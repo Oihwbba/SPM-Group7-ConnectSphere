@@ -9,15 +9,13 @@ import {
   Eye,
   CalendarPlus,
   BellRing,
-  FileEdit,
   Filter,
   CopyPlus,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Search,
   Trash2,
-  Send,
-  Inbox,
   MessagesSquare,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -272,13 +270,6 @@ export function EventsClient({
   });
   const actionCount = events.filter(needsAction).length;
 
-  const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
-  const submittedCount = events.filter((evt) =>
-    submittedMeans === "awaiting-review"
-      ? AWAITING_REVIEW.includes(evt.status)
-      : evt.status !== "DRAFT",
-  ).length;
-
   // Row actions. The row is a single element (table row on desktop, stacked
   // card on mobile — see events-list.module.css), so each control renders once
   // and its testid is unambiguous without any "mobile-" prefix.
@@ -288,15 +279,14 @@ export function EventsClient({
     // SCRUM-126 AC2/AC3: the Coordinator's choice decides which way back the
     // Organiser is offered.
     const startsAgain = event.rejectionOutcome === "NEW_REQUEST";
-    // On a phone the actions are a two-column grid of full-width, thumb-sized
-    // buttons, so a fourth button no longer wraps alone onto a second line; from
-    // md up they are the compact inline row the desktop table has always had.
-    const actionButton = "h-11 w-full gap-1.5 text-sm lg:h-8 lg:w-auto lg:text-xs";
+    // On a card the actions gather at the bottom right, thumb-sized; from lg
+    // up they are the compact inline row the desktop table has always had.
+    const actionButton = "h-11 gap-1.5 text-sm lg:h-8 lg:text-xs";
     // Change 3: actions whose icon says it all are icon-only, named for
     // screen readers and with a tooltip.
-    const iconButton = "h-11 w-full lg:h-8 lg:w-8 lg:p-0";
+    const iconButton = "h-11 w-11 lg:h-8 lg:w-8 lg:p-0";
     return (
-      <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-nowrap lg:items-center lg:justify-end lg:gap-1.5 [&>*:only-child]:col-span-2 lg:[&>*:only-child]:col-span-1">
+      <div className="flex flex-wrap items-center justify-end gap-2 lg:flex-nowrap lg:gap-1.5">
         {isDraft && (
           <Button
             variant="ghost"
@@ -420,103 +410,62 @@ export function EventsClient({
       />
       <ActionError message={listError} />
 
-      {/* Filter Tabs & Interactive Search Bar for SCRUM-84 AC6-AC9 */}
+      {/* The status picker and the search box filter the list (SCRUM-84
+          AC6-AC9); each carries its own icon. "Actions required" stays beside
+          them as its own view (SCRUM-207 AC7) and toggles off again. */}
       {events.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          {/* SCRUM-207: the tabs wrap onto a second line on a phone, so every
-              one is in view without scrolling sideways. */}
-          <div className="flex w-full flex-wrap items-center gap-1.5 md:w-auto md:gap-2">
-            <Filter className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground md:mr-1" />
+        <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
+          {!isCoordinator && (
             <Button
-              variant={activeTab === "ALL" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-11 shrink-0 text-sm font-medium md:h-8 md:text-xs"
-              onClick={() => {
-                setActiveTab("ALL");
-                setStatusFilter("ALL");
-              }}
-            >
-              All ({events.length})
-            </Button>
-            {!isCoordinator && (
-              <Button
-                variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-11 shrink-0 gap-1.5 text-sm font-medium md:h-8 md:text-xs",
-                  activeTab === "DRAFT" && "font-semibold",
-                )}
-                onClick={() => {
-                  setActiveTab("DRAFT");
-                  setStatusFilter("ALL");
-                }}
-              >
-                <FileEdit className="h-3.5 w-3.5" />
-                Drafts ({draftCount})
-              </Button>
-            )}
-            <Button
-              variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
+              variant={activeTab === "ACTION" ? "secondary" : "ghost"}
               size="sm"
               className={cn(
-                "h-11 shrink-0 gap-1.5 text-sm font-medium md:h-8 md:text-xs",
-                activeTab === "SUBMITTED" && "font-semibold",
+                "h-11 shrink-0 gap-1.5 self-start text-sm font-medium md:h-9 md:text-xs",
+                activeTab === "ACTION" && "font-semibold",
               )}
               onClick={() => {
-                setActiveTab("SUBMITTED");
+                setActiveTab(activeTab === "ACTION" ? "ALL" : "ACTION");
                 setStatusFilter("ALL");
               }}
             >
-              {isCoordinator ? (
-                <Inbox className="h-3.5 w-3.5" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              {/* SCRUM-131 AC1: "Sent", since the tab lists every request
-                  that isn't a draft, not only the Submitted ones. */}
-              {isCoordinator ? "Awaiting review" : "Sent"} ({submittedCount})
+              <BellRing className="h-3.5 w-3.5" />
+              Actions required ({actionCount})
             </Button>
-            {!isCoordinator && (
-              <Button
-                variant={activeTab === "ACTION" ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-11 shrink-0 gap-1.5 text-sm font-medium md:h-8 md:text-xs",
-                  activeTab === "ACTION" && "font-semibold",
-                )}
-                onClick={() => {
-                  setActiveTab("ACTION");
-                  setStatusFilter("ALL");
-                }}
-              >
-                <BellRing className="h-3.5 w-3.5" />
-                Actions required ({actionCount})
-              </Button>
-            )}
-          </div>
+          )}
 
-          <div className="flex w-full flex-col gap-2 sm:max-w-sm sm:flex-row sm:items-center">
-            <AppSelect
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-              aria-label="Filter by status"
-              className="h-11 w-full text-base sm:h-9 sm:w-40 sm:shrink-0 sm:text-xs"
-              options={[
-                { value: "ALL", label: "All Statuses" },
-                ...Object.entries(EVENT_STATUS_LABEL).map(([value, label]) => ({
-                  value,
-                  label,
-                })),
-              ]}
-            />
-            <input
-              type="text"
-              aria-label="Search by name or purpose"
-              placeholder="Search by name or purpose..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-sm sm:h-8 sm:text-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
+          <div className="flex w-full flex-col gap-2 sm:max-w-sm sm:flex-row sm:items-center md:ml-auto">
+            <div className="relative w-full sm:w-40 sm:shrink-0">
+              <Filter
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <AppSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                aria-label="Filter by status"
+                className="h-11 w-full pl-9 text-base sm:h-9 sm:text-xs"
+                options={[
+                  { value: "ALL", label: "All Statuses" },
+                  ...Object.entries(EVENT_STATUS_LABEL).map(
+                    ([value, label]) => ({ value, label }),
+                  ),
+                ]}
+              />
+            </div>
+            <div className="relative w-full">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="text"
+                aria-label="Search by name or purpose"
+                placeholder="Search by name or purpose..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9 sm:text-xs"
+              />
+            </div>
           </div>
         </div>
       )}

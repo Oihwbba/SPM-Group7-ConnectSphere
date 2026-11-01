@@ -31,21 +31,25 @@ export function PageHeader({
           Back to {back.to}
         </Link>
       )}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <h1 className="flex flex-wrap items-center gap-2 break-words text-2xl font-semibold tracking-tight">
+      {/* The actions sit beside the title, on a phone as on a desktop; the
+          description keeps the full width beneath them both. */}
+      <div className="space-y-1">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="flex min-w-0 flex-wrap items-center gap-2 break-words text-2xl font-semibold tracking-tight">
             {title}
           </h1>
-          <p
-            className="text-sm text-muted-foreground"
-            data-testid="page-description"
-          >
-            {description}
-          </p>
+          {actions && (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {actions}
+            </div>
+          )}
         </div>
-        {actions && (
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
-        )}
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid="page-description"
+        >
+          {description}
+        </p>
       </div>
     </div>
   );

@@ -15,39 +15,10 @@
     display: block;
   }
 
-  /* The column headings become a bar of sort buttons above the cards, so a
-     phone can sort as a desktop does (SCRUM-207); the per-field labels below
-     name each value. "Actions" has no control and is kept for screen readers. */
+  /* A card is not a table, so the column headings go: each value carries its
+     own label inside the card instead (see events-client.tsx). */
   .list thead {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .list thead tr {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 0.75rem;
-    border: 0;
-  }
-
-  .list thead th {
-    display: block;
-    height: auto;
-    padding: 0;
-  }
-
-  .list thead th button {
-    min-height: 2.75rem;
-  }
-
-  .list thead th:not(:has(button)) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
+    display: none;
   }
 
   /* Each row becomes a card laid out with grid areas:
@@ -116,8 +87,10 @@
   .list td[data-col="created"] {
     grid-area: created;
   }
+  /* Every action sits at the bottom right of the card. */
   .list td[data-col="actions"] {
     grid-area: actions;
+    justify-self: end;
   }
 
   /* The "Starts"/"Created" field labels are real elements in the cells (see
