@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
 import type { EventStatus, Role } from "@prisma/client";
 
@@ -9,6 +9,7 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { confirmEvent } from "@/app/(app)/events/actions";
+import { OVERDUE_REFUSAL } from "@/lib/event-closing";
 import { EVENT_STATUS_LABEL } from "@/lib/event-lifecycle";
 import { formatDateTime } from "@/lib/datetime";
 
@@ -81,6 +82,7 @@ function eventRow(
     status: EventStatus;
     coordinatorId: string | null;
     registrationRequired: boolean | null;
+    startAt: Date | null;
   }> = {},
 ) {
   return {
@@ -88,6 +90,7 @@ function eventRow(
     coordinatorId: "usr_coordinator" as string | null,
     status: "PLANNING" as EventStatus,
     registrationRequired: null as boolean | null,
+    startAt: new Date("2099-06-01T02:00:00Z") as Date | null,
     // SCRUM-85: never confirmed before, unless a case says otherwise.
     confirmedStartAt: null as Date | null,
     confirmedEndAt: null as Date | null,
@@ -544,5 +547,65 @@ describe("confirmEvent — what registered Attendees are told (SCRUM-85)", () =>
 
     expect(tx.notification.createMany).not.toHaveBeenCalled();
     expect(tx.registration.findMany).not.toHaveBeenCalled();
+  });
+});
+
+// SCRUM-249 — an overdue event can't be confirmed. Test cases:
+// docs/testing/SCRUM-249.md. The rule's edge is one instant, so the clock is
+// fixed; only Date is faked, so the mocked transaction's promises still run.
+describe("confirmEvent — an overdue event, SCRUM-249", () => {
+  const NOW = new Date("2031-06-01T02:00:00.000Z");
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const startingAt = (startAt: Date) =>
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventRow({ startAt }), name: "Gala" });
+
+  it("SCRUM-249 [AC2, AC3] TC-249-05: one millisecond past its start, a ready event is refused and nothing is written", async () => {
+    startingAt(new Date(NOW.getTime() - 1));
+
+    expect(await confirmEvent({ eventId: "evt1" })).toEqual({
+      ok: false,
+      error: "This event is overdue: its start time has passed. It can be rejected or cancelled.",
+      fieldErrors: undefined,
+    });
+    expect(tx.event.update).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-249 [AC2] TC-249-05: an overdue event is refused for being overdue even with arrangements outstanding", async () => {
+    startingAt(new Date(NOW.getTime() - 1));
+    mockChecklist.mockResolvedValue(notReady);
+
+    expect(await confirmEvent({ eventId: "evt1" })).toMatchObject({ error: OVERDUE_REFUSAL });
+  });
+
+  it.each([
+    ["exactly now", NOW],
+    ["later", new Date(NOW.getTime() + 1)],
+  ])("SCRUM-249 [AC3] TC-249-06: an event starting %s can still be confirmed", async (_, startAt) => {
+    startingAt(startAt);
+
+    expect(await confirmEvent({ eventId: "evt1" })).toEqual({
+      ok: true,
+      data: { status: "CONFIRMED" },
+    });
+    expect(tx.event.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("SCRUM-249 [AC3] TC-249-05: the check reads the event after locking its row", async () => {
+    startingAt(new Date(NOW.getTime() - 1));
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.event.findUniqueOrThrow.mock.invocationCallOrder[0],
+    );
   });
 });
