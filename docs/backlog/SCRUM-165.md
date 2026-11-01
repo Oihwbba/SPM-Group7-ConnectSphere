@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-165 - Lead assigns new requests from an unassigned queue
@@ -16,6 +16,8 @@
 
 ---
 
+**Superseded in part:** AC2's columns are superseded by SCRUM-211 AC1 once SCRUM-211 is delivered: every queue shows the same four columns (event, event date, what's asked, and requested, as the date and how long ago), other details appear when a request is opened, and the queue keeps its oldest-first default order. The criteria below are kept as accepted in Sprint 3.
+
 **User story:** As an Event Coordinator Lead, I want new requests to wait in an unassigned queue until I assign a Coordinator, so that each event goes to a suitable Coordinator instead of being assigned automatically.
 
 **Acceptance criteria**
@@ -30,7 +32,7 @@
 8. Given a request is unassigned, then Coordinators can't open it for decision or decide it; they see their own events and the read-only all-events list (SCRUM-141).
 9. Given a rejected request is amended and resubmitted (SCRUM-108), then it keeps its Coordinator; if that Coordinator no longer holds the role, it returns to the queue.
 10. Only Leads can see the queue and assign (SCRUM-67).
-11.  Given I assign a Coordinator to a request, then I'm recorded as the event's supervising Lead, since the Lead supervises the Coordinator they allocated for that event.
+11. Given I assign a Coordinator to a request, then I'm recorded as the event's supervising Lead, since the Lead supervises the Coordinator they allocated for that event.
 
 **Related:** the Lead's view of every assignment and active event is SCRUM-141.
 
@@ -42,8 +44,8 @@
 
 **Change log**
 
-* * 2026-10-16 (W9 clarifications, PO approved): AC11 added. The Lead who assigns a request becomes its supervising Lead ("Lead is responsible for supervising the co-ordinator that he/she allocated for an event request"), recorded in the field SCRUM-172 AC12 added.
-  * 2026-10-07 (Week 7 change 5): created.
-
+* 2026-10-07 (Week 7 change 5): created.
+* 2026-10-16 (W9 clarifications, PO approved): AC11 added. The Lead who assigns a request becomes its supervising Lead ("Lead is responsible for supervising the co-ordinator that he/she allocated for an event request"), recorded in the field SCRUM-172 AC12 added.
+* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-211 AC1 (decision by Felicia, 29 Oct). The change log is one list, oldest first; it was nested by mistake. Criteria unchanged.
 
 Functionality Area: Coordinator Assignment
