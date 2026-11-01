@@ -207,4 +207,6 @@ SCRUM-128 applies (TC-75-14).
 
 ### TC-75-14
 
-**Retired** on 17 Oct 2026, when AC 11 moved to SCRUM-128 AC11: a Confirmed event whose Registration needed changes from No to Yes through a change request opens registration as in AC 4. SCRUM-128 approves the change, so its tests own this case.
+**Retired** on 17 Oct 2026, when AC 11 moved to SCRUM-128 AC11: a Confirmed event whose Registration needed changes from No to Yes through a change request opens registration as in AC 4. SCRUM-128 approves the change, so its tests own this case: [TC-128-16](SCRUM-128.md#tc-128-16).
+
+**Automated by:** see [TC-128-16](SCRUM-128.md#tc-128-16): `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: Registration needed raised as Yes on a Confirmed event opens registration when approved, with its Registration closed notice written for the event's start"
