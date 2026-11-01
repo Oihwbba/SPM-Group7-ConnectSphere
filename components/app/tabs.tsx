@@ -89,7 +89,7 @@ export function Tabs({
                 if (e.key === "ArrowLeft") move(i, -1);
               }}
               className={cn(
-                "relative -mb-px inline-flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "relative -mb-px inline-flex min-h-11 flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors sm:min-h-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 selected
                   ? "border-primary font-semibold text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground",

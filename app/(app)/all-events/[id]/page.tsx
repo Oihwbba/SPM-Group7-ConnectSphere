@@ -89,7 +89,7 @@ export default async function PlanningEventPage({
           {canEdit && (
             <Link
               href={`/events/${event.id}`}
-              className="inline-block text-sm font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline md:min-h-6"
             >
               Open in my Events
             </Link>
@@ -97,7 +97,7 @@ export default async function PlanningEventPage({
           {canAssign && (
             <Link
               href={`/queue/${event.id}`}
-              className="inline-block text-sm font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline md:min-h-6"
               data-testid="assign-link"
             >
               Assign a Coordinator

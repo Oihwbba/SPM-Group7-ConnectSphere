@@ -25,7 +25,7 @@ export function PageHeader({
         <Link
           href={back.href}
           data-testid="back-link"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground md:min-h-6"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Back to {back.to}
