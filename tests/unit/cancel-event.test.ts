@@ -5,6 +5,7 @@ import type { EventStatus, Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { cancelEvent } from "@/app/(app)/events/cancel-actions";
+import { completeIfTakenPlace, EVENT_TOOK_PLACE } from "@/lib/event-closing";
 import { EVENT_STATUS_LABEL } from "@/lib/event-lifecycle";
 
 // SCRUM-82 — the assigned Coordinator cancels an event, releasing everything
@@ -31,6 +32,12 @@ vi.mock("@/lib/db", () => ({
   prisma: { event: { findUnique: vi.fn() }, $transaction: vi.fn() },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// SCRUM-262: whether the event has taken place is the database's call, made in
+// tests/integration/finished-event.test.ts; here it hasn't unless a test says so.
+vi.mock("@/lib/event-closing", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/event-closing")>()),
+  completeIfTakenPlace: vi.fn().mockResolvedValue(false),
+}));
 
 const mockAuth = auth as unknown as Mock;
 const mockEvent = prisma.event.findUnique as unknown as Mock;
@@ -324,5 +331,19 @@ describe("cancelEvent — SCRUM-82 AC4, AC6", () => {
     // The expiry compared is the moment of cancelling.
     expect(liveHold.holdExpiresAt.gt.getTime()).toBeLessThanOrEqual(Date.now());
     expect(where.OR[0].status.in).not.toContain("HELD");
+  });
+});
+
+// SCRUM-262 — an event that has taken place is completed, never cancelled.
+describe("cancelEvent — SCRUM-262", () => {
+  it("SCRUM-262 [AC1, AC3] TC-262-01: an event that has taken place is completed under its lock and not cancelled", async () => {
+    (completeIfTakenPlace as Mock).mockResolvedValueOnce(true);
+
+    expect(await cancelEvent(valid)).toEqual({ ok: false, error: EVENT_TOOK_PLACE });
+    expect(completeIfTakenPlace).toHaveBeenCalledWith(tx, "evt1");
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      (completeIfTakenPlace as Mock).mock.invocationCallOrder[0],
+    );
+    expectNothingWritten();
   });
 });

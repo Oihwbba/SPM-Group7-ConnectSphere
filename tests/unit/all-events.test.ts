@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import {
   getAllEvents,
   getEventForPlanning,
@@ -20,6 +21,7 @@ vi.mock("@/lib/db", () => ({
     user: { findMany: vi.fn() },
   },
 }));
+vi.mock("@/lib/event-closing", () => ({ completeFinishedEvents: vi.fn().mockResolvedValue([]) }));
 
 const mockAuth = auth as unknown as Mock;
 const mockFindMany = prisma.event.findMany as unknown as Mock;
@@ -376,5 +378,35 @@ describe("can — event:view-all (SCRUM-141)", () => {
         status: "PLANNING",
       }),
     ).toBe(false);
+  });
+});
+
+// SCRUM-262 — All Events shows a finished event as Completed, as the Events,
+// event and My Registrations pages do (SCRUM-82 AC7).
+describe("all events — SCRUM-262", () => {
+  it("SCRUM-262 [AC5] TC-262-05: finished events are completed before the list or an event is read", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_cody"));
+    mockFindMany.mockResolvedValue([]);
+    mockFindUnique.mockResolvedValue(null);
+
+    await getAllEvents({ unassigned: false });
+    expect(completeFinishedEvents).toHaveBeenCalledWith(prisma);
+    expect((completeFinishedEvents as Mock).mock.invocationCallOrder[0]).toBeLessThan(
+      mockFindMany.mock.invocationCallOrder[0],
+    );
+
+    await getEventForPlanning("evt1");
+    expect(completeFinishedEvents).toHaveBeenCalledTimes(2);
+    expect((completeFinishedEvents as Mock).mock.invocationCallOrder[1]).toBeLessThan(
+      mockFindUnique.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("SCRUM-262 [AC5] TC-262-05: someone who can't see All Events completes nothing", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_att"));
+
+    expect(await getAllEvents({ unassigned: false })).toBeNull();
+    expect(await getEventForPlanning("evt1")).toBeNull();
+    expect(completeFinishedEvents).not.toHaveBeenCalled();
   });
 });
