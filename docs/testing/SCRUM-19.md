@@ -14,6 +14,14 @@ title format, so each case names them by their current titles.
 moves straight to Planning in the same step, with Approved kept in its history
 (SCRUM-81, ADR 0012, SCRUM-135 AC12). TC-19-01 tests that.
 
+**AC 3 and AC 4 were extended by SCRUM-126.** A rejection also records an
+outcome, and **Amend & Resubmit** is offered only when the Coordinator chose
+Amend and resubmit: TC-19-02 and TC-19-04 choose it, and TC-19-05 tests the
+other outcome. **Only the assigned Coordinator decides.** A Submitted request
+with no Coordinator waits for the Lead and can't be approved or rejected
+(SCRUM-165 AC 8, SCRUM-135 AC 3 and AC 4:
+[TC-165-11](SCRUM-165.md#tc-165-11), [TC-135-03](SCRUM-135.md#tc-135-03)).
+
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. A request submitted by `organiser@test.local` is Under
 Review with `coordinator@test.local` (both `Password123!`).

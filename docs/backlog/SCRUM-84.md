@@ -59,7 +59,6 @@
     * Search matches partial substrings (e.g., typing "annual" matches "Annual Tech Conference").
     * Clearing the search input immediately restores the full filtered list according to the active status tab.
 
-
 **Note:** closes a dependency three existing stories already assumed without anyone building it — "Save an event request as a draft" ("Organiser can find and resume any of their saved drafts"), "Distinguish drafts from submitted requests" (drafts must look distinct "wherever they appear alongside submitted requests"), and "View only the events I own" ("An Organiser's event list contains only events where they are the submitting Organiser"). All three describe rules for this list; this story is the list itself. Added 2026-09-06 following the full backlog synthesis.
 
 **Change log**
