@@ -56,7 +56,11 @@ export function EventProgress({
           return (
             <li
               key={step}
-              className="flex min-w-0 flex-1 items-center gap-1 last:flex-none"
+              // SCRUM-207: a step's circle and label can't shrink, so sharing
+              // the width equally on a phone made them print over each other.
+              // Below sm each step keeps its own width and the row scrolls, as
+              // the ol above already allows for.
+              className="flex min-w-0 flex-1 items-center gap-1 max-sm:flex-none last:flex-none"
               aria-current={here ? "step" : undefined}
             >
               <span className="flex shrink-0 items-center gap-2">
