@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **89** |
+| Tasks | **90** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -285,3 +285,4 @@ _6 stories, 10 points_
 | [SCRUM-249](SCRUM-249.md) | Bug: An overdue event can still be approved or confirmed, so an event that never happened can end up Completed | SCRUM Sprint 4 | In Review |
 | [SCRUM-255](SCRUM-255.md) | Bug: Sign-in answers faster for an unknown email, which can reveal which accounts exist | SCRUM Sprint 4 | In Review |
 | [SCRUM-258](SCRUM-258.md) | Bug: A Confirmed event's flagged arrangements read as secured | SCRUM Sprint 4 | In Review |
+| [SCRUM-260](SCRUM-260.md) | Chore: Sync docs/backlog for the stories open pull requests need | SCRUM Sprint 4 | In Review |
