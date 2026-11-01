@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-130 - Discard a draft request
@@ -27,7 +27,7 @@
 5. Drafts never expire automatically in Release 1.
 6. Given a draft's proposed start is in the past, when I open it, then it shows "Dates are in the past – update them before submitting". (Submission is already blocked by SCRUM-13 AC9.)
 
-**Customer basis:** "No time constraint specified by the stake holders. The team can propose and implement the mechanism." (Draft Event Requests). Team proposal: manual discard, no automatic expiry.
+**Basis:** Team proposal: manual discard, no automatic expiry.
 
 **Why this is a new story:** SCRUM-15 (Sprint 1, Done) saves drafts but gives no way to remove one, and no draft-expiry mechanism was proposed.
 
