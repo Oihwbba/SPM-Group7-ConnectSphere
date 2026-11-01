@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-53 - Approve or reject a booking request
@@ -39,5 +39,6 @@
 
 * 2026-10-01 (mid-sprint correction, no new scope): renumbered; clarified where the "free text" quote came from. SCRUM-51 (track and be notified) was merged into this story and SCRUM-124 and is closed.
 * 2026-10-01 (audit): AC3 says the suggestion goes in the free-text reason, as built (there is no separate field). AC10 names the readiness checklist (SCRUM-110), which is where the Coordinator sees the decision. Summary in sentence case.
+* 2026-10-29 (SCRUM-244, logged 2026-11-01): removed "Venue Staff may provide a reason or suggest an alternative venue/arrangement." and "Optional, this is not considered as core requirement. Resubmission counts as new booking for audit." from the Customer basis. Criteria unchanged.
 
 Functionality Area: Venue Booking Approval, Booking Conflict Detection

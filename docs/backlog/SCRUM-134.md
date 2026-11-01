@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-134 - Decide competing venue and equipment requests in the order they were made
@@ -33,5 +33,6 @@
 
 * 2026-10-01 (audit): the equipment criteria follow the built model: requests are reviewed as a whole and stock is held by reservations (SCRUM-31), so the first-come rule applies when reserving. A withdrawn venue request (SCRUM-142) no longer blocks later ones.
 * 2026-10-07 (Week 7 changes 1 and 4): AC1 to AC3 compare occupied periods (SCRUM-159). AC2 applies to holds as well as approvals, and a Held booking blocks later requests like an Approved one (SCRUM-163).
+* 2026-10-29 (SCRUM-244, logged 2026-11-01): removed the Customer basis, which quoted "Conflicts are handled on a first-come, first-served basis for venue/resources." and "Confirmed bookings block availability. Pending conflicts are only resolved outside of system currently; the team can also propose and implement other mechanism." Criteria unchanged.
 
 Functionality Area: Venue Booking Approval, Equipment Availability Checking

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-124 - Staff and arrangement notifications
@@ -47,5 +47,6 @@
 * 2026-10-07 (Week 7 changes 1, 2, 4, 5 and 6): new triggers for holds (AC4 to AC6, SCRUM-163); flags from setup or turnaround changes, venue unavailability and safety outcomes (AC8: SCRUM-160, SCRUM-161, SCRUM-167); new requests for Leads (AC10, SCRUM-165); and safety checks (AC11, SCRUM-166). AC3 adds withdrawing a whole equipment request (SCRUM-142), an audit edit that didn't save on 1 Oct. The user story now includes Leads and Safety Officers. Re-estimated from 3 to 5 points.
 * 2026-10-07 (backlog refinement): AC8 points to SCRUM-166, which SCRUM-167 was merged into.
 * 2026-10-13 (W9 clarification, Week 7 change 4): AC4 also notifies the Coordinator when Venue Staff approve a hold, which the Coordinator must then confirm (SCRUM-163 AC3).
+* 2026-10-29 (SCRUM-244, logged 2026-11-01): removed "Changes trigger notifications to staff." from the Customer basis, and "Briefing §6 examples" now reads "Briefing section 6 examples". Criteria unchanged.
 
 Functionality Area: Notification System
