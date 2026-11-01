@@ -127,7 +127,7 @@ re-planned" is one back in Planning after being Confirmed, as a flagged venue
 | Test Data | — |
 | Expected Result | Both are in the one list (SCRUM-48) and open `/events/<id>`; the re-planned one only while the Attendee is still registered (withdrawn, or never registered: no link, since they can't open it). A Cancelled or Completed event's notice has no link. |
 
-**Automated by:** `tests/unit/notifications.test.ts` › "SCRUM-85 [AC7, AC9] TC-85-08: …" and "SCRUM-85 [AC5, AC9] TC-85-08: …" (3 tests); `e2e/attendee-updates.spec.ts` › "… TC-85-08 …" (2 tests)
+**Automated by:** `tests/unit/notifications.test.ts` › "SCRUM-85 [AC7, AC9] TC-85-08: …" and "SCRUM-85 [AC5, AC7, AC9] TC-85-08: …" (3 tests); `e2e/attendee-updates.spec.ts` › "… TC-85-08 …" (2 tests)
 
 ### TC-85-09
 
@@ -140,4 +140,4 @@ re-planned" is one back in Planning after being Confirmed, as a flagged venue
 | Test Data | Reason "Venue flooded." |
 | Expected Result | The registered Attendee gets one "An event you registered for was cancelled" notice with the reason, and their registration shows Cancelled. The withdrawn Attendee gets nothing. |
 
-**Automated by:** built with SCRUM-82. `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC6] TC-82-06: the Organiser, the Coordinator and each Attendee whose registration was cancelled are notified with the reason" (only Registered ones are cancelled, so a withdrawn one isn't told); `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3, AC6] TC-82-04: …"; `tests/unit/my-registrations.test.ts` › "[Positive] AC3: given ConnectSphere cancels the event, a %s registration shows as Cancelled"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC3] TC-76-02, SCRUM-85 [AC4, AC5, AC12] TC-85-09: a registration for an event ConnectSphere cancelled shows as Cancelled"
+**Automated by:** built with SCRUM-82. `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC6] TC-82-06: the Organiser, the Coordinator and each Attendee whose registration was cancelled are notified with the reason" (only Registered ones are cancelled, so a withdrawn one isn't told); `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3, AC6] TC-82-04: …"; `tests/unit/my-registrations.test.ts` › "SCRUM-85 [AC3, AC4, AC5, AC12] TC-85-09: [Positive] given ConnectSphere cancels the event, a %s registration shows as Cancelled"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC3] TC-76-02, SCRUM-85 [AC4, AC5, AC12] TC-85-09: a registration for an event ConnectSphere cancelled shows as Cancelled"

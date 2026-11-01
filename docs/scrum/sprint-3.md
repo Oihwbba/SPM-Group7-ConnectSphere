@@ -42,6 +42,11 @@ times the average of the two. The goal named the Highest-priority stories,
 97 points, as the commitment, with the 27 points labelled `stretch` to
 follow. All 34 stories were Done by close, 126 points at today's estimates.
 
+Context the board records: 42 of those points were labelled `week7-change`,
+the customer's Week 7 changes (the Lead, several venues per event, holds,
+setup and turnaround times, and the safety check), which arrived with this
+sprint and were part of Release 1.
+
 Why the team committed this much, and what it changes for Sprint 4: _To be completed by the team._
 For reference, the [backlog index](../backlog/README.md) records 15 points
 committed to Sprint 4 at its start.
@@ -85,6 +90,22 @@ committed to Sprint 4 at its start.
 | [SCRUM-170](../backlog/SCRUM-170.md) | Show the Organiser's requirements to the people planning the event | 3 | High | Added 7 Oct | Done 19 Oct |
 | [SCRUM-171](../backlog/SCRUM-171.md) | Record whether an event needs registration | 3 | High | Added 7 Oct | Done 19 Oct (reopened 19 Oct and closed again) |
 
+"Reopened and closed again" means the item went back from Done in Jira and was
+moved to Done again; each reopen's reason is in the item's Jira comments.
+The six stories reopened on **20 Oct** were reopened for gaps the 20 Oct audit
+found against their criteria. Each was fixed in its own pull request, moved to
+In Review for the Product Owner, and moved to Done again by the PO at 00:30 on
+21 Oct:
+
+| Story | Gap found by the 20 Oct audit | Fixed in |
+|---|---|---|
+| SCRUM-21 | Notices written ahead for the Coordinator still went to the previous one after a reassignment (AC 6) | #258 |
+| SCRUM-82 | Cancelling left an open clarification answerable, and marked expired holds Cancelled (AC 3) | #254 |
+| SCRUM-128 | A change moving only the end could not be approved once the start had passed it (AC 2) | #256 |
+| SCRUM-142 | Rejecting a changed request left its unchanged lines' reservations holding stock (AC 2, AC 10) | #255 |
+| SCRUM-161 | The calendar drew unavailability over a standing booking wrongly (AC 1, AC 3) | #259 |
+| SCRUM-166 | Rejecting a Planning event left its safety check in the Safety Officers' queue (AC 13) | #257 |
+
 ## Tasks
 
 | Task | Summary | Points | In the sprint | Outcome |
@@ -120,11 +141,14 @@ committed to Sprint 4 at its start.
   - SCRUM-171 (Record whether an event needs registration, 3 points) at 22:39.
   - SCRUM-170 (Show the Organiser's requirements to the people planning the
     event, 3 points) at 23:37.
-- **Removed and re-added the same evening:** SCRUM-145 and SCRUM-147. They
+- **Refined on the first evening, then put back:** SCRUM-145 and SCRUM-147
   were in the sprint at the start, taken out at 22:17 and put back, estimated,
-  at 23:04.
-- **Removed and re-added later:** SCRUM-146, also taken out at 22:17, came
-  back on 12 Oct.
+  at 23:04, during the same evening's refinement in which priorities and the
+  `stretch` label were set. SCRUM-145's change log gives the reason:
+  "narrowed to test documentation. Syncing docs/backlog … moved to SCRUM-169
+  … Added to Sprint 3 and estimated, so the resync is counted as a task".
+- **Taken out the same evening, back on 12 Oct:** SCRUM-146, also taken out
+  at 22:17.
 - **In briefly, then out:** SCRUM-13, a Sprint 1 story, was reopened on 7 Oct.
   It was put into this sprint, closed again and taken back out the same
   evening.
@@ -152,12 +176,14 @@ a separate recording.
 
 What Jira and git already show:
 
-- On the evening of 20 Oct, six of this sprint's stories went back from Done:
-  SCRUM-21, 82, 128, 142, 161 and 166. So did the Sprint 1 story SCRUM-15.
-  All seven were moved to Done again at 00:30 on 21 Oct, together with
-  SCRUM-203 to 206.
-- SCRUM-15's history shows that move made by Caylern, the Product Owner for
-  Sprint 3.
+- On the evening of 20 Oct, six of this sprint's stories went back from Done
+  for the gaps the 20 Oct audit found (see "Stories" above). So did the
+  Sprint 1 story SCRUM-15, for a Product Owner decision on its AC 9: as built,
+  a draft holds no catalogue reference that could go stale, so the
+  criterion's "marked for correction" half had nothing to mark.
+- All seven were moved to Done again at 00:30 on 21 Oct, together with
+  SCRUM-203 to 206. SCRUM-15's history shows that move made by Caylern, the
+  Product Owner for Sprint 3.
 
 ## Retrospective
 

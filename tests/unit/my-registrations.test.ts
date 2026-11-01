@@ -30,7 +30,7 @@ beforeEach(() => {
 });
 
 describe("getMyRegistrations — SCRUM-76", () => {
-  it("[Positive] AC5: the list contains only my registrations — filtered by the session's user id", async () => {
+  it("SCRUM-76 [AC5] TC-76-04: [Positive] the list contains only my registrations — filtered by the session's user id", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     await getMyRegistrations();
@@ -40,7 +40,7 @@ describe("getMyRegistrations — SCRUM-76", () => {
     });
   });
 
-  it("[Positive] AC1: fetches the event name, date, time, venue and the registration status", async () => {
+  it("SCRUM-76 [AC1] TC-76-01: [Positive] fetches the event name, date, time, venue and the registration status", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     await getMyRegistrations();
@@ -78,7 +78,7 @@ describe("getMyRegistrations — SCRUM-76", () => {
     });
   });
 
-  it("[Positive] AC4: event details are read live from the event, not from a copy on the registration", async () => {
+  it("SCRUM-76 [AC4] TC-76-03: [Positive] event details are read live from the event, not from a copy on the registration", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     await getMyRegistrations();
@@ -87,7 +87,7 @@ describe("getMyRegistrations — SCRUM-76", () => {
     expect(Object.keys(select).sort()).toEqual(["event", "id", "status"]);
   });
 
-  it("[Positive] lists the soonest event first", async () => {
+  it("SCRUM-76 [AC1, AC2] TC-76-01: [Positive] lists the soonest event first", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     await getMyRegistrations();
@@ -98,7 +98,7 @@ describe("getMyRegistrations — SCRUM-76", () => {
   });
 
   it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "TECH_SUPPORT"] as const)(
-    "[Security gate] a %s without registration:read gets an empty list, before the query runs",
+    "SCRUM-76: [Security gate] a %s without registration:read gets an empty list, before the query runs",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, "usr_other"));
 
@@ -107,7 +107,7 @@ describe("getMyRegistrations — SCRUM-76", () => {
     },
   );
 
-  it("[Negative] a signed-out caller gets an empty list, before the query runs", async () => {
+  it("SCRUM-76 [AC5] TC-76-04: [Negative] a signed-out caller gets an empty list, before the query runs", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect(await getMyRegistrations()).toEqual([]);
@@ -117,20 +117,20 @@ describe("getMyRegistrations — SCRUM-76", () => {
 
 describe("shownRegistrationStatus — SCRUM-76 AC2, AC3", () => {
   it.each(["REGISTERED", "WITHDRAWN", "CANCELLED"] as const)(
-    "[Positive] AC2: a %s registration on a Confirmed event shows its own status",
+    "SCRUM-76 [AC2]: [Positive] a %s registration on a Confirmed event shows its own status",
     (status) => {
       expect(shownRegistrationStatus(status, "CONFIRMED")).toBe(status);
     },
   );
 
   it.each(["REGISTERED", "WITHDRAWN", "CANCELLED"] as const)(
-    "[Positive] AC3: given ConnectSphere cancels the event, a %s registration shows as Cancelled",
+    "SCRUM-85 [AC3, AC4, AC5, AC12] TC-85-09: [Positive] given ConnectSphere cancels the event, a %s registration shows as Cancelled",
     (status) => {
       expect(shownRegistrationStatus(status, "CANCELLED")).toBe("CANCELLED");
     },
   );
 
-  it("[Boundary] an event back in Planning keeps the registration's own status", () => {
+  it("SCRUM-73 [AC7] TC-73-07: [Boundary] an event back in Planning keeps the registration's own status", () => {
     expect(shownRegistrationStatus("REGISTERED", "PLANNING")).toBe(
       "REGISTERED",
     );

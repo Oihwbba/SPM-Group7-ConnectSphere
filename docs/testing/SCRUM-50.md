@@ -29,7 +29,7 @@ a manual tester creates the same events, or edits an event's dates.
 | [TC-50-04](#tc-50-04) | Positive | AC 3, AC 10 (pending blocks nobody) | Unit, integration |
 | [TC-50-05](#tc-50-05) | Boundary | AC 4 | Unit, integration, e2e |
 | [TC-50-06](#tc-50-06) | Negative, Boundary | AC 5 | Unit, integration |
-| [TC-50-07](#tc-50-07) | Negative | AC 8 (one venue per event) | Unit, integration, e2e |
+| [TC-50-07](#tc-50-07) | Negative | AC 8 (one venue per event) | Integration |
 | [TC-50-08](#tc-50-08) | Concurrency | AC 8 | Unit, integration |
 | [TC-50-09](#tc-50-09) | Negative | AC 7 | Unit, integration, e2e |
 | [TC-50-10](#tc-50-10) | Negative, Boundary | AC 6 | Unit, integration, e2e |
@@ -37,7 +37,7 @@ a manual tester creates the same events, or edits an event's dates.
 | [TC-50-12](#tc-50-12) | Positive | AC 1 (room layout before venue) | Unit, e2e |
 | [TC-50-13](#tc-50-13) | Negative, Boundary | AC 3, AC 4, AC 5 shown live, before submitting | Unit, integration, e2e |
 | [TC-50-14](#tc-50-14) | Positive | AC 9 (a new request after a rejection or cancellation) | Integration |
-| [TC-50-15](#tc-50-15) | Negative, Boundary | AC 1 (period and attendance fixed to the event) | Unit, integration, e2e |
+| [TC-50-15](#tc-50-15) | Negative, Boundary | AC 1 (period and attendance fixed to the event) | Unit |
 | [TC-50-16](#tc-50-16) | Negative, Concurrency | AC 1 | Unit |
 
 ---
@@ -157,7 +157,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | `venuestaff@test.local`; `coordinator2@test.local` |
 | Expected Result | Venue Staff see "Access denied". The event list holds only APPROVED or PLANNING events the coordinator may act on. Another coordinator's event is refused as "Event not found." |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC7] TC-50-09: venue staff typing the request form's address are refused by the server"; `tests/unit/auth.test.ts` › the three "SCRUM-50 TC-50-09: …" cases; `tests/unit/bookings.test.ts` › "SCRUM-50 TC-50-09: every role except Event Coordinator is refused before anything is read", "SCRUM-50 TC-50-09: an event that does not exist, or is another coordinator's, reads as not found", "SCRUM-50 TC-50-09: a venue cannot be requested for an event that has not been approved"; `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC7] TC-50-09: venue staff typing the request form's address are refused by the server"; `tests/unit/auth.test.ts` › the three "SCRUM-50 [AC7] TC-50-09: …" cases; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC7] TC-50-09: every role except Event Coordinator is refused before anything is read", "SCRUM-50 [AC7] TC-50-09: the live check refuses every role except Event Coordinator before anything is read", "SCRUM-50 [AC7] TC-50-09: an event that does not exist, or is another coordinator's, reads as not found", "SCRUM-50 [AC7] TC-50-09: a venue cannot be requested for an event that has not been approved"; `tests/integration/bookings.test.ts` › "SCRUM-50 [AC7] TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows"
 
 ### TC-50-10
 
@@ -170,7 +170,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | E2E Hall — Big Concert (250); E2E Hall — Full House (200) |
 | Expected Result | Step 1: "Exhibition Hall holds up to 200 people; 250 expected is over its capacity." appears under the attendance, and **Submit request** is disabled. The server refuses the same request if sent directly, and nothing is written. Step 2: the error clears and Submit is enabled. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC6] TC-50-10: an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 TC-50-10: expected attendance above the venue's capacity is refused against the attendance field, and nothing is written" and "SCRUM-50 TC-50-10: expected attendance exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-10: attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC6] TC-50-10: an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC6] TC-50-10: expected attendance above the venue's capacity is refused against the attendance field, and nothing is written" and "SCRUM-50 [AC6] TC-50-10: expected attendance exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 [AC6] TC-50-10: attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"
 
 ### TC-50-11
 
