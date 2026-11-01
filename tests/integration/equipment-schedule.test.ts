@@ -112,7 +112,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
   });
 
   describe("SCRUM-30 — View Equipment Conflicts", () => {
-    it("SCRUM-30 [AC1]: lists current and future commitments with the event name, and drops finished ones", async () => {
+    it("SCRUM-30 [AC1] TC-30-01: lists current and future commitments with the event name, and drops finished ones", async () => {
       await reserve(8, 10, 1); // finished before `from`
       await reserve(11, 14, 1); // still running at `from`
       await reserve(15, 17, 1); // in the future
@@ -134,7 +134,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
     const period = { startAt: new Date(at(12)), endAt: new Date(at(15)) };
     const periodInput = { equipmentId: "", startAt: at(12), endAt: at(15) };
 
-    it("SCRUM-30 [AC2, AC5]: splits real commitments by the requested period, with touching ones under other commitments", async () => {
+    it("SCRUM-30 [AC2, AC5] TC-30-04: splits real commitments by the requested period, with touching ones under other commitments", async () => {
       const touchesStart = await reserve(9, 12, 1);
       const inside = await reserve(13, 14, 1);
       const straddlesEnd = await reserve(14, 17, 1);
@@ -151,7 +151,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
       }
     });
 
-    it("SCRUM-30 [AC3]: commitments during the period are amber while the request still fits", async () => {
+    it("SCRUM-30 [AC3] TC-30-03: commitments during the period are amber while the request still fits", async () => {
       await reserve(13, 14, 2);
       await reserve(14, 17, 1);
 
@@ -165,7 +165,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
       }
     });
 
-    it("SCRUM-30 [AC4]: they turn red, with the shortfall, once the request exceeds what is free", async () => {
+    it("SCRUM-30 [AC4] TC-30-03: they turn red, with the shortfall, once the request exceeds what is free", async () => {
       await reserve(13, 14, 2);
       await reserve(14, 17, 1);
 
@@ -182,7 +182,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
     // Written straight to the table: two reservations outside the period that
     // together exceed the pool. They are other commitments — neutral, and not
     // part of what is free during the requested period.
-    it("SCRUM-30 [AC2]: other commitments, even ones that overlap each other, do not reduce the requested period's availability", async () => {
+    it("SCRUM-30 [AC2] TC-30-02: other commitments, even ones that overlap each other, do not reduce the requested period's availability", async () => {
       await reserve(9, 12, 4); // touches the start
       await reserve(15, 18, 4); // touches the end
       await reserve(18, 21, 3);
@@ -202,7 +202,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
       expect(schedule.ok).toBe(true);
     });
 
-    it("SCRUM-30 [AC6]: shows the reason, note and period of unavailability, alongside reservations in time order", async () => {
+    it("SCRUM-30 [AC6] TC-30-05: shows the reason, note and period of unavailability, alongside reservations in time order", async () => {
       await reserve(14, 16, 1);
       await outOfService(9, 11, 2, "DAMAGED", "Cracked lens");
 
@@ -223,7 +223,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
       }
     });
 
-    it("SCRUM-30 [AC7]: an item with nothing committed from `from` onwards is reported fully available", async () => {
+    it("SCRUM-30 [AC7] TC-30-06: an item with nothing committed from `from` onwards is reported fully available", async () => {
       await reserve(8, 10, 1); // finished before `from`, so it does not count
       await reserve(12, 14, 4, "CANCELLED");
 

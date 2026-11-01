@@ -1,5 +1,9 @@
 # ADR 0014 — A clarification names the fields its answer may change; a resubmission returns to the same Coordinator
 
+> **Status: amended on 2026-10-29 by the addendum.** Decision 6's fallback
+> to automatic assignment was replaced by the Lead's Unassigned queue
+> (SCRUM-165); the rest of the decision stands.
+
 SCRUM-108. It builds on the clarification of SCRUM-18, the rejection outcome
 of SCRUM-126 (ADR 0013) and the automatic assignment of SCRUM-20.
 
@@ -78,3 +82,17 @@ stayed in every Coordinator's list).
   and can be closed as a duplicate.
 - Rejections recorded before AC 11's change may have no coordinator; the
   resubmission fallback (automatic assignment) still covers them.
+
+## Addendum (2026-10-29) — Resubmission falls back to the Lead's queue (SCRUM-165, SCRUM-243)
+
+Week 7 change 5 removed automatic assignment (SCRUM-20, superseded by
+SCRUM-165). Decision 6 still holds for its first half: a resubmission goes
+back Under Review to the previous Coordinator if they still hold the role.
+Otherwise `submitEventRequest` now clears the Coordinator and leaves the
+request Submitted in the Lead's Unassigned queue (SCRUM-165 AC9, SCRUM-135
+AC6), recording why in the history; it no longer runs automatic assignment
+or puts the request in every Coordinator's list. A request with no
+Coordinator can't be rejected any more (SCRUM-135 AC4), so the last
+Consequence (rejections with no coordinator, covered by automatic
+assignment) now reaches the same queue. SCRUM-108 AC11 carries a
+"Superseded in part" note saying so.

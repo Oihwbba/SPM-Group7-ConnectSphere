@@ -309,7 +309,7 @@ describe("cancelEvent — SCRUM-82 AC4, AC6", () => {
     });
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-82 [AC4]: does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(cancelEvent(valid)).rejects.toThrow("connection lost");
   });

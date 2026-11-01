@@ -14,6 +14,14 @@ title format, so each case names them by their current titles.
 moves straight to Planning in the same step, with Approved kept in its history
 (SCRUM-81, ADR 0012, SCRUM-135 AC12). TC-19-01 tests that.
 
+**AC 3 and AC 4 were extended by SCRUM-126.** A rejection also records an
+outcome, and **Amend & Resubmit** is offered only when the Coordinator chose
+Amend and resubmit: TC-19-02 and TC-19-04 choose it, and TC-19-05 tests the
+other outcome. **Only the assigned Coordinator decides.** A Submitted request
+with no Coordinator waits for the Lead and can't be approved or rejected
+(SCRUM-165 AC 8, SCRUM-135 AC 3 and AC 4:
+[TC-165-11](SCRUM-165.md#tc-165-11), [TC-135-03](SCRUM-135.md#tc-135-03)).
+
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. A request submitted by `organiser@test.local` is Under
 Review with `coordinator@test.local` (both `Password123!`).
@@ -40,7 +48,7 @@ Review with `coordinator@test.local` (both `Password123!`).
 | Test Data | The Under Review request |
 | Expected Result | The request is in Planning, with who approved it and when recorded; Approved appears only in its history. Nothing is booked or reserved yet: approval means planning can start. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-19: the assigned coordinator approves an under-review request", "SCRUM-81 [AC1] TC-81-01: approving an assigned request moves it to Planning, recording who approved it and when"; `e2e/events.spec.ts` › "SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24)"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-19 [AC1, AC2] TC-19-01: the assigned coordinator approves an under-review request", "SCRUM-81 [AC1] TC-81-01: approving an assigned request moves it to Planning, recording who approved it and when"; `e2e/events.spec.ts` › "SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24)"
 
 ### TC-19-02
 
@@ -53,7 +61,7 @@ Review with `coordinator@test.local` (both `Password123!`).
 | Test Data | Reason "The venue is booked that week; please pick another date." |
 | Expected Result | The request is Rejected, with the reason saved. The Organiser's details show "Rejection reason" with that text. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-19: a rejection records its reason"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-19 [AC3] TC-19-02: a rejection records its reason"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
 
 ### TC-19-03
 
@@ -66,7 +74,7 @@ Review with `coordinator@test.local` (both `Password123!`).
 | Test Data | "   " |
 | Expected Result | The rejection is refused ("A rejection reason is required."), and the request stays Under Review with nothing written. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-19: a rejection with a blank reason is refused and nothing is written"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-19 [AC3] TC-19-03: a rejection with a blank reason is refused and nothing is written"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
 
 ### TC-19-04
 
@@ -79,7 +87,7 @@ Review with `coordinator@test.local` (both `Password123!`).
 | Test Data | Venue requirements "Any room — a different date is fine." |
 | Expected Result | "Event request submitted for review successfully!" The request is back in review with the same Coordinator, and the old decision is cleared. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "an organiser resubmits an amended rejected request and the old decision is cleared"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-19 [AC4] TC-19-04: an organiser resubmits an amended rejected request and the old decision is cleared"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
 
 ### TC-19-05
 
@@ -105,4 +113,4 @@ Review with `coordinator@test.local` (both `Password123!`).
 | Test Data | The Under Review request |
 | Expected Result | One decision is saved. The other is refused with "This event was updated by another user. Refresh and try again.", and writes no history entry. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"; `tests/integration/concurrency.test.ts` › "SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-24 [AC7] TC-24-04, SCRUM-19 [AC6] TC-19-06: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"; `tests/integration/concurrency.test.ts` › "SCRUM-24 [AC7] TC-24-04, SCRUM-135 [AC14] TC-135-14, SCRUM-19 [AC6] TC-19-06: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"

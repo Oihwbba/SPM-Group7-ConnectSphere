@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-241 - Bug: The venue availability calendar shows closed hours as available
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Medium |
 | **Story points** | - |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-241 |
 
@@ -30,5 +30,3 @@ The availability calendar shows every hour of every day as available, including 
 **Change log**
 
 * 2026-10-29: created in Sprint 4 from a teammate's report during the SCRUM-7 epic check (SCRUM-214).
-
-**Links:** relates to SCRUM-36.

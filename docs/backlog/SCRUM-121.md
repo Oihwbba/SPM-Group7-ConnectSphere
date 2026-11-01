@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-121 - Accounts can hold multiple roles
@@ -28,12 +28,13 @@
 
 **Supersedes:** the single-role wording in SCRUM-65 ("the signed-in user's role") and SCRUM-66 ("their role"), both Sprint 1 and Done.
 
-**Customer basis:** "Multiple roles possible. Coordinator can view other events for planning purpose but should not be able to edit events not assigned to them."
+**Customer basis:** "Multiple roles possible."
 
 **Change log**
 
 * 2026-10-01: added AC4 and AC5 so multiple roles can't be used to approve your own work; stated which Sprint 1 wording this supersedes.
 * 2026-10-01 (audit): AC5 names the equipment actions as built: Technical Support reviews a request (SCRUM-28) and reserves stock (SCRUM-31); there is no per-item decision.
 * 2026-10-07 (Week 7 changes 5 and 6): AC4 applies to the Lead's assignment and reassignment (SCRUM-165, SCRUM-21) instead of automatic assignment and handover. AC5 adds a Safety Officer's outcome (SCRUM-166).
+* 2026-10-29 (SCRUM-244, logged 2026-11-01): shortened the Customer basis quote to "Multiple roles possible.", removing "Coordinator can view other events for planning purpose but should not be able to edit events not assigned to them." Criteria unchanged.
 
 Functionality Area: User Authorisation and Authentication

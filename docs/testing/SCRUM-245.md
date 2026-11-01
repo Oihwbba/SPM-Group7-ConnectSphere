@@ -58,7 +58,7 @@ and seeded with `npm run db:seed`, as in CI's `build-and-test`.
 | Test Data | `usr_coordinator`; `evt_approved`, `evt_planning` |
 | Expected Result | 1. TC-50-09 passes: it checks each offered event's status, Organiser and Coordinator as read, so a later confirmation doesn't reach it. 2. TC-50-09 fails ("expected [ 'APPROVED', 'PLANNING' ] to include 'CONFIRMED'"), so an event the form shouldn't offer is still caught. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows". Step 2 was checked by hand on 30 Oct and the list restored.
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC7] TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows". Step 2 was checked by hand on 30 Oct and the list restored.
 
 ### TC-245-04
 

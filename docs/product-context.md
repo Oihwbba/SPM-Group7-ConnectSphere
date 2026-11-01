@@ -80,12 +80,12 @@ row lock (ADR 0006 for the Coordinator's decision).
 | Step | What happens | Stories, ADRs |
 |---|---|---|
 | **Draft → Submitted** | The Organiser can save an incomplete request and finish it later. Submitting needs every required field. | SCRUM-13, 14, 15 |
-| **Assignment** | A new request waits in the Lead's Unassigned queue (oldest first) until a Lead assigns a Coordinator, which moves it to Under Review in the same step; the least-loaded Coordinator is suggested (Week 7 change 5). Reassignment by the Lead is SCRUM-21, not built yet. SCRUM-20's automatic assignment is superseded. | SCRUM-165; SCRUM-21 |
+| **Assignment** | A new request waits in the Lead's Unassigned queue (oldest first) until a Lead assigns a Coordinator, which moves it to Under Review in the same step; the least-loaded Coordinator is suggested (Week 7 change 5). The Lead can reassign an event Under Review, in Planning or Confirmed to another Coordinator from All Events (SCRUM-21). SCRUM-20's automatic assignment is superseded. | SCRUM-165; SCRUM-21 |
 | **Review** | The Coordinator can ask the Organiser a question and name the fields the answer may change. While a question is open the event stays Under Review; "awaiting clarification" is shown, not stored as a status. | SCRUM-17, 18, 108, ADR 0014 |
 | **Approve** | Approval moves the event straight to **Planning**: "Approved means there is enough information to start planning." Approved is recorded in the history but never stored on its own. | SCRUM-19, 81, ADR 0012 |
 | **Reject** | A rejection always has a reason and an outcome chosen by the Coordinator: **amend and resubmit** (back to the same Coordinator) or **submit as a new request** (a copy starts as a new Draft). | SCRUM-19, 126, 108, ADR 0013 |
 | **Planning** | The Coordinator books one venue and raises one equipment request. Venue Staff and Technical Support decide them. A Planning event that can't be fulfilled is rejected, and its bookings and reservations are released in the same step. Since Week 7 an event can book several venues, each requested and decided on its own (SCRUM-162), and Venue Staff can hold a venue until a deadline instead of approving it (SCRUM-163). Until the event is Confirmed, the Organiser can ask for changes through a change request (SCRUM-41), which the Coordinator decides and applies (SCRUM-128). | SCRUM-50, 53, 27, 28, 117, ADR 0015; SCRUM-162, 163, 41, 128 |
-| **Confirm** | A readiness checklist shows what is still missing (the venue, and the equipment if any was requested). When it is complete, only the assigned Coordinator can confirm: "Confirmed means the essential arrangements are complete." Week 7 change 6 adds a step: the Safety Officer must approve the event's safety check before it can be confirmed. Not built yet. | SCRUM-110, 81, ADR 0011, 0012; SCRUM-166 |
+| **Confirm** | A readiness checklist shows what is still missing (the venue, and the equipment if any was requested). When it is complete, only the assigned Coordinator can confirm: "Confirmed means the essential arrangements are complete." Week 7 change 6 adds a step: the Safety Officer must approve the event's safety check before it can be confirmed; the checklist's Safety check item is complete only once a check is Approved (SCRUM-166). | SCRUM-110, 81, ADR 0011, 0012; SCRUM-166 |
 | **Registration** | Attendees register for an event open for registration, up to its expected attendance, within its registration period. | SCRUM-72 to 77 |
 
 ### Venue and equipment, step by step
@@ -121,8 +121,8 @@ to an epic in Jira; the stories carry the acceptance criteria.
 
 | # | Feature | Epic | Main stories |
 |---|---|---|---|
-| 1 | User authorisation and authentication | SCRUM-9 Access Control | 65, 66, 67, 68, 69, 164, 121 |
-| 2 | Event request creation | SCRUM-6 Event Request Lifecycle | 13, 14, 171 |
+| 1 | User authorisation and authentication | SCRUM-9 Access Control | 65, 66, 67, 68, 69, 70, 164, 121 |
+| 2 | Event request creation | SCRUM-6 Event Request Lifecycle | 13, 14, 171, 129, 190 |
 | 3 | Draft event requests | SCRUM-6 | 15, 16, 130 |
 | 4 | Event review and approval | SCRUM-6 | 17, 18, 19, 108, 126 |
 | 5 | Coordinator assignment | SCRUM-6 | 20, 21, 165, 141 |
@@ -138,7 +138,7 @@ to an epic in Jira; the stories carry the acceptance criteria.
 | 15 | Equipment request management | SCRUM-10 Equipment Management | 27, 28, 142 |
 | 16 | Equipment availability checking | SCRUM-10 | 29, 30 |
 | 17 | Equipment reservation | SCRUM-10 | 31, 155, 156, 32 |
-| 18 | Attendee registration | SCRUM-11 Attendee Registration | 70, 72, 73, 74, 75, 76, 77 |
+| 18 | Attendee registration | SCRUM-11 Attendee Registration | 72, 73, 74, 75, 76, 77, 212 |
 | 19 | Event change requests | SCRUM-8 Event Change & Notifications | 41, 128, 26 |
 | 20 | Notification system | SCRUM-8 | 45, 48, 85, 124 |
 
