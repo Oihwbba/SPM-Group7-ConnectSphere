@@ -36,7 +36,7 @@ needs them.
 | [TC-31-07](#tc-31-07) | Negative, Boundary | AC 6 | Unit, e2e |
 | [TC-31-08](#tc-31-08) | Positive | AC 7 | Unit |
 | [TC-31-09](#tc-31-09) | Negative, Boundary | Valid period | Unit, e2e (SCRUM-155's) |
-| [TC-31-10](#tc-31-10) | Positive, Negative | Approved and Planning events only | Unit, integration |
+| [TC-31-10](#tc-31-10) | Positive, Negative | Planning events only | Unit, integration |
 | [TC-31-11](#tc-31-11) | Negative | Technical Support only | Unit |
 
 ---
