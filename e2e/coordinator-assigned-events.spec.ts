@@ -117,7 +117,7 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     await expect(row(page, mine)).toHaveCount(0);
   });
 
-  test("SCRUM-69 [AC1, AC4] TC-69-01, TC-69-05, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list", async ({
+  test("SCRUM-69 [AC1] TC-69-01, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list", async ({
     page,
   }) => {
     for (const email of ["coordinator@test.local", "coordinator2@test.local"]) {

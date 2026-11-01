@@ -212,7 +212,7 @@ describe("requestSafetyCheck — SCRUM-166", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-166: does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(requestSafetyCheck({ eventId: "evt_1" })).rejects.toThrow("connection lost");
   });

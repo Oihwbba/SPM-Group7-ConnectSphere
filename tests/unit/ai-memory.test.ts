@@ -45,7 +45,7 @@ function proposal(body: string, note = "Coordinators are seeded twice.") {
 }
 
 describe("parseProposal — SCRUM-112", () => {
-  it("reads the JSON out of a fenced reply with prose around it", () => {
+  it("SCRUM-112: reads the JSON out of a fenced reply with prose around it", () => {
     const reply = [
       "Here is what I learned:",
       "```json",
@@ -61,7 +61,7 @@ describe("parseProposal — SCRUM-112", () => {
     });
   });
 
-  it("reads a bare JSON reply, and treats anything but true as nothing learned", () => {
+  it("SCRUM-112: reads a bare JSON reply, and treats anything but true as nothing learned", () => {
     expect(parseProposal(JSON.stringify({ learned: "yes", note: "n" }))).toMatchObject({ learned: false });
     expect(parseProposal(JSON.stringify({ learned: false, note: "Nothing here." }))).toMatchObject({
       learned: false,
@@ -69,7 +69,7 @@ describe("parseProposal — SCRUM-112", () => {
     });
   });
 
-  it("returns null for a reply that is not usable JSON", () => {
+  it("SCRUM-112: returns null for a reply that is not usable JSON", () => {
     expect(parseProposal("I could not decide.")).toBeNull();
     expect(parseProposal("```json\n{ broken\n```")).toBeNull();
     expect(parseProposal("")).toBeNull();
@@ -77,7 +77,7 @@ describe("parseProposal — SCRUM-112", () => {
 });
 
 describe("checkProposal — SCRUM-112", () => {
-  it("accepts a rewrite that keeps the file's shape and adds a lesson", () => {
+  it("SCRUM-112: accepts a rewrite that keeps the file's shape and adds a lesson", () => {
     const next = proposal("- (2026-09-21, #61) The seed has two coordinators, so a test must read the assignment.");
 
     const verdict = checkProposal({ proposal: next, current, prNumber: 61 });
@@ -89,7 +89,7 @@ describe("checkProposal — SCRUM-112", () => {
     expect(verdict.memory).toContain("two coordinators");
   });
 
-  it("makes no change when the merge taught nothing, and says why", () => {
+  it("SCRUM-112: makes no change when the merge taught nothing, and says why", () => {
     const verdict = checkProposal({
       proposal: { learned: false, note: "A straightforward bug fix.", memory: "" },
       current,
@@ -100,7 +100,7 @@ describe("checkProposal — SCRUM-112", () => {
     expect(verdict.reason).toContain("A straightforward bug fix.");
   });
 
-  it("refuses a memory the reviewer would not read in full", () => {
+  it("SCRUM-112: refuses a memory the reviewer would not read in full", () => {
     const tooLong = proposal(`- ${"x".repeat(13_000)}`);
 
     const verdict = checkProposal({ proposal: tooLong, current, prNumber: 61 });
@@ -111,7 +111,7 @@ describe("checkProposal — SCRUM-112", () => {
 
   // A rewrite may prune a stale lesson, but handing back a near-empty file
   // would silently switch the reviewer's memory off.
-  it("refuses a wipe, and a rewrite that keeps only a fraction of the file", () => {
+  it("SCRUM-112: refuses a wipe, and a rewrite that keeps only a fraction of the file", () => {
     const gutted = { learned: true, note: "Tidied up.", memory: `${HEADING}\n\nRules for a lesson:\n` };
 
     const verdict = checkProposal({ proposal: gutted, current, prNumber: 61 });
@@ -120,7 +120,7 @@ describe("checkProposal — SCRUM-112", () => {
     expect(verdict.reason).toContain("wipe");
   });
 
-  it("refuses a memory that lost its heading or its own rules", () => {
+  it("SCRUM-112: refuses a memory that lost its heading or its own rules", () => {
     const noHeading = { learned: true, note: "n", memory: current.replace(HEADING, "# Notes") };
     const noRules = { learned: true, note: "n", memory: current.replace("Rules for a lesson:", "Guidance:") };
 
@@ -128,13 +128,13 @@ describe("checkProposal — SCRUM-112", () => {
     expect(checkProposal({ proposal: noRules, current, prNumber: 61 }).reason).toContain("Rules for a lesson:");
   });
 
-  it("refuses a lesson with no note, because the pull request has nothing to say", () => {
+  it("SCRUM-112: refuses a lesson with no note, because the pull request has nothing to say", () => {
     const unexplained = { learned: true, note: "", memory: memory("- (2026-09-21, #61) Something.") };
 
     expect(checkProposal({ proposal: unexplained, current, prNumber: 61 }).reason).toContain("no note");
   });
 
-  it("makes no change when the rewrite says exactly what the file already says", () => {
+  it("SCRUM-112: makes no change when the rewrite says exactly what the file already says", () => {
     const same = { learned: true, note: "n", memory: `${current}\r\n` };
 
     const verdict = checkProposal({ proposal: same, current, prNumber: 61 });
@@ -153,7 +153,7 @@ describe("checkProposal — SCRUM-112", () => {
     const lesson = "- (2026-09-22, #67) Held checks on the memory pull request are GitHub's guard.";
     const before = memory(migration);
 
-    it("refuses a proposal that edits an old entry without citing the pull request", () => {
+    it("SCRUM-112: refuses a proposal that edits an old entry without citing the pull request", () => {
       const corrupted = memory(`${migration.replace("add_programme", "add-programme")}\n${lesson}`);
 
       const verdict = checkProposal({ proposal: { learned: true, note: "n", memory: corrupted }, current: before, prNumber: 67 });
@@ -163,7 +163,7 @@ describe("checkProposal — SCRUM-112", () => {
       expect(verdict.reason).toContain("add-programme");
     });
 
-    it("accepts a new lesson, a re-wrapped old one, and a stale one deleted whole", () => {
+    it("SCRUM-112: accepts a new lesson, a re-wrapped old one, and a stale one deleted whole", () => {
       const rewrapped = migration.replace("\n  ", " ");
       const kept = memory(`${rewrapped}\n${lesson}`);
       const pruned = memory(lesson);
@@ -172,20 +172,20 @@ describe("checkProposal — SCRUM-112", () => {
       expect(checkProposal({ proposal: { learned: true, note: "n", memory: pruned }, current: before, prNumber: 67 }).accept).toBe(true);
     });
 
-    it("does not take #6 as a citation of #67", () => {
+    it("SCRUM-112: does not take #6 as a citation of #67", () => {
       const edited = memory(`${migration.replace("uses", "now uses")} (see #67)`);
 
       expect(checkProposal({ proposal: { learned: true, note: "n", memory: edited }, current: before, prNumber: 6 }).accept).toBe(false);
     });
   });
 
-  it("reads a bullet and its indented lines as one entry, whatever the wrapping", () => {
+  it("SCRUM-112: reads a bullet and its indented lines as one entry, whatever the wrapping", () => {
     expect(memoryEntries("# Title\n\n- one\n  two\n-   three")).toEqual(["# Title", "- one two", "- three"]);
   });
 
   // The file's opening paragraph is hard-wrapped flush left; a model returning
   // it on one line has not changed it.
-  it("reads a flush-left wrapped paragraph as one entry, so re-wrapping it is not a change", () => {
+  it("SCRUM-112: reads a flush-left wrapped paragraph as one entry, so re-wrapping it is not a change", () => {
     const wrapped = "Lessons from past reviews, approved by the team. The reviewer reads this file\nfrom `main` on every pull request.";
     const oneLine = wrapped.replace("\n", " ");
 
@@ -195,7 +195,7 @@ describe("checkProposal — SCRUM-112", () => {
 
   // Existing lessons cite pull requests mid-sentence ("was recovered in #33"),
   // and a different wrapping can put the citation at the start of a line.
-  it("does not take a citation wrapped to the start of a line for a heading", () => {
+  it("SCRUM-112: does not take a citation wrapped to the start of a line for a heading", () => {
     const wrapped = "- Migration X was recovered in\n  #33 and is safe everywhere.";
     const oneLine = "- Migration X was recovered in #33 and is safe everywhere.";
 
@@ -205,12 +205,12 @@ describe("checkProposal — SCRUM-112", () => {
 
   // 17:00 UTC is already the next day in Singapore; a UTC date would be a
   // day behind every evening.
-  it("dates a lesson in Singapore time, not UTC", () => {
+  it("SCRUM-112: dates a lesson in Singapore time, not UTC", () => {
     expect(singaporeDate(new Date("2026-09-22T17:00:00Z"))).toBe("2026-09-23");
     expect(singaporeDate(new Date("2026-09-22T15:59:00Z"))).toBe("2026-09-22");
   });
 
-  it("refuses a reply GLM never gave", () => {
+  it("SCRUM-112: refuses a reply GLM never gave", () => {
     expect(checkProposal({ proposal: null, current, prNumber: 61 }).accept).toBe(false);
   });
 
@@ -265,13 +265,13 @@ describe("refusalLog — SCRUM-152", () => {
     expect(empty).toContain("::warning::A lesson was lost (Equipment lines are reviewed one by one.)");
   });
 
-  it("names the latest attempt's lesson when both found one", () => {
+  it("SCRUM-152: names the latest attempt's lesson when both found one", () => {
     const pruned = { learned: true, note: "Equipment lines are reviewed one by one; dropped the #33 checksums note.", memory: "" };
 
     expect(refusalLog({ attempts: [found, pruned], verdict: tooLong, prNumber: 95 })).toContain("dropped the #33 checksums note");
   });
 
-  it("logs nothing learned as a plain line, because that is the normal answer", () => {
+  it("SCRUM-152: logs nothing learned as a plain line, because that is the normal answer", () => {
     const log = refusalLog({
       attempts: [{ learned: false, note: "A docs-only sync.", memory: "" }],
       verdict: { accept: false, reason: "Nothing learned: A docs-only sync." },
@@ -304,7 +304,7 @@ describe("the memory on this branch — SCRUM-152", () => {
 });
 
 describe("summariseCi — SCRUM-112", () => {
-  it("names the failing checks, because a predictable failure is the lesson", () => {
+  it("SCRUM-112: names the failing checks, because a predictable failure is the lesson", () => {
     const summary = summariseCi([
       { name: "build-and-test", conclusion: "failure" },
       { name: "build-and-test", conclusion: "failure" },
@@ -316,7 +316,7 @@ describe("summariseCi — SCRUM-112", () => {
     expect(summary).not.toContain("review,");
   });
 
-  it("says so when CI never failed, and says nothing when there was no CI", () => {
+  it("SCRUM-112: says so when CI never failed, and says nothing when there was no CI", () => {
     expect(summariseCi([{ name: "build-and-test", conclusion: "success" }])).toContain("passed");
     expect(summariseCi([])).toBe("");
   });
@@ -325,7 +325,7 @@ describe("summariseCi — SCRUM-112", () => {
 // The stat comes from the API because merged branches are deleted, so the
 // pull request's head commit is usually not in the runner's clone.
 describe("renderFileStat — SCRUM-112", () => {
-  it("lists each file with its line counts, and says when it was added or removed", () => {
+  it("SCRUM-112: lists each file with its line counts, and says when it was added or removed", () => {
     expect(
       renderFileStat([
         { filename: "lib/nav.ts", additions: 12, deletions: 3, status: "modified" },
@@ -348,7 +348,7 @@ describe("buildMemoryPrompt — SCRUM-112", () => {
     mergedBy: "Oihwbba",
   };
 
-  it("shows the memory, the pull request, its review and what CI did", () => {
+  it("SCRUM-112: shows the memory, the pull request, its review and what CI did", () => {
     const prompt = buildMemoryPrompt({
       current,
       pending: false,
@@ -367,14 +367,14 @@ describe("buildMemoryPrompt — SCRUM-112", () => {
     expect(prompt).not.toContain("not been merged yet");
   });
 
-  it("tells GLM the date and the pull request to cite, so a lesson is dated today", () => {
+  it("SCRUM-112: tells GLM the date and the pull request to cite, so a lesson is dated today", () => {
     const prompt = buildMemoryPrompt({ current, pending: false, pr, review: "", ci: "", stat: "", today: "2026-09-22" });
 
     expect(prompt).toContain("Today is 2026-09-22.");
     expect(prompt).toContain("cite #61");
   });
 
-  it("says when the memory carries lessons still waiting in an open proposal", () => {
+  it("SCRUM-112: says when the memory carries lessons still waiting in an open proposal", () => {
     const prompt = buildMemoryPrompt({ current, pending: true, pr, review: "", ci: "", stat: "", today: "2026-09-22" });
 
     expect(prompt).toContain("not been merged yet");

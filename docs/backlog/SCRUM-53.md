@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-53 - Approve or reject a booking request
@@ -33,11 +33,12 @@
 
 **Related:** the Coordinator is notified of the decision (SCRUM-124); first-come, first-served between competing requests is SCRUM-134; flagged requests can't be approved (SCRUM-26).
 
-**Customer basis:** "Venue Staff may provide a reason or suggest an alternative venue/arrangement." "Optional, this is not considered as core requirement. Resubmission counts as new booking for audit." The free-text form follows the customer's answer "Free text reason is reasonable", which was given for Coordinator rejections and is applied here as a team decision.
+**Customer basis:** "Free text reason is reasonable", which was given for Coordinator rejections and is applied here as a team decision.
 
 **Change log**
 
 * 2026-10-01 (mid-sprint correction, no new scope): renumbered; clarified where the "free text" quote came from. SCRUM-51 (track and be notified) was merged into this story and SCRUM-124 and is closed.
 * 2026-10-01 (audit): AC3 says the suggestion goes in the free-text reason, as built (there is no separate field). AC10 names the readiness checklist (SCRUM-110), which is where the Coordinator sees the decision. Summary in sentence case.
+* 2026-10-29 (SCRUM-244, logged 2026-11-01): removed "Venue Staff may provide a reason or suggest an alternative venue/arrangement." and "Optional, this is not considered as core requirement. Resubmission counts as new booking for audit." from the Customer basis. Criteria unchanged.
 
 Functionality Area: Venue Booking Approval, Booking Conflict Detection

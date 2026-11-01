@@ -2,12 +2,14 @@ import { describe, it, expect, vi } from "vitest";
 
 import {
   availabilityByDay,
+  closedHours,
   describeBlocker,
   findVenueBlockers,
   findVenueCalendar,
   occupiedPeriod,
   type CalendarEntry,
 } from "@/lib/venue-availability";
+import type { OpeningDay } from "@/lib/venue-hours";
 
 // SCRUM-50 AC3 / SCRUM-53 AC4, AC8 — what makes a venue unavailable. The query is
 // checked against a stub; the same rule is exercised against real rows in
@@ -309,7 +311,7 @@ describe("describeBlocker", () => {
     );
   });
 
-  it("SCRUM-159: a booking with no setup or turnaround reads exactly as before", () => {
+  it("SCRUM-159 [AC3] TC-159-14: a booking with no setup or turnaround reads exactly as before", () => {
     expect(
       describeBlocker({
         kind: "booking",
@@ -437,7 +439,7 @@ describe("availabilityByDay — SCRUM-36", () => {
     expect(covered).toBe(86_400_000);
   });
 
-  it("SCRUM-36 — a period across midnight is split between the two days; one ending at midnight does not spill over", () => {
+  it("SCRUM-36 [AC5] TC-36-03: a period across midnight is split between the two days; one ending at midnight does not spill over", () => {
     const days = availabilityByDay(
       [
         maintenance(sg("2035-03-10", "22:00"), sg("2035-03-11", "02:00")),
@@ -462,7 +464,7 @@ describe("availabilityByDay — SCRUM-36", () => {
     expect(days[2].segments.map((s) => s.kind)).toEqual(["free"]);
   });
 
-  it("walks the range across a month end", () => {
+  it("SCRUM-36: walks the range across a month end", () => {
     const days = availabilityByDay([], "2035-02-27", "2035-03-02");
     expect(days.map((d) => d.day)).toEqual([
       "2035-02-27",
@@ -515,7 +517,7 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
     );
   });
 
-  it("SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder", async () => {
+  it("SCRUM-36 TC-36-08: carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder", async () => {
     // The week of 5–11 Mar 2035, which holds both.
     const entries = await findVenueCalendar(
       stubDb([booked], [closed]) as never,
@@ -547,7 +549,7 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
     });
   });
 
-  it("SCRUM-36 — a stretch clipped to one day keeps the whole period in its details", async () => {
+  it("SCRUM-36 TC-36-08: a stretch clipped to one day keeps the whole period in its details", async () => {
     const entries = await findVenueCalendar(
       stubDb([], [closed]) as never,
       "ven_1",
@@ -724,5 +726,103 @@ describe("availabilityByDay — unavailability over a booking (SCRUM-161)", () =
     }
     expect(segments[0].startAt).toEqual(at("00:00"));
     expect(segments.at(-1)!.endAt).toEqual(new Date("2035-03-11T00:00:00+08:00"));
+  });
+});
+
+describe("closedHours — the calendar greys out closed hours (SCRUM-241)", () => {
+  // Mon 12 to Sun 18 Mar 2035, Singapore time.
+  const MONDAY = "2035-03-12";
+  const at = (day: string, hhmm: string) =>
+    hhmm === "24:00"
+      ? new Date(new Date(`${day}T00:00:00+08:00`).getTime() + 86_400_000)
+      : new Date(`${day}T${hhmm}:00+08:00`);
+  const open = (weekday: number, opens: string, closes: string): OpeningDay => ({
+    weekday,
+    opensMinute: Number(opens.slice(0, 2)) * 60 + Number(opens.slice(3)),
+    closesMinute: Number(closes.slice(0, 2)) * 60 + Number(closes.slice(3)),
+  });
+  const closed = (weekday: number): OpeningDay => ({ weekday, opensMinute: null, closesMinute: null });
+  /** Mon–Fri 09:00–18:00, Saturday Closed, and no row for Sunday. */
+  const OFFICE_HOURS = [1, 2, 3, 4, 5].map((d) => open(d, "09:00", "18:00")).concat(closed(6));
+  const day = (entries: CalendarEntry[], d: string) =>
+    availabilityByDay(entries, d, d)[0].segments.map((s) => [
+      s.kind,
+      s.startAt.toISOString(),
+      s.endAt.toISOString(),
+    ]);
+  const seg = (kind: string, d: string, start: string, end: string) => [
+    kind,
+    at(d, start).toISOString(),
+    at(d, end).toISOString(),
+  ];
+
+  it("SCRUM-241 [AC1] TC-241-01: before opening and after closing show as closed, with the opening hours available between", () => {
+    const entries = closedHours(OFFICE_HOURS, MONDAY, MONDAY);
+
+    expect(day(entries, MONDAY)).toEqual([
+      seg("closed", MONDAY, "00:00", "09:00"),
+      seg("free", MONDAY, "09:00", "18:00"),
+      seg("closed", MONDAY, "18:00", "24:00"),
+    ]);
+  });
+
+  it("SCRUM-241 [AC1] TC-241-02: a day marked Closed, and a weekday with no hours once others have them, are closed all day", () => {
+    const entries = closedHours(OFFICE_HOURS, MONDAY, "2035-03-18");
+
+    expect(day(entries, "2035-03-17")).toEqual([seg("closed", "2035-03-17", "00:00", "24:00")]);
+    expect(day(entries, "2035-03-18")).toEqual([seg("closed", "2035-03-18", "00:00", "24:00")]);
+    // Friday is open, so the week has two closed days and five open ones.
+    expect(day(entries, "2035-03-16").map(([kind]) => kind)).toEqual(["closed", "free", "closed"]);
+  });
+
+  it("SCRUM-241 [AC3] TC-241-03: opening and closing are boundaries: a booking from exactly opening to exactly closing sits flush against the closed hours, with no free sliver", () => {
+    const booking = {
+      kind: "booking" as const,
+      id: "bkg",
+      startAt: at(MONDAY, "09:00"),
+      endAt: at(MONDAY, "18:00"),
+    };
+
+    expect(day([...closedHours(OFFICE_HOURS, MONDAY, MONDAY), booking], MONDAY)).toEqual([
+      seg("closed", MONDAY, "00:00", "09:00"),
+      seg("booking", MONDAY, "09:00", "18:00"),
+      seg("closed", MONDAY, "18:00", "24:00"),
+    ]);
+  });
+
+  it("SCRUM-241 [AC3] TC-241-03: a venue that opens at midnight has no closed stretch before opening, and one open until 23:59 is closed for the last minute only", () => {
+    const entries = closedHours([open(1, "00:00", "23:59")], MONDAY, MONDAY);
+
+    expect(day(entries, MONDAY)).toEqual([
+      seg("free", MONDAY, "00:00", "23:59"),
+      seg("closed", MONDAY, "23:59", "24:00"),
+    ]);
+  });
+
+  it("SCRUM-241 [AC4] TC-241-04: a venue with no opening hours recorded has no closed hours, and stays available all day", () => {
+    expect(closedHours([], MONDAY, "2035-03-18")).toEqual([]);
+    expect(day(closedHours([], MONDAY, MONDAY), MONDAY)).toEqual([
+      seg("free", MONDAY, "00:00", "24:00"),
+    ]);
+  });
+
+  it("SCRUM-241 [AC1, AC2] TC-241-05: a booking's turnaround past closing, and unavailability overnight, show as themselves over the closed hours", () => {
+    const entries: CalendarEntry[] = [
+      ...closedHours(OFFICE_HOURS, MONDAY, MONDAY),
+      { kind: "booking", id: "bkg", startAt: at(MONDAY, "16:00"), endAt: at(MONDAY, "18:00") },
+      // SCRUM-159 AC9 lets a turnaround run past closing.
+      { kind: "turnaround", id: "bkg-turnaround", startAt: at(MONDAY, "18:00"), endAt: at(MONDAY, "18:30"), eventName: "Board Meeting" },
+      { kind: "unavailability", id: "vun", startAt: at(MONDAY, "02:00"), endAt: at(MONDAY, "04:00"), reason: "MAINTENANCE" },
+    ];
+
+    expect(day(entries, MONDAY)).toEqual([
+      seg("closed", MONDAY, "00:00", "02:00"),
+      seg("unavailability", MONDAY, "02:00", "04:00"),
+      seg("closed", MONDAY, "04:00", "09:00"),
+      seg("free", MONDAY, "09:00", "16:00"),
+      seg("booking", MONDAY, "16:00", "18:00"),
+      seg("turnaround", MONDAY, "18:00", "18:30"),
+      seg("closed", MONDAY, "18:30", "24:00"),
+    ]);
   });
 });
