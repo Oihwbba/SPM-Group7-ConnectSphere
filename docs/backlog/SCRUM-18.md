@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-18 - Request clarification on an event under review
@@ -28,3 +28,9 @@
 * The clarification request notification is owned by SCRUM-56.
 
 **Business rule:** clarification is a sub-state of Under Review, not a tenth event status.
+
+**References moved:** the clarification-response edit path in the third criterion is SCRUM-108, which SCRUM-109 was merged into. The notification in the last criterion is SCRUM-45 AC8; SCRUM-56 was dropped.
+
+**Change log**
+
+* 2026-10-29 (SCRUM-243, PO approval pending): added the References moved note for SCRUM-109 and SCRUM-56. Criteria unchanged.
