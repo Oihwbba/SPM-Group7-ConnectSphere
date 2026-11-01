@@ -17,7 +17,7 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | [TC-164-02](#tc-164-02) | Positive | AC 1, AC 4 | Unit, e2e |
 | [TC-164-03](#tc-164-03) | Negative | AC 1, AC 3 | e2e |
 | [TC-164-04](#tc-164-04) | Negative | AC 2, AC 3 | Unit, integration |
-| [TC-164-05](#tc-164-05) | Positive | AC 2 | Unit, integration, e2e |
+| [TC-164-05](#tc-164-05) | Positive | AC 2 | Integration, e2e |
 | [TC-164-06](#tc-164-06) | Positive | AC 5 | Manual |
 
 ### TC-164-01
@@ -70,7 +70,7 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | Test Data | Roles `COORDINATOR_LEAD`, `SAFETY_OFFICER` |
 | Expected Result | Every check is refused. The direct call is refused and the database is unchanged. |
 
-**Automated by:** `tests/unit/auth.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s reads only its own notifications and can't decide, plan or edit an event" (2 tests); `tests/integration/permission-guard.test.ts` › "refuses %s directly and leaves the database unchanged" (includes both roles)
+**Automated by:** `tests/unit/auth.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s reads only its own notifications and can't decide, plan or edit an event" (2 tests); `tests/integration/permission-guard.test.ts` › "SCRUM-164 [AC2, AC3] TC-164-04, SCRUM-172 [AC1] TC-172-01: refuses %s directly and leaves the database unchanged" (includes both roles)
 
 ### TC-164-05
 
@@ -83,7 +83,7 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | Test Data | `lead@test.local`, `safety@test.local` |
 | Expected Result | The Lead's work behaves as SCRUM-165, SCRUM-21 and SCRUM-141 describe. The Safety Officer's work behaves as SCRUM-166 describes, and its approval doesn't confirm the event (SCRUM-166 AC14). |
 
-**Automated by:** the Safety Officer's half by SCRUM-166's cases ([TC-166-15](SCRUM-166.md#tc-166-15)). The Lead's half by SCRUM-165's, SCRUM-21's and SCRUM-141's cases: `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-20 [AC1, AC2, AC3, AC7, AC8] TC-20-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it" (assigning), `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC6, AC8] …" (reassigning) and `e2e/all-events.spec.ts` › "SCRUM-141 [AC2, AC3, AC5] TC-141-04, TC-141-06, TC-141-08: …" (every event), with `tests/integration/reassign.test.ts` › "SCRUM-21 [AC2, AC9] TC-21-02: …"
+**Automated by:** the Safety Officer's half by SCRUM-166's cases ([TC-166-15](SCRUM-166.md#tc-166-15)). The Lead's half by SCRUM-165's, SCRUM-21's and SCRUM-141's cases: `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it" (assigning), `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC6, AC8] …" (reassigning) and `e2e/all-events.spec.ts` › "SCRUM-141 [AC2, AC3, AC5] TC-141-04, TC-141-06, TC-141-08: …" (every event), with `tests/integration/reassign.test.ts` › "SCRUM-21 [AC2, AC9] TC-21-02: …"
 
 ### TC-164-06
 

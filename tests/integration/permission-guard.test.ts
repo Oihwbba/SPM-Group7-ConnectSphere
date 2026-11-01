@@ -76,7 +76,7 @@ afterAll(async () => {
 
 describe.skipIf(!usesLocalDatabase)("SCRUM-67 — createDraftEvent is guarded for every role", () => {
   it.each(FORBIDDEN_ROLES)(
-    "refuses %s directly and leaves the database unchanged",
+    "SCRUM-164 [AC2, AC3] TC-164-04, SCRUM-172 [AC1] TC-172-01: refuses %s directly and leaves the database unchanged",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role));
 
@@ -101,7 +101,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-67 — createDraftEvent is guarded fo
     },
   );
 
-  it("still lets an ORGANISER create a draft (the permitted path works)", async () => {
+  it("SCRUM-67 [AC2] TC-67-03: still lets an ORGANISER create a draft (the permitted path works)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER"));
 
     const name = `SCRUM-67 guard check ${Date.now()}`;
