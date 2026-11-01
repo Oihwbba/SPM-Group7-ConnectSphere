@@ -15,7 +15,11 @@ import {
   isImpactful,
   outdatesSafetyCheck,
 } from "@/lib/change-application";
-import { cancelInTransaction } from "@/lib/event-closing";
+import {
+  cancelInTransaction,
+  completeIfTakenPlace,
+  EVENT_TOOK_PLACE,
+} from "@/lib/event-closing";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
 import { formatDateTime } from "@/lib/datetime";
@@ -130,7 +134,7 @@ type Outcome =
   | { refused: "reassigned" | "not-changeable" }
   | { refused: "decided"; status: ChangeRequestStatus }
   | { refused: "attendance" | "registration"; registered: number }
-  | { refused: "past-start" | "period" };
+  | { refused: "past-start" | "period" | "taken-place" };
 
 /**
  * SCRUM-128 — the assigned Coordinator decides a Submitted change request.
@@ -184,6 +188,9 @@ export async function decideChangeRequest(
 
     const outcome = await prisma.$transaction(async (tx): Promise<Outcome> => {
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+      // SCRUM-262: completing an event that has taken place rejects its
+      // submitted change requests (SCRUM-82 AC11), so none is decided here.
+      if (await completeIfTakenPlace(tx, eventId)) return { refused: "taken-place" };
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: {
@@ -461,6 +468,8 @@ export async function decideChangeRequest(
           );
         case "period":
           return err(PERIOD_INVERTED);
+        case "taken-place":
+          return err(EVENT_TOOK_PLACE);
       }
     }
 

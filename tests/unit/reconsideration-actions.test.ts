@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import { completeIfTakenPlace, EVENT_TOOK_PLACE } from "@/lib/event-closing";
 import {
   bookingStillStandsRefusal,
   reservationStillStandsRefusal,
@@ -48,6 +49,12 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// SCRUM-262: whether the event has taken place is the database's call, made in
+// tests/integration/finished-event.test.ts; here it hasn't unless a test says so.
+vi.mock("@/lib/event-closing", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/event-closing")>()),
+  completeIfTakenPlace: vi.fn().mockResolvedValue(false),
+}));
 vi.mock("@/lib/reconsideration", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/reconsideration")>()),
   bookingStillStandsRefusal: vi.fn(),
@@ -738,5 +745,22 @@ describe("resolution notices — SCRUM-124 AC9", () => {
       (await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" })).ok,
     ).toBe(false);
     expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+});
+
+// SCRUM-262 — an event that has taken place is completed; its flags are no
+// longer resolved, and it never returns to Planning.
+describe("resolveReconsiderationFlag — SCRUM-262", () => {
+  it("SCRUM-262 [AC2, AC3] TC-262-04: a flag on an event that has taken place is not resolved", async () => {
+    (completeIfTakenPlace as Mock).mockResolvedValueOnce(true);
+
+    expect(
+      await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" }),
+    ).toEqual({ ok: false, error: EVENT_TOOK_PLACE });
+    expect(completeIfTakenPlace).toHaveBeenCalledWith(tx, expect.any(String));
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      (completeIfTakenPlace as Mock).mock.invocationCallOrder[0],
+    );
+    expectNothingWritten();
   });
 });
