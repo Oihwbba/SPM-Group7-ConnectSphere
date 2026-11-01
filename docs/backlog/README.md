@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **78** |
+| Tasks | **79** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -277,3 +277,4 @@ _7 stories, 11 points_
 | [SCRUM-240](SCRUM-240.md) | Bug: The live app hits Supabase's connection limit because the database pool has no maximum | SCRUM Sprint 4 | In Progress |
 | [SCRUM-241](SCRUM-241.md) | Bug: The venue availability calendar shows closed hours as available | SCRUM Sprint 4 | In Progress |
 | [SCRUM-249](SCRUM-249.md) | Bug: An overdue event can still be approved or confirmed, so an event that never happened can end up Completed | SCRUM Sprint 4 | In Review |
+| [SCRUM-261](SCRUM-261.md) | Bug: Reserving equipment is refused when the earlier requests it waits for never run at the same time | SCRUM Sprint 4 | In Review |
