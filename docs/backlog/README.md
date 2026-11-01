@@ -276,3 +276,4 @@ _7 stories, 11 points_
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
 | [SCRUM-240](SCRUM-240.md) | Bug: The live app hits Supabase's connection limit because the database pool has no maximum | SCRUM Sprint 4 | In Progress |
 | [SCRUM-241](SCRUM-241.md) | Bug: The venue availability calendar shows closed hours as available | SCRUM Sprint 4 | In Progress |
+| [SCRUM-249](SCRUM-249.md) | Bug: An overdue event can still be approved or confirmed, so an event that never happened can end up Completed | SCRUM Sprint 4 | In Review |

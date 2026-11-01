@@ -15,6 +15,7 @@ import {
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { auditValue } from "@/lib/audit-value";
+import { isOverdue, OVERDUE_REFUSAL } from "@/lib/event-closing";
 import { getReadinessChecklist } from "@/lib/event-readiness";
 import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
 import {
@@ -599,6 +600,17 @@ export async function transitionEventStatus(
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      // SCRUM-249 AC1, AC3: approval asks the start under the event's lock, so
+      // an edit moving the start can't slip between the check and the update.
+      if (approved) {
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${event.id} FOR UPDATE`;
+        const current = await tx.event.findUniqueOrThrow({
+          where: { id: event.id },
+          select: { status: true, startAt: true },
+        });
+        if (isOverdue(current)) return "overdue" as const;
+      }
+
       const now = new Date();
       const result = await tx.event.updateMany({
         where: {
@@ -694,6 +706,7 @@ export async function transitionEventStatus(
       });
       return true;
     });
+    if (updated === "overdue") return err(OVERDUE_REFUSAL);
     if (!updated) {
       return err(
         "This event was updated by another user. Refresh and try again.",
@@ -764,6 +777,9 @@ export async function confirmEvent(
         return { refused: transitionRefusal(current.status, "confirmed") };
       }
       if (current.coordinatorId !== user!.id) return "reassigned" as const;
+      // SCRUM-249 AC2, AC3: read under the lock above. It comes before
+      // readiness, because finishing the arrangements can't make it confirmable.
+      if (isOverdue(current)) return { refused: OVERDUE_REFUSAL };
 
       const checklist = (await getReadinessChecklist(tx, eventId))!;
       if (!checklist.ready) {
