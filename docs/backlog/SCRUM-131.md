@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-131 - Use the agreed status names on every screen
@@ -30,6 +30,8 @@
 
 **Related:** these are display names. Stored values can differ; for example a reservation stored as CONFIRMED is shown as Reserved, and a change request stored as PENDING_REVIEW is shown as Submitted.
 
+**Supersedes:** SCRUM-84 AC2's status names (shown in capitals) and the name of its "Submitted" tab, which is now "Sent" (AC1).
+
 **Why this is a new story:** SCRUM-84 (Sprint 1, Done) names the Organiser's tab "Submitted", although it also lists requests that are Under Review, in Planning, Confirmed and so on. Reservations are stored as CONFIRMED (SCRUM-31, Done), and the team's lifecycle table named registrations "Confirmed"; both collide with the event status.
 
 **Change log**
@@ -37,5 +39,6 @@
 * 2026-10-01 (audit): AC1 corrected; the code has no "In Review" tab, and the Organiser's "Submitted" tab lists every request that isn't a draft. AC2 uses the built equipment statuses: request statuses, and Reserved for reservations (SCRUM-31). Waitlisted removed (SCRUM-79 is beyond Release 1). Handovers have no Rejected status, because SCRUM-21 has no decline step.
 * 2026-10-07 (Week 7 changes 4 to 6): AC2 adds the Held and Expired booking statuses (SCRUM-163). AC5 drops the handover statuses, because the Lead now reassigns at once (SCRUM-21). AC7 names the safety check states and keeps the event in Planning (SCRUM-167). Re-estimated from 1 to 2 points.
 * 2026-10-07 (backlog refinement): AC6 points to SCRUM-85 and AC7 to SCRUM-166, which SCRUM-133 and SCRUM-167 were merged into.
+* 2026-10-29 (SCRUM-243, PO approval pending): added the Supersedes line for SCRUM-84, which AC1 already changed; SCRUM-84 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Event Status Management
