@@ -207,7 +207,7 @@ export function CoordinatorRequests({
           ) : (
             <Card>
               <CardContent className="p-0">
-                <Table aria-label="Your equipment requests">
+                <Table aria-label="Your equipment requests" className="table-stack">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Event</TableHead>
@@ -240,21 +240,21 @@ export function CoordinatorRequests({
                             {formatEventPeriod(request.event)}
                           </p>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground" data-label="Items">
                           {request.lines.length}{" "}
                           {request.lines.length === 1 ? "item" : "items"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell data-label="Status">
                           <RequestStatusBadge status={request.status} />
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground" data-label="Submitted">
                           {formatDate(request.createdAt)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="h-11 w-11 p-0 md:h-8 md:w-8"
                             aria-label={`View details of ${request.event.name}`}
                             title="View details"
                             data-testid="view-request-button"

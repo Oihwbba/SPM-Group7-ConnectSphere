@@ -161,7 +161,7 @@ export default async function AllEventsPage({
       ) : (
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-stack">
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -182,18 +182,18 @@ export default async function AllEventsPage({
                         {event.name}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-sm md:text-xs" data-label="Date & time">
                       {formatEventTime(event.startAt, event.endAt)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Status">
                       <StatusBadge status={event.status} />
                     </TableCell>
-                    <TableCell className="text-xs" data-testid="venues">
+                    <TableCell className="text-sm md:text-xs" data-testid="venues" data-label="Venues">
                       {event.bookings.length > 0
                         ? event.bookings.map((b) => b.venue.name).join(", ")
                         : "Not booked"}
                     </TableCell>
-                    <TableCell className="text-xs" data-testid="coordinator">
+                    <TableCell className="text-sm md:text-xs" data-testid="coordinator" data-label="Coordinator">
                       {event.coordinator?.name ?? "Unassigned"}
                     </TableCell>
                   </TableRow>

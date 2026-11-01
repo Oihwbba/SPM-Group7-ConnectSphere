@@ -109,7 +109,7 @@ export function WorkQueue({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
               href={state.listHref}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground md:min-h-6"
             >
               <ArrowLeft className="h-4 w-4" aria-hidden /> All {noun}
             </Link>
@@ -144,7 +144,9 @@ export function WorkQueue({
               <aside
                 aria-label="Decision"
                 data-testid="queue-decision"
-                className="space-y-3 lg:sticky lg:top-20"
+                // min-w-0: on a 320px phone the decision's own buttons would
+                // otherwise stretch the single grid column past the screen.
+                className="min-w-0 space-y-3 lg:sticky lg:top-20"
               >
                 {decision}
               </aside>
@@ -174,7 +176,7 @@ function QueueTable({ state, title }: { state: QueueState; title: string }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <Table aria-label={title} className="table-fixed">
+        <Table aria-label={title} className="table-stack table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[34%]">Event</TableHead>
@@ -217,10 +219,14 @@ function QueueTable({ state, title }: { state: QueueState; title: string }) {
                 <TableCell
                   className="text-muted-foreground"
                   data-testid="event-date"
+                  data-label="Event date"
                 >
                   {item.eventStart ? formatDate(item.eventStart) : "—"}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell
+                  className="text-muted-foreground"
+                  data-label="What's asked"
+                >
                   <span
                     className="block truncate"
                     title={item.asked}
@@ -232,6 +238,7 @@ function QueueTable({ state, title }: { state: QueueState; title: string }) {
                 <TableCell
                   className="text-muted-foreground"
                   data-testid="requested"
+                  data-label="Requested"
                 >
                   {requestedLabel(item.requestedAt)}
                 </TableCell>
@@ -269,7 +276,7 @@ function SortHead({
       <Link
         href={state.href(sortChange(view, sortKey))}
         className={cn(
-          "inline-flex items-center gap-1 hover:text-foreground",
+          "inline-flex min-h-6 items-center gap-1 hover:text-foreground",
           active && "text-foreground",
         )}
       >
@@ -285,7 +292,7 @@ function Badges({ badges }: { badges: QueueBadge[] }) {
     <Badge
       key={badge.label}
       variant={BADGE_VARIANT[badge.tone]}
-      className="shrink-0 whitespace-nowrap px-2 py-0 text-[11px]"
+      className="shrink-0 whitespace-nowrap px-2 py-0 text-xs md:text-[11px]"
       data-testid="queue-badge"
     >
       {badge.label}
