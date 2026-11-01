@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-23. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-50 - Submit a venue booking request
@@ -34,8 +34,6 @@
 10. A Pending request does not block the venue; only an Approved booking does.
 
 **Related:** fixing the period and attendance to the event is SCRUM-170; refusing periods outside opening hours is SCRUM-34; withdrawing a Pending request is SCRUM-142; competing Pending requests are decided in submission order (SCRUM-134); Venue Staff are notified of new requests (SCRUM-124).
-
-**Customer basis:** "Co-ordinator can submit booking request based on per event that he is assigned. Each event can only has one venue." "Confirmed bookings block availability. Pending conflicts are only resolved outside of system currently; the team can also propose and implement other mechanism."
 
 **Change log**
 
