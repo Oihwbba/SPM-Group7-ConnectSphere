@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-30. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-247 - Bug: A Coordinator's edit during re-planning can set expected attendance below the people already registered, overbooking the event
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-11 - Attendee Registration |
 | **Priority** | Highest |
 | **Story points** | - |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-247 |
 
