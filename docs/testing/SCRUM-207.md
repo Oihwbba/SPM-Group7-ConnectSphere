@@ -45,6 +45,10 @@ action that can't be undone asking in the shared confirmation dialog
 | [TC-207-22](#tc-207-22) | Boundary | User story | Unit |
 | [TC-207-23](#tc-207-23) | Positive | User story | e2e |
 | [TC-207-24](#tc-207-24) | Positive | User story | e2e |
+| [TC-207-25](#tc-207-25) | Positive, Boundary | AC 1 | e2e |
+| [TC-207-26](#tc-207-26) | Positive, Boundary | AC 1 | e2e |
+| [TC-207-27](#tc-207-27) | Positive, Boundary | AC 5 | e2e |
+| [TC-207-28](#tc-207-28) | Positive, Boundary | AC 4 | e2e |
 
 "User story" cases check the customer's page-by-page changes that make pages
 look and behave the same; each supports the story as a whole rather than one
@@ -377,3 +381,55 @@ Not in the dialog, deliberately: Record unavailability, which already asks again
 | Expected Result | 1: the request opens on the queue's page (SCRUM-211), its lines and history on the left and the decision on the right. 2: the Coordinator's pop-up has a **Details** tab (lines and actions) and a **History** tab (the timeline of every change). |
 
 **Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" and "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …"
+
+### TC-207-25
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-25 |
+| Test Scenario | [Positive, Boundary] AC 1: every page fits a phone, scrolling only up and down |
+| Pre-conditions | Seed data. A phone screen 360 px wide, and a small one 320 px wide. |
+| Test Steps | For each role, open every page in its menu and a page off the menu (an event, a venue, an open request or check), at 360 px and then 320 px. |
+| Test Data | One seeded account per role. |
+| Expected Result | Each page shows its title. Neither the page nor any table or box in it scrolls sideways (only a row of tabs scrolls within itself, by design, SCRUM-208 TC-208-14) (WCAG 2.2 1.4.10 Reflow; SCRUM-132 AC1): tables become one card per row, with every column's value and its name. |
+
+**Automated by:** `e2e/phone-layout.spec.ts` › "SCRUM-207 [AC1] TC-207-25: …'s pages scroll only up and down at phone width" (one test per role)
+
+### TC-207-26
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-26 |
+| Test Scenario | [Positive, Boundary] AC 1: a queue's rows keep every column, and what you tap is big enough, on a phone |
+| Pre-conditions | Seed data. A phone screen 360 px wide. |
+| Test Steps | 1. As Venue Staff, open Bookings. <br> 2. Open a venue, then the Venue Catalogue. <br> 3. As the Organiser, open an event. |
+| Test Data | `venuestaff@test.local`, `organiser@test.local` |
+| Expected Result | 1: a row shows its event date, what's asked and when it was requested, all on screen; the **Event date** and **Requested** sort links are at least 44 px tall. 2: **Back to Venue Catalogue** and each venue's **View** link are at least 44 px tall (WCAG 2.2 2.5.8 needs 24 px; 44 px is the aim). 3: every tab is at least 44 px tall. |
+
+**Automated by:** `e2e/phone-layout.spec.ts` › "SCRUM-207 [AC1] TC-207-26: a queue's rows show every column with its name, and what you tap is at least 44px tall, at phone width"
+
+### TC-207-27
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-27 |
+| Test Scenario | [Positive, Boundary] AC 5: the confirmation pop-up fits a small phone |
+| Pre-conditions | Seed data: a pending booking (`bkg_pending`). A phone screen 320 × 640 px. |
+| Test Steps | As Venue Staff, open the booking and choose **Reject**; then choose the way back. |
+| Test Data | `venuestaff@test.local` |
+| Expected Result | The shared pop-up sits wholly on screen, with both its buttons in view and at least 44 px tall. The way back closes it and nothing is rejected. |
+
+**Automated by:** `e2e/phone-layout.spec.ts` › "SCRUM-207 [AC5] TC-207-27: the confirmation pop-up fits a small phone, with both its buttons in view and big enough to tap"
+
+### TC-207-28
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-28 |
+| Test Scenario | [Positive, Boundary] AC 4: a form is comfortable to fill on a phone |
+| Pre-conditions | Seed data. A phone screen 360 px wide. |
+| Test Steps | As Venue Staff, open the Venue Catalogue and choose **Add venue**; then close the pop-up without saving. |
+| Test Data | `venuestaff@test.local` |
+| Expected Result | Every text field uses 16 px type, so an iPhone doesn't zoom when one is tapped; each day's **closed** checkbox is at least 20 × 20 px; the pop-up's close button is at least 44 px tall. |
+
+**Automated by:** `e2e/phone-layout.spec.ts` › "SCRUM-207 [AC4] TC-207-28: a form's text fields use 16px type, and its checkboxes and close button are big enough to tap, at phone width"
