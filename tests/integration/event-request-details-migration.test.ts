@@ -25,7 +25,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-89 — recovered event_request_detail
     await prisma.$disconnect();
   });
 
-  it("creates the four Event columns with the same type, nullability and default as Supabase", async () => {
+  it("SCRUM-89: creates the four Event columns with the same type, nullability and default as Supabase", async () => {
     // information_schema returns identifier types (`name`) the Prisma driver
     // adapter can't deserialize, so every value is cast to text.
     const columns = await prisma.$queryRaw<ColumnDefinition[]>`
@@ -45,7 +45,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-89 — recovered event_request_detail
     ]);
   });
 
-  it("records both event-detail migrations as cleanly applied, as Supabase does", async () => {
+  it("SCRUM-89: records both event-detail migrations as cleanly applied, as Supabase does", async () => {
     const applied = await prisma.$queryRaw<{ migration_name: string }[]>`
       select migration_name
       from _prisma_migrations

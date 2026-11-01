@@ -163,7 +163,7 @@ describe("reportUnprovidableEquipment — SCRUM-32", () => {
     expect(parse("x".repeat(501))).toBe(false);
   });
 
-  it("SCRUM-32 [AC1] TC-32-02: a request without a reservation id is not found, before anything is read", async () => {
+  it("SCRUM-32 [AC2] TC-32-02: a request without a reservation id is not found, before anything is read", async () => {
     expect(await reportUnprovidableEquipment({ reason: REASON })).toEqual({
       ok: false,
       error: "Reservation not found.",
@@ -239,7 +239,7 @@ describe("reportUnprovidableEquipment — SCRUM-32", () => {
     }
   });
 
-  it("SCRUM-32 TC-32-05: a signed-out caller is refused", async () => {
+  it("SCRUM-32 [AC4] TC-32-05: a signed-out caller is refused", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect((await report()).ok).toBe(false);

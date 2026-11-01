@@ -19,7 +19,7 @@ unless the case says otherwise.
 | [TC-84-01](#tc-84-01) | Negative | AC 1 | Unit, e2e |
 | [TC-84-02](#tc-84-02) | Positive | AC 2 | Unit |
 | [TC-84-03](#tc-84-03) | Positive | AC 3, AC 4 | Unit, e2e |
-| [TC-84-04](#tc-84-04) | Boundary | AC 5 | Unit |
+| [TC-84-04](#tc-84-04) | Boundary | AC 5 | Unit, e2e |
 | [TC-84-05](#tc-84-05) | Positive | AC 6, AC 9 | Unit, e2e |
 | [TC-84-06](#tc-84-06) | Positive | AC 7 | Unit, e2e |
 | [TC-84-07](#tc-84-07) | Positive | AC 8 | Unit, e2e |
@@ -39,7 +39,7 @@ unless the case says otherwise.
 | Test Data | organiser2's seeded "Another Client's Event — Product Launch"; organiser@test.local's "Draft — Annual Tech Summit" |
 | Expected Result | "Another Client's Event — Product Launch" is listed. Nothing of organiser@test.local's, such as "Draft — Annual Tech Summit", appears anywhere on the page. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events"
 
 ### TC-84-02
 
@@ -52,7 +52,7 @@ unless the case says otherwise.
 | Test Data | The seeded events |
 | Expected Result | **All** lists every one. **Drafts** lists only the drafts; **Submitted** lists every non-draft, in any later status. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser", "SCRUM-84: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab …", "SCRUM-84: an organiser's second tab still holds everything they have sent"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser", "SCRUM-84 [AC2] TC-84-02: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab …", "SCRUM-84 [AC2] TC-84-02: an organiser's second tab still holds everything they have sent"
 
 ### TC-84-03
 
@@ -65,7 +65,7 @@ unless the case says otherwise.
 | Test Data | The seeded events |
 | Expected Result | The most recently updated request is first. Each row shows the name, proposed dates and status badge. Clicking a row opens that request's full details. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3 - Implicit Rule / Default Sort]: filterAndSortEvents orders list by updatedAt descending by default", "SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display", "SCRUM-84 [AC4 - Happy Path]: retrieves full detail model when selecting a specific event request"; `e2e/events.spec.ts` › "SCRUM-84 [AC3, AC4] TC-84-03, SCRUM-208 [AC1] TC-208-01: organiser views list of their own events with names, status badges, and selects an entry for full detail"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3] TC-84-03: [Implicit Rule / Default Sort] filterAndSortEvents orders list by updatedAt descending by default", "SCRUM-84 [AC3] TC-84-03, SCRUM-23 [AC2] TC-23-02: [Happy Path] exposes event name and current status badge properties for list display", "SCRUM-84 [AC4] TC-84-03: [Happy Path] retrieves full detail model when selecting a specific event request"; `e2e/events.spec.ts` › "SCRUM-84 [AC3, AC4] TC-84-03, SCRUM-208 [AC1] TC-208-01: organiser views list of their own events with names, status badges, and selects an entry for full detail"
 
 ### TC-84-04
 
@@ -78,7 +78,7 @@ unless the case says otherwise.
 | Test Data | None |
 | Expected Result | "No events yet" with "Create your first draft event to get started. You can complete the details and submit it for review later." and a **Create Event Request** button, which opens the form. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC5 - Edge Case / Empty State]: returns an empty array when an organiser has not created any event requests" (the data); `tests/unit/organiser-empty-state.test.tsx` › "SCRUM-84 [AC5] TC-84-04: says there are no events yet and offers Create Event Request" (the message and the button, beside the header's). The button opens the same form as the header's, which `e2e/events.spec.ts` drives.
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC5] TC-84-04: [Edge Case / Empty State] returns an empty array when an organiser has not created any event requests" (the data); `tests/unit/organiser-empty-state.test.tsx` › "SCRUM-84 [AC5] TC-84-04: says there are no events yet and offers Create Event Request" (the message and the button, beside the header's). The button opens the same form as the header's, which `e2e/events.spec.ts` drives.
 
 ### TC-84-05
 
@@ -91,7 +91,7 @@ unless the case says otherwise.
 | Test Data | "Annual" |
 | Expected Result | Step 1 shows only that status. Step 2 shows "Annual Tech Summit" and not "Career Fair". Step 3 brings back every request for the chosen filter. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC6 - Happy Path / Search Filter]: filters event list by search query matching event name or purpose via filterAndSortEvents", "SCRUM-84 [AC9 - Search Cleared State & Partial Matches]: matches partial string and restores list when search is cleared"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC6] TC-84-05: [Happy Path / Search Filter] filters event list by search query matching event name or purpose via filterAndSortEvents", "SCRUM-84 [AC9] TC-84-05: [Search Cleared State & Partial Matches] matches partial string and restores list when search is cleared"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
 
 ### TC-84-06
 
@@ -104,7 +104,7 @@ unless the case says otherwise.
 | Test Data | The seeded events |
 | Expected Result | By default the most recently updated is first. After step 2 the rows are in name order. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC7 - Default & Custom Sorting]: orders event list by updatedAt descending by default and by name asc when specified"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC7] TC-84-06: [Default & Custom Sorting] orders event list by updatedAt descending by default and by name asc when specified"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
 
 ### TC-84-07
 
@@ -117,7 +117,7 @@ unless the case says otherwise.
 | Test Data | "Annual" |
 | Expected Result | Only requests that match the tab, the filter and the search, all three, are listed. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC8 - Multi-Criteria Filtering Combination]: filters events by active tab AND status filter AND search query simultaneously"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC8] TC-84-07: [Multi-Criteria Filtering Combination] filters events by active tab AND status filter AND search query simultaneously"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
 
 ### TC-84-08
 
