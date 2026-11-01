@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-48 - User views their notification list
@@ -31,7 +31,7 @@
 
 **Related:** the Sprint 1 and 2 code already creates notifications (assignment, clarification, equipment-request updates), so this list is the first place users can read them. The Notifications placeholder page in the code still names SCRUM-51; it should name this story.
 
-**Customer basis:** "The notification delivery channel is up to your implementation (can be in-app or external)." Week 7 change 4: "The Event Coordinator should be informed before or when the hold expires."
+**Customer basis:** Week 7 change 4: "The Event Coordinator should be informed before or when the hold expires."
 
 **Change log**
 
