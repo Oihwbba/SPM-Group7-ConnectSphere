@@ -55,7 +55,11 @@ Copy this block for each case:
   afterwards. Quote messages exactly.
 - **Automated by** (below the table): the test file and test title that
   automate the case, or **Manual** if none does yet. A case marked Manual is a
-  test still to be written.
+  test still to be written. Write each title in full or shorten it with "…",
+  and keep a template's `${x}` or `%s`. `npm run check:citations` checks every
+  citation, and CI fails when one names a file or title that doesn't exist
+  (SCRUM-196). A quote in prose that follows a sentence's end, or sits inside
+  parentheses with no file of their own, is read as text.
 - **The test's title** starts with the story, the criteria and the case:
   `SCRUM-31 [AC1, AC2] TC-31-01: what must happen`. The reviewer finds tests
   by the key, and the graders trace story → criterion → case → test by it.
@@ -202,6 +206,7 @@ SCRUM-236 the unit and integration tests, with every citation updated.
 | [SCRUM-210](SCRUM-210.md) | Caylern Goh | 9 | Every case automated (unit for each role's groups, single-link groups, permission changes, Notifications, the pinned landing pages and several roles; e2e for each role's landing page and menu, collapsed, expanded and on a phone) |
 | [SCRUM-212](SCRUM-212.md) | Caylern Goh | 12 | Every case automated (unit for the state mapping and its boundaries, the My Registrations row, Withdraw shown and hidden, and the empty state; e2e for each state on Browse Events and the event page, withdrawing through the shared dialog, and the three pages at 360 px) |
 | [SCRUM-216](SCRUM-216.md) | Caylern Goh | 7 | A Chore task: the epic check for SCRUM-9 Access Control; AC 3 automated (unit, integration for a refused call writing nothing, e2e for each role's menu, refusals, ownership and sign-in), AC 2 by the citation check recorded in #311, and AC 1, AC 4 and AC 5 Manual (Jira) |
+| [SCRUM-196](SCRUM-196.md) | Jin Hong | 11 | A Chore task: the CI check that every citation names a test and file that exist; automated by unit tests, and TC-196-11 by the check itself in CI |
 | [SCRUM-225](SCRUM-225.md) | Jin Hong | 5 | A Chore task: the GLM review skipped with a passing check on its quota or rate limit; automated by unit tests except TC-225-05, a document check |
 | [SCRUM-234](SCRUM-234.md) | Jin Hong | 3 | A Chore task: the e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation; automated by e2e except TC-234-03, a document check |
 | [SCRUM-236](SCRUM-236.md) | Jin Hong | 6 | A Chore task: every unit and integration test titled after its story, criteria and case; checked by the audit in #313, and TC-236-04 by SCRUM-196's citation check once it merges |
