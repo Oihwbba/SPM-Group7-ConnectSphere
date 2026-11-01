@@ -26,20 +26,20 @@ function hrefsFor(role: Role): string[] {
 }
 
 describe("role-based navigation — SCRUM-66", () => {
-  it("lands every role on a page that is in its own nav", () => {
+  it("SCRUM-66 [AC1, AC2, AC3] TC-66-01: lands every role on a page that is in its own nav", () => {
     for (const role of ROLES) {
       expect(hrefsFor(role)).toContain(LANDING_ROUTE_BY_ROLE[role]);
     }
   });
 
-  it("keeps venue, equipment and booking work out of an organiser's nav", () => {
+  it("SCRUM-66 [AC3] TC-66-02: keeps venue, equipment and booking work out of an organiser's nav", () => {
     const hrefs = hrefsFor("ORGANISER");
     expect(hrefs).not.toContain("/venues");
     expect(hrefs).not.toContain("/equipment");
     expect(hrefs).not.toContain("/bookings");
   });
 
-  it("shows each internal role its own work", () => {
+  it("SCRUM-66 [AC1, AC2, AC3] TC-66-01: shows each internal role its own work", () => {
     expect(hrefsFor("VENUE_STAFF")).toContain("/bookings");
     expect(hrefsFor("TECH_SUPPORT")).toContain("/equipment");
     expect(hrefsFor("COORDINATOR")).toContain("/venues");
@@ -48,7 +48,7 @@ describe("role-based navigation — SCRUM-66", () => {
 
   // SCRUM-27 — coordinators raise equipment requests from their own page;
   // the equipment pool itself stays Technical Support's.
-  it("shows a coordinator equipment requests but not the equipment pool", () => {
+  it("SCRUM-66 [AC3] TC-66-02: shows a coordinator equipment requests but not the equipment pool", () => {
     const hrefs = hrefsFor("COORDINATOR");
     expect(hrefs).toContain("/equipment-requests");
     expect(hrefs).not.toContain("/equipment");
@@ -56,7 +56,7 @@ describe("role-based navigation — SCRUM-66", () => {
   });
 
   // SCRUM-28 — Technical Support reviews the requests coordinators raise.
-  it("shows Technical Support the equipment pool and the requests to review", () => {
+  it("SCRUM-66 [AC3] TC-66-02: shows Technical Support the equipment pool and the requests to review", () => {
     const hrefs = hrefsFor("TECH_SUPPORT");
     expect(hrefs).toContain("/equipment");
     expect(hrefs).toContain("/equipment-requests");
@@ -80,7 +80,7 @@ describe("role-based navigation — SCRUM-66", () => {
     expect(hrefsFor("ORGANISER")).not.toContain("/venues");
   });
 
-  it("gives an attendee only their events and registrations", () => {
+  it("SCRUM-66 [AC3] TC-66-02: gives an attendee only their events and registrations", () => {
     const hrefs = hrefsFor("ATTENDEE");
     expect(hrefs).toContain("/events");
     expect(hrefs).toContain("/registrations");
@@ -88,7 +88,7 @@ describe("role-based navigation — SCRUM-66", () => {
     expect(hrefs).not.toContain("/equipment");
   });
 
-  it("gives every role a human-readable label for the header", () => {
+  it("SCRUM-66 [AC1, AC2, AC3] TC-66-01: gives every role a human-readable label for the header", () => {
     for (const role of ROLES) {
       expect(ROLE_LABEL[role]).toBeTruthy();
     }
@@ -116,7 +116,7 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     { href: "/all-events", actions: ["event:view-all"] },
   ];
 
-  it("shows a link only to a role that holds the action behind it", () => {
+  it("SCRUM-66 [AC1, AC2, AC3] TC-66-01: shows a link only to a role that holds the action behind it", () => {
     for (const role of ROLES) {
       const hrefs = hrefsFor(role);
 
@@ -130,7 +130,7 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     }
   });
 
-  it("never shows a link a role has no action for", () => {
+  it("SCRUM-66 [AC3] TC-66-02: never shows a link a role has no action for", () => {
     for (const role of ROLES) {
       for (const href of hrefsFor(role)) {
         const route = ROUTE_ACTION.find((entry) => entry.href === href);
@@ -145,7 +145,7 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     }
   });
 
-  it("lands each role on the first link it is allowed to see", () => {
+  it("SCRUM-66 [AC5] TC-66-04: lands each role on the first link it is allowed to see", () => {
     for (const role of ROLES) {
       expect(LANDING_ROUTE_BY_ROLE[role]).toBe(navFor(role)[0].href);
     }
@@ -174,7 +174,7 @@ describe("navigation follows a permission change — SCRUM-66", () => {
     return import("@/lib/nav");
   }
 
-  it("shows a newly granted route to a role that has no label of its own for it", async () => {
+  it("SCRUM-66 [AC5] TC-66-04: shows a newly granted route to a role that has no label of its own for it", async () => {
     const nav = await navWith(
       (role, action) =>
         roleAllows(role, action) ||
@@ -187,7 +187,7 @@ describe("navigation follows a permission change — SCRUM-66", () => {
     });
   });
 
-  it("lands a role with no links on its notifications", async () => {
+  it("SCRUM-66 [AC5] TC-66-04: lands a role with no links on its notifications", async () => {
     const nav = await navWith(() => false);
 
     expect(nav.NAV_BY_ROLE.ATTENDEE).toEqual([]);

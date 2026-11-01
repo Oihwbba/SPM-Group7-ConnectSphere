@@ -398,7 +398,7 @@ describe("resolveReconsiderationFlag — Cancel arrangement (SCRUM-26 AC9, AC10)
   });
 
   it.each(["STILL_STANDS", "CANCEL"] as const)(
-    "SCRUM-26 [AC7] TC-26-10: a flagged hold past its expiry has released the venue, so %s is turned away and nothing is written",
+    "SCRUM-26 [AC7, AC9] TC-26-10: a flagged hold past its expiry has released the venue, so %s is turned away and nothing is written",
     async (decision) => {
       mockBooking.mockResolvedValue(owner());
       tx.booking.findUniqueOrThrow.mockResolvedValue({
@@ -536,7 +536,7 @@ describe("resolveReconsiderationFlag — exactly once (SCRUM-26 AC9)", () => {
     expect(tx.safetyCheck.updateMany).not.toHaveBeenCalled();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-26 [AC9]: does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(
       resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" }),

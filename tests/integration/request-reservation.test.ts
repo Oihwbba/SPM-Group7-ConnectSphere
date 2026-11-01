@@ -262,7 +262,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await totalReserved(roomy)).toBe(1);
     });
 
-    it("SCRUM-226 [AC1, AC3] SCRUM-155 [AC5] TC-155-17: a form opened before someone else reserved part of the request is refused, so no line is reserved twice", async () => {
+    it("SCRUM-226 [AC1, AC3], SCRUM-155 [AC5] TC-155-17: a form opened before someone else reserved part of the request is refused, so no line is reserved twice", async () => {
       const eventId = await event("PLANNING");
       const requestId = await approvedRequest(eventId, [
         { equipmentId: roomy, quantity: 1 },

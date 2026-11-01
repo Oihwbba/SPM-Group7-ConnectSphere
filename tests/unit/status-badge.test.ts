@@ -21,17 +21,17 @@ const ALL_STATUSES: EventStatus[] = [
 ];
 
 describe("StatusBadge metadata", () => {
-  it("covers every one of the nine statuses", () => {
+  it("SCRUM-16 [AC2, AC5] TC-16-02, SCRUM-23 [AC1] TC-23-01, SCRUM-24 [AC1, AC2] TC-24-01: covers every one of the nine statuses", () => {
     expect(Object.keys(STATUS_META).sort()).toEqual([...ALL_STATUSES].sort());
   });
 
-  it("gives every status its own icon, so colour is never the only signal", () => {
+  it("SCRUM-16 [AC2, AC5] TC-16-02: gives every status its own icon, so colour is never the only signal", () => {
     const icons = ALL_STATUSES.map((status) => STATUS_META[status].icon);
 
     expect(new Set(icons).size).toBe(ALL_STATUSES.length);
   });
 
-  it("gives every status a distinct icon and colour pair", () => {
+  it("SCRUM-16 [AC2, AC5] TC-16-02: gives every status a distinct icon and colour pair", () => {
     const pairs = ALL_STATUSES.map(
       (status) => `${STATUS_META[status].variant}:${STATUS_META[status].icon.displayName ?? STATUS_META[status].icon.name}`,
     );
@@ -39,14 +39,14 @@ describe("StatusBadge metadata", () => {
     expect(new Set(pairs).size).toBe(ALL_STATUSES.length);
   });
 
-  it("SCRUM-16: a draft is muted, and never shares a look with a request under review", () => {
+  it("SCRUM-16 [AC2, AC5] TC-16-02: a draft is muted, and never shares a look with a request under review", () => {
     expect(STATUS_META.DRAFT.variant).toBe("muted");
     expect(STATUS_META.DRAFT.variant).not.toBe(STATUS_META.SUBMITTED.variant);
     expect(STATUS_META.DRAFT.variant).not.toBe(STATUS_META.UNDER_REVIEW.variant);
     expect(STATUS_META.DRAFT.icon).not.toBe(STATUS_META.SUBMITTED.icon);
   });
 
-  it("labels each status in words a user reads, not the enum value", () => {
+  it("SCRUM-16 [AC2, AC5] TC-16-02, SCRUM-23 [AC1] TC-23-01: labels each status in words a user reads, not the enum value", () => {
     expect(STATUS_META.UNDER_REVIEW.label).toBe("Under Review");
     for (const status of ALL_STATUSES) {
       expect(STATUS_META[status].label).not.toContain("_");

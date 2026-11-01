@@ -425,7 +425,7 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     });
   });
 
-  it("SCRUM-128 [AC11], SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't", async () => {
+  it("SCRUM-128 [AC11] TC-128-16, SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
     tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(
       pendingRequest([
@@ -624,7 +624,7 @@ describe("decideChangeRequest — who and when (SCRUM-128 AC9)", () => {
     expectNothingWritten();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-128 [AC9]: does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(
       decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),

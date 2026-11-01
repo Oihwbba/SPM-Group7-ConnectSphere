@@ -52,3 +52,24 @@ The Prisma adapter is still installed, as the brief requires, and manages the
 - `role` lives in the token, so changing a user's role only takes effect on
   their next sign-in. Acceptable for this system; noted so nobody is surprised.
 - Every server action and page can trust `session.user.role` as a typed value.
+
+## Addendum (2026-10-29) — Role changes and sign-out (SCRUM-216)
+
+The SCRUM-216 epic check recorded two consequences of the JWT strategy. The
+Product Owner (Hann Qian) accepted both for Release 1 on 30 October 2026:
+
+- **A role change takes effect at the next sign-in.** The token carries
+  `role` and, since SCRUM-121, `additionalRoles`, so a role granted or removed
+  in the database doesn't change what an existing session can do until that
+  user signs in again. Every relationship is still read from the database at
+  the time of the request (ADR 0004), so a reassigned event leaves the old
+  Coordinator's reach at once; only the role itself waits.
+- **Signing out clears the browser's cookie but doesn't revoke the token.**
+  A copy of the token taken before sign-out stays valid until it expires
+  (Auth.js's default, 30 days, since `auth.config.ts` sets no `maxAge`). There
+  is no session table to delete a row from: that is the trade-off this ADR
+  made.
+
+Revoking either would need state on every request (a session table, or a
+token version on `User` checked in the `jwt` callback), which is what this ADR
+chose to avoid; it is recorded here as future work, not Release 1.
