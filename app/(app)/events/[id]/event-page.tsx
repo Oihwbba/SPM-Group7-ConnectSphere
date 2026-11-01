@@ -425,11 +425,13 @@ function NextStepBanner({
       data-testid="next-step"
       data-kind={step.kind}
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3 rounded-xl border-l-4 px-4 py-3 text-sm",
+        // The words stay on the left and the button on the right, so the card
+        // is no taller than it needs to be on a phone.
+        "flex items-center justify-between gap-3 rounded-xl border-l-4 px-3 py-2 text-sm",
         mine ? "border-primary bg-primary/5" : "border-muted-foreground/40 bg-muted/40",
       )}
     >
-      <div className="space-y-1">
+      <div className="min-w-0 space-y-0.5">
         <p className="flex items-center gap-2 font-medium">
           <Info className={cn("h-4 w-4 shrink-0", mine ? "text-primary" : "text-muted-foreground")} aria-hidden />
           {step.text}
@@ -437,7 +439,7 @@ function NextStepBanner({
         {handledBy}
       </div>
       {step.kind === "yours" && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
           {step.action.kind === "tab" && (
             <Button
               size="sm"

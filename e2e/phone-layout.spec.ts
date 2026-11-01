@@ -42,11 +42,9 @@ async function sidewaysScroll(page: Page) {
       found.push(`the page is ${root.scrollWidth}px wide`);
     }
     for (const el of document.body.querySelectorAll<HTMLElement>("*")) {
-      // Two strips scroll sideways within themselves on a phone by design,
-      // rather than squeezing: a row of tabs (SCRUM-208 TC-208-14) and an
-      // event's progress steps. The page around them doesn't.
+      // A row of tabs scrolls sideways on a phone by design (SCRUM-208
+      // TC-208-14); the page around it doesn't.
       if (el.getAttribute("role") === "tablist") continue;
-      if (el.getAttribute("aria-label") === "Progress") continue;
       const { overflowX } = getComputedStyle(el);
       if (
         (overflowX === "auto" || overflowX === "scroll") &&
