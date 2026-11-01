@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { primaryRoleLabel, rolesLabel } from "@/lib/nav";
 import { rolesOf } from "@/lib/auth/can";
-import { Sidebar } from "@/components/app/sidebar";
+import { MobileNav, Sidebar } from "@/components/app/sidebar";
 import { SphereLogo } from "@/components/app/sphere-logo";
 import { UserMenu } from "@/components/app/user-menu";
 import { NotificationBell } from "@/components/app/notification-bell";
@@ -40,8 +40,9 @@ export default async function AppLayout({
       {/* Scrolls away with the page, so the sticky top bar keeps its height. */}
       <DevelopmentNotice variant="strip" />
       {/* Top section — spans the full width, above everything else. */}
-      <header className="sticky top-0 z-50 flex h-16 items-center gap-4 bg-background/70 px-4 backdrop-blur-glass sm:px-6">
-        <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-50 flex h-16 items-center gap-2 bg-background/70 px-4 backdrop-blur-glass sm:gap-4 sm:px-6">
+        <MobileNav roles={roles} />
+        <div className="flex min-w-0 items-center gap-2">
           <SphereLogo className="h-9 w-9" />
           <span className="text-lg tracking-tight">
             <span className="font-bold">Connect</span>
@@ -63,9 +64,9 @@ export default async function AppLayout({
       {/* Below the top bar: nav rail + page content. */}
       <div className="flex flex-1">
         <Sidebar roles={roles} />
-        {/* Extra bottom padding on mobile so content clears the fixed bottom
-            nav bar; the desktop rail is in-flow so needs none. */}
-        <main className="min-w-0 flex-1 px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
+        {/* Nothing floats over the page now that a phone's menu is the panel
+            behind the hamburger, so no extra bottom padding is needed. */}
+        <main className="min-w-0 flex-1 px-4 pb-10 pt-4 sm:px-6 md:pt-6">
           {children}
         </main>
       </div>

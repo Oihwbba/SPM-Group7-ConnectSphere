@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,7 +17,9 @@ import {
   ChevronDown,
   ClipboardList,
   LayoutGrid,
+  Menu,
   Search,
+  X,
   ShieldCheck,
   Inbox,
   LayoutList,
@@ -129,12 +132,10 @@ export function Sidebar({ roles }: { roles: Role[] }) {
     <aside
       aria-label="Primary"
       className={cn(
-        // Mobile: a floating, rounded, translucent bar that spans the width
-        // (with a small side margin) and hovers just above the bottom edge; the
-        // shell adds bottom padding to clear it. From `md` up it becomes the
-        // in-flow, collapsible vertical rail.
-        "fixed inset-x-4 bottom-4 z-40 rounded-full border border-border/50 bg-card/45 shadow-glass backdrop-blur-glass backdrop-saturate-150",
-        "md:sticky md:inset-x-auto md:bottom-auto md:top-16 md:z-auto md:flex md:h-[calc(100vh-4rem)] md:shrink-0 md:flex-col md:gap-3 md:rounded-none md:border-0 md:bg-transparent md:p-3 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 md:transition-[width] md:duration-200",
+        // The rail is the desktop layout only. On a phone the same links are
+        // reached from the hamburger beside the logo (MobileNav, below).
+        "hidden",
+        "md:sticky md:top-16 md:z-auto md:flex md:h-[calc(100vh-4rem)] md:shrink-0 md:flex-col md:gap-3 md:p-3 md:transition-[width] md:duration-200",
         collapsed ? "md:w-[84px]" : "md:w-64",
       )}
     >
@@ -297,6 +298,98 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         })}
       </nav>
     </aside>
+  );
+}
+
+/**
+ * The phone's menu: a hamburger beside the logo that opens the role's links in
+ * a panel from the left. The links, their grouping and their order are the
+ * rail's (SCRUM-210); only the way in differs.
+ */
+export function MobileNav({ roles }: { roles: Role[] }) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  const groups = navGroupsForRoles(roles);
+  const items = groups.flatMap((group) => group.items);
+  const activeHref = items
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  // Escape closes the panel, as it closes a dialog.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div className="md:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+        aria-expanded={open}
+        className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Menu className="h-6 w-6" />
+      </button>
+
+      {/* Rendered on the body: the top bar's backdrop blur would otherwise be
+          the containing block, and the panel would be trapped inside it. */}
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex">
+            {/* The page behind: tapping it closes the panel. Escape and the
+              Close button do the same, so it carries no name of its own. */}
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={() => setOpen(false)}
+              className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
+            />
+            <nav
+              aria-label="Primary"
+              className="relative flex h-full w-72 max-w-[85%] flex-col gap-1 overflow-y-auto border-r border-border/50 bg-background p-3 shadow-glass"
+            >
+              <div className="flex items-center justify-end pb-1">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close menu"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              {groups.map((group) => (
+                <div key={group.id} className="flex flex-col gap-1">
+                  {group.heading && (
+                    <span className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.heading}
+                    </span>
+                  )}
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      item={item}
+                      active={item.href === activeHref}
+                      inPanel
+                      onSelect={() => setOpen(false)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </div>,
+          document.body,
+        )}
+    </div>
   );
 }
 
