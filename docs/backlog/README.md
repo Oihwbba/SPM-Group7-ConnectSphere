@@ -38,6 +38,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 |---|---|
 | Stories | **97** |
 | Tasks | **93** |
+| Tasks | **78** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
