@@ -39,6 +39,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | Stories | **97** |
 | Tasks | **93** |
 | Tasks | **78** |
+| Tasks | **90** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -184,6 +185,7 @@ _11 stories, 22 points_
 ## Stories with no epic
 
 _5 stories, 9 points_
+_6 stories, 10 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
