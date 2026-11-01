@@ -352,6 +352,56 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     );
   });
 
+  test("SCRUM-258 [AC3] TC-258-10: resolving a flag clears its badge from Confirmed arrangements without reloading the page", async ({
+    page,
+  }) => {
+    const name = `SCRUM-258 Resolved ${Date.now()}`;
+    ({ eventId } = await eventWithFlaggedBooking(name, "CONFIRMED"));
+
+    await signIn(page, "coordinator@test.local");
+    // Arrangements first: a tab stays mounted once it has been opened.
+    const details = await openDetails(page, name, "Arrangements");
+    const booking = details
+      .getByTestId("confirmed-arrangements")
+      .getByTestId("event-venue-booking");
+    await expect(booking.getByTestId("needs-reconsideration")).toBeVisible();
+
+    await details.getByRole("tab", { name: /^Changes/ }).click();
+    await details
+      .getByTestId("reconsideration-panel")
+      .getByRole("button", { name: "Still stands" })
+      .click();
+    await expect(page.getByText("Exhibition Hall (Approved) still stands.")).toBeVisible();
+
+    await details.getByRole("tab", { name: /^Arrangements/ }).click();
+    await expect(booking).toContainText("Exhibition Hall");
+    await expect(booking.getByTestId("needs-reconsideration")).toHaveCount(0);
+    await expect(page.getByTestId("next-step")).toContainText("the arrangements are secured");
+  });
+
+  test("SCRUM-258 [AC3] TC-258-11: a flag resolved by someone else clears from the Organiser's open page", async ({
+    page,
+  }) => {
+    const name = `SCRUM-258 Resolved elsewhere ${Date.now()}`;
+    let bookingId: string;
+    ({ eventId, bookingId } = await eventWithFlaggedBooking(name, "CONFIRMED"));
+
+    await signIn(page, "organiser@test.local");
+    const details = await openDetails(page, name, "Arrangements");
+    const badge = details
+      .getByTestId("confirmed-arrangements")
+      .getByTestId("needs-reconsideration");
+    await expect(badge).toBeVisible();
+
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: { needsReconsideration: false },
+    });
+
+    // The page refreshes itself every four seconds (SCRUM-24).
+    await expect(badge).toHaveCount(0, { timeout: 15_000 });
+  });
+
   test("SCRUM-26 [AC8, AC9] TC-26-08, TC-26-10: a flagged reservation that no longer covers its request can't stand, and Cancel arrangement releases it", async ({
     page,
   }) => {

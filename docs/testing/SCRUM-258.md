@@ -22,6 +22,8 @@ database.
 | [TC-258-07](#tc-258-07) | Positive, Negative, Boundary | AC 2, AC 3 | Unit |
 | [TC-258-08](#tc-258-08) | Positive | AC 1 | Integration |
 | [TC-258-09](#tc-258-09) | Positive, Negative | AC 1, AC 2, AC 3 | e2e |
+| [TC-258-10](#tc-258-10) | Negative | AC 3 | e2e |
+| [TC-258-11](#tc-258-11) | Negative | AC 3 | e2e |
 
 ---
 
@@ -141,3 +143,29 @@ database.
 | Expected Result | 1. The banner waits on the Coordinator, doesn't say secured, and Changes is open. 2. The booking reads Exhibition Hall, Approved, with the badge beside it; the equipment lists both items with one badge, not on the Wireless Microphone; neither flag reason shows. 3. The banner asks the Coordinator to decide. |
 
 **Automated by:** `e2e/reconsideration.spec.ts` › "SCRUM-258 [AC1, AC2, AC3] TC-258-09: on a Confirmed event the banner doesn't call flagged arrangements secured, and Confirmed arrangements badges them without the reason"
+
+### TC-258-10
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-258-10 |
+| Test Scenario | [Negative] AC 3: once resolved, an arrangement shows no badge, without reloading the page |
+| Pre-conditions | Signed in as the Coordinator; a Confirmed event with a flagged Approved booking at Exhibition Hall; Arrangements already opened, so the panel is mounted. |
+| Test Steps | 1. Open Changes and choose Still stands. <br> 2. Open Arrangements. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | 1. "Exhibition Hall (Approved) still stands." 2. The booking is still listed, with no badge, and the banner says the arrangements are secured. |
+
+**Automated by:** `e2e/reconsideration.spec.ts` › "SCRUM-258 [AC3] TC-258-10: resolving a flag clears its badge from Confirmed arrangements without reloading the page"
+
+### TC-258-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-258-11 |
+| Test Scenario | [Negative] AC 3: a flag resolved by someone else clears from a page already open |
+| Pre-conditions | Signed in as the Organiser, with Arrangements open on a Confirmed event with a flagged booking. |
+| Test Steps | 1. Clear the flag in the database. <br> 2. Wait for the page's own refresh. |
+| Test Data | `organiser@test.local` |
+| Expected Result | 2. The badge goes, without reloading the page. |
+
+**Automated by:** `e2e/reconsideration.spec.ts` › "SCRUM-258 [AC3] TC-258-11: a flag resolved by someone else clears from the Organiser's open page"
