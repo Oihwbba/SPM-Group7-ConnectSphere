@@ -1,5 +1,6 @@
 import type { EquipmentRequestStatus, Prisma, PrismaClient } from "@prisma/client";
 
+import type { Commitment } from "@/lib/equipment/availability";
 import { overlaps, type Period } from "@/lib/period";
 import { LIVE_LINE, outstandingLines } from "@/lib/equipment/requests";
 
@@ -107,4 +108,60 @@ export function competingLines(
         overlaps(line.event, period),
     )
     .sort((a, b) => (submittedFirst(a, b) ? -1 : 1));
+}
+
+/** AC5 — the moment where reserving falls furthest short of what earlier requests still need. */
+export type FirstComeShortfall = {
+  /** What reserving would leave free at that moment. */
+  left: number;
+  /** What the earlier requests running then still need. */
+  needed: number;
+  /** The earliest-submitted of them. */
+  first: OpenRequestLine;
+};
+
+/**
+ * AC5 — whether reserving `quantity` over `period` leaves enough, at every
+ * moment, for the earlier requests (`competingLines`, earliest first) whose
+ * events are running then. Like `peakCommitted`, each earlier request counts
+ * only while its event runs, so two that don't overlap each other are never
+ * added together (SCRUM-261). Null when every moment leaves enough.
+ */
+export function firstComeShortfall({
+  total,
+  commitments,
+  earlier,
+  quantity,
+  period,
+}: {
+  total: number;
+  /** Reservations and unavailability of this type overlapping `period`. */
+  commitments: Commitment[];
+  earlier: OpenRequestLine[];
+  quantity: number;
+  period: Period;
+}): FirstComeShortfall | null {
+  const runningAt = (span: Period, instant: Date) =>
+    span.startAt <= instant && span.endAt > instant;
+  // What is in use, and what is needed, only rises when something starts.
+  const instants = [
+    period.startAt,
+    ...[...commitments.map((c) => c.startAt), ...earlier.map((line) => line.event.startAt)].filter(
+      (start) => start > period.startAt && start < period.endAt,
+    ),
+  ];
+
+  let worst: FirstComeShortfall | null = null;
+  for (const instant of instants) {
+    const running = earlier.filter((line) => runningAt(line.event, instant));
+    if (running.length === 0) continue;
+    const needed = running.reduce((sum, line) => sum + line.quantity - line.reserved, 0);
+    const inUse = commitments
+      .filter((c) => runningAt(c, instant))
+      .reduce((sum, c) => sum + c.quantity, 0);
+    const left = total - inUse - quantity;
+    if (left < needed && (!worst || needed - left > worst.needed - worst.left))
+      worst = { left, needed, first: running[0] };
+  }
+  return worst;
 }

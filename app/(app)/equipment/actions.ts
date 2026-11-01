@@ -34,6 +34,7 @@ import {
 import { flagArrangements } from "@/lib/reconsideration";
 import {
   competingLines,
+  firstComeShortfall,
   openRequestLines,
   submittedFirst,
 } from "@/lib/equipment/competing";
@@ -460,7 +461,6 @@ export async function reserveEquipmentRequest(
         // AC 4 — every row is checked before anything is written, so a short
         // row reports itself and the rows that would fit are not reserved alone.
         const shortfalls: Record<string, string[]> = {};
-        const free: number[] = [];
         lines.forEach((line, index) => {
           const { available, total } = summariseAvailability({
             total: totals.get(line.equipmentId)!,
@@ -473,7 +473,6 @@ export async function reserveEquipmentRequest(
             startAt,
             endAt,
           });
-          free[index] = available;
           if (line.quantity > available)
             shortfalls[`lines.${index}.quantity`] = [
               `Only ${available} of ${total} free for this period — ${line.quantity - available} short.`,
@@ -490,6 +489,7 @@ export async function reserveEquipmentRequest(
         // leave enough for each earlier open request whose event overlaps,
         // until it is reserved in full, rejected or cancelled. Read with the
         // equipment rows locked, so nothing is reserved for it in between.
+        // Weighed moment by moment, like availability (SCRUM-261).
         const openLines = await openRequestLines(tx);
         const me = { requestId, submittedAt: request.createdAt };
         const waiting: Record<string, string[]> = {};
@@ -498,14 +498,18 @@ export async function reserveEquipmentRequest(
             startAt,
             endAt,
           }).filter((other) => submittedFirst(other, me) && other.reserved < other.quantity);
-          const needed = earlier.reduce(
-            (sum, other) => sum + other.quantity - other.reserved,
-            0,
-          );
-          const left = free[index] - line.quantity;
-          if (earlier.length > 0 && left < needed)
+          const shortfall = firstComeShortfall({
+            total: totals.get(line.equipmentId)!,
+            commitments: [...reservations, ...unavailability].filter(
+              (c) => c.equipmentId === line.equipmentId,
+            ),
+            earlier,
+            quantity: line.quantity,
+            period: { startAt, endAt },
+          });
+          if (shortfall)
             waiting[`lines.${index}.quantity`] = [
-              `Reserving ${line.quantity} would leave ${left} free, but an earlier request still needs ${needed}: "${earlier[0].eventName}", submitted ${formatDateTime(earlier[0].submittedAt)}. Reserve it first, or wait until it is rejected or cancelled.`,
+              `Reserving ${line.quantity} would leave ${shortfall.left} free, but an earlier request still needs ${shortfall.needed}: "${shortfall.first.eventName}", submitted ${formatDateTime(shortfall.first.submittedAt)}. Reserve it first, or wait until it is rejected or cancelled.`,
             ];
         });
         if (Object.keys(waiting).length)

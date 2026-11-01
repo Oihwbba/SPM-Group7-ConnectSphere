@@ -9,6 +9,7 @@ import {
 } from "@/lib/venue-availability";
 import {
   competingLines,
+  firstComeShortfall,
   openRequestLines,
   submittedFirst,
   type OpenRequestLine,
@@ -325,13 +326,18 @@ describe("reserving with an earlier request waiting — SCRUM-134 AC5", () => {
       endAt: END.toISOString(),
       lines: [{ equipmentId: "eqp_projector", quantity: String(quantity) }],
     });
-  const openRequest = (id: string, createdAt: Date, quantity: number, reserved: number) => ({
+  const openRequest = (
+    id: string,
+    createdAt: Date,
+    quantity: number,
+    reserved: number,
+    event = { startAt: START, endAt: END },
+  ) => ({
     id,
     createdAt,
     event: {
       name: `Event ${id}`,
-      startAt: START,
-      endAt: END,
+      ...event,
       reservations: reserved
         ? [{ requestId: id, equipmentId: "eqp_projector", quantity: reserved, startAt: START, endAt: END }]
         : [],
@@ -384,5 +390,89 @@ describe("reserving with an earlier request waiting — SCRUM-134 AC5", () => {
     db.reservation.createMany.mockResolvedValue({ count: 1 });
 
     expect(await reserve(2)).toEqual({ ok: true, data: { reserved: 1 } });
+  });
+
+  // SCRUM-261 — the request being reserved runs 10:00–12:00 and asks for 3 of
+  // the 4; each earlier request counts only while its own event runs.
+  const half = (from: string, to: string) => ({
+    startAt: at(`2036-06-01T${from}:00.000Z`),
+    endAt: at(`2036-06-01T${to}:00.000Z`),
+  });
+
+  it("SCRUM-261 [AC1] TC-261-01: two earlier requests that never run together are not added up, so the later one is reserved", async () => {
+    db.equipmentRequest.findMany.mockResolvedValue([
+      openRequest("eqr_a", at("2036-01-01T00:00:00.000Z"), 1, 0, half("10:00", "11:00")),
+      openRequest("eqr_b", at("2036-01-01T06:00:00.000Z"), 1, 0, half("11:00", "12:00")),
+    ]);
+    db.reservation.createMany.mockResolvedValue({ count: 1 });
+
+    expect(await reserve(3)).toEqual({ ok: true, data: { reserved: 1 } });
+    expect(db.reservation.createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("SCRUM-261 [AC2] TC-261-03: where the two earlier requests do run together, what they need then is added up, and nothing is reserved", async () => {
+    db.equipmentRequest.findMany.mockResolvedValue([
+      openRequest("eqr_a", at("2036-01-01T00:00:00.000Z"), 1, 0, half("10:00", "11:30")),
+      openRequest("eqr_b", at("2036-01-01T06:00:00.000Z"), 1, 0, half("11:00", "12:00")),
+    ]);
+
+    expect(await reserve(3)).toEqual({
+      ok: false,
+      error: "Nothing was reserved: an earlier request comes first for the rows marked below.",
+      fieldErrors: {
+        "lines.0.quantity": [
+          `Reserving 3 would leave 1 free, but an earlier request still needs 2: "Event eqr_a", submitted ${formatDateTime(at("2036-01-01T00:00:00.000Z"))}. Reserve it first, or wait until it is rejected or cancelled.`,
+        ],
+      },
+    });
+    expect(db.reservation.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("firstComeShortfall — SCRUM-261", () => {
+  // A pool of 10; the reservation runs 09:00–15:00.
+  const t = (hhmm: string) => at(`2036-06-01T${hhmm}:00.000Z`);
+  const period = { startAt: t("09:00"), endAt: t("15:00") };
+  const earlier = (requestId: string, from: string, to: string, quantity: number, reserved = 0): OpenRequestLine => ({
+    requestId,
+    submittedAt: SUBMITTED,
+    eventName: `Event ${requestId}`,
+    event: { startAt: t(from), endAt: t(to) },
+    equipmentId: "eqp_projector",
+    quantity,
+    reserved,
+  });
+  const shortfall = (quantity: number, lines: OpenRequestLine[], commitments: { startAt: Date; endAt: Date; quantity: number }[] = []) =>
+    firstComeShortfall({ total: 10, commitments, earlier: lines, quantity, period });
+
+  it("SCRUM-261 [AC1] TC-261-01: A (9–10, needs 4) and B (2–3pm, needs 4) never run together, so 5, and 6, can be reserved; 7 leaves A 3 of its 4", () => {
+    const lines = [earlier("eqr_a", "09:00", "10:00", 4), earlier("eqr_b", "14:00", "15:00", 4)];
+
+    expect(shortfall(5, lines)).toBeNull();
+    expect(shortfall(6, lines)).toBeNull();
+    expect(shortfall(7, lines)).toEqual({ left: 3, needed: 4, first: lines[0] });
+  });
+
+  it("SCRUM-261 [AC1] TC-261-02: stock in use only after the earlier request's event has ended isn't held against it", () => {
+    const lines = [earlier("eqr_a", "09:00", "10:00", 4)];
+    const reservedLater = [{ startAt: t("14:00"), endAt: t("15:00"), quantity: 4 }];
+    const reservedThen = [{ startAt: t("09:30"), endAt: t("10:00"), quantity: 4 }];
+
+    expect(shortfall(5, lines, reservedLater)).toBeNull();
+    expect(shortfall(5, lines, reservedThen)).toEqual({ left: 1, needed: 4, first: lines[0] });
+  });
+
+  it("SCRUM-261 [AC2] TC-261-03: A (9–11) and B (10am–3pm) run together from 10, so their 4 and 4 add up then: 3 is one too many, 2 is exactly what is left", () => {
+    const lines = [earlier("eqr_a", "09:00", "11:00", 4), earlier("eqr_b", "10:00", "15:00", 4)];
+
+    expect(shortfall(3, lines)).toEqual({ left: 7, needed: 8, first: lines[0] });
+    expect(shortfall(2, lines)).toBeNull();
+  });
+
+  it("SCRUM-261 [AC2] TC-261-03: only what the earlier requests still need counts, and the earliest running at that moment is named", () => {
+    const lines = [earlier("eqr_a", "09:00", "10:00", 4, 4), earlier("eqr_b", "14:00", "15:00", 6, 1)];
+
+    expect(shortfall(5, lines, [{ startAt: t("09:00"), endAt: t("10:00"), quantity: 4 }])).toBeNull();
+    expect(shortfall(6, lines)).toEqual({ left: 4, needed: 5, first: lines[1] });
   });
 });

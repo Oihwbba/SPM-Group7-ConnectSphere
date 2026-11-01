@@ -105,7 +105,8 @@ describe.skipIf(!usesLocalDatabase)(
 
     beforeAll(async () => {
       eventIds = [];
-      for (const n of [1, 2, 3]) {
+      // Events 4 and 5 are SCRUM-261's earlier requests; each test sets their times.
+      for (const n of [1, 2, 3, 4, 5]) {
         eventIds.push(
           (
             await prisma.event.create({
@@ -227,6 +228,48 @@ describe.skipIf(!usesLocalDatabase)(
         await prisma.equipmentRequest.update({ where: { id: first.id }, data: { status: "REJECTED" } });
 
         expect(await reserve(second.id, 2)).toEqual({ ok: true, data: { reserved: 1 } });
+      });
+
+      // SCRUM-261 — event 3 runs 02:00–06:00 and asks for 3 of the 4. Earlier,
+      // A (event 4) asked for 1 from 02:00 for `aHours`, then B (event 5) for
+      // 1 from `bFrom` hours after 02:00 to 06:00.
+      const hoursIn = (hours: number) => new Date(START.getTime() + hours * HOUR);
+      const laterAfter = async (aHours: number, bFrom: number) => {
+        await prisma.event.update({
+          where: { id: eventIds[3] },
+          data: { startAt: START, endAt: hoursIn(aHours) },
+        });
+        await prisma.event.update({
+          where: { id: eventIds[4] },
+          data: { startAt: hoursIn(bFrom), endAt: END },
+        });
+        await approvedRequest(eventIds[3], FIRST, 1);
+        await approvedRequest(eventIds[4], new Date(FIRST.getTime() + HOUR), 1);
+        return (await approvedRequest(eventIds[2], SECOND, 3)).id;
+      };
+
+      it("SCRUM-261 [AC1] TC-261-01: two earlier requests that never run together are not added up, so the later one is reserved", async () => {
+        const later = await laterAfter(1, 3);
+
+        expect(await reserve(later, 3)).toEqual({ ok: true, data: { reserved: 1 } });
+        expect(await prisma.reservation.count({ where: { equipmentId } })).toBe(1);
+      });
+
+      it("SCRUM-261 [AC2] TC-261-03: where the earlier requests run together, what they need then is added up, and nothing is reserved", async () => {
+        const later = await laterAfter(2, 1);
+
+        expect(await reserve(later, 3)).toMatchObject({
+          ok: false,
+          error: "Nothing was reserved: an earlier request comes first for the rows marked below.",
+          fieldErrors: {
+            "lines.0.quantity": [
+              expect.stringMatching(
+                new RegExp(`^Reserving 3 would leave 1 free, but an earlier request still needs 2: "First-come event 4 ${STAMP}"`),
+              ),
+            ],
+          },
+        });
+        expect(await prisma.reservation.count({ where: { equipmentId } })).toBe(0);
       });
 
       it("SCRUM-134 [AC4] TC-134-04: the review queue shows, on each line, the other open requests for the type with when they were submitted and what is reserved", async () => {
