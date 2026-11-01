@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-21. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-142 - Change equipment lines or withdraw a venue request before confirmation
@@ -31,7 +31,7 @@
 9. Given a safety check was approved or is awaiting review, then a change or withdrawal here makes it Outdated (SCRUM-166).
 10. Given an equipment request for my event is Pending Review or In Review, for example after a change in AC1, then the readiness checklist (SCRUM-110) shows Equipment as incomplete, so the event can't be Confirmed (SCRUM-81) until Technical Support approves it again. When every requested line is already reserved, Equipment shows "Awaiting Technical Support review".
 
-**Customer basis:** "Can Coordinator add/remove equipment line items anytime before confirmation? Yes, changes allowed; Technical Support Staff re-check suitability." "Co-ordinator can submit booking request based on per event that he is assigned." Week 7 change 3: "Changes or cancellation of one venue arrangement should not automatically remove the other venue bookings unless this is explicitly required."
+**Customer basis:** Week 7 change 3: "Changes or cancellation of one venue arrangement should not automatically remove the other venue bookings unless this is explicitly required."
 
 **Why this is a new story:** SCRUM-27 (Sprint 2, Done) creates an equipment request but has no way to change or withdraw it, and SCRUM-50 (Sprint 2, Done) has no way to withdraw a pending venue request, so a wrong request stays in the Venue Staff queue until it is rejected. Both are added here rather than re-scoping Done stories.
 
@@ -41,5 +41,6 @@
 * 2026-10-07 (Week 7 changes 3, 4 and 6): AC4 withdraws one of an event's several venue requests and leaves the others alone (SCRUM-162); a Held booking is released through SCRUM-163. AC9 puts a safety check out of date (SCRUM-167). The reason no longer depends on one venue per event, and the customer answer "Each event can only has one venue" is dropped from the customer basis, because Week 7 change 3 replaced it. AC3 adds withdrawing a whole equipment request, an audit edit that didn't save on 1 Oct.
 * 2026-10-07 (backlog refinement): AC9 points to SCRUM-166, which SCRUM-167 was merged into.
 * 2026-10-12 (PO decision 1, for the PO to confirm): AC10 added. Removing a line leaves the other lines reserved, so the event could be Confirmed before Technical Support's re-check, and Technical Support could then reject a request whose stock a Confirmed event still holds. The customer says Technical Support re-checks suitability after a change, so Confirm waits for it.
+* 2026-10-29 (SCRUM-244, logged 2026-11-01): removed "Can Coordinator add/remove equipment line items anytime before confirmation? Yes, changes allowed; Technical Support Staff re-check suitability." and "Co-ordinator can submit booking request based on per event that he is assigned." from the Customer basis. Criteria unchanged.
 
 Functionality Area: Equipment Request Management, Venue Booking Request

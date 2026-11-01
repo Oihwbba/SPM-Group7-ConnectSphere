@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-26. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-210 - Menus grouped by task
@@ -7,7 +7,7 @@
 | | |
 |---|---|
 | **Type** | Story |
-| **Epic** | - |
+| **Epic** | SCRUM-9 - Access Control |
 | **Priority** | High |
 | **Story points** | 1 |
 | **Status in Jira** | In Review |
