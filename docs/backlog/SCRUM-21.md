@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-21. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-21 - Reassign an event to another Coordinator and show who is currently assigned
@@ -33,7 +33,7 @@
 
 **Supersedes:** SCRUM-69 AC3 (the event moves when a handover is accepted) and SCRUM-20's last criterion (a Coordinator who can't take an event reassigns it).
 
-**Customer basis:** Week 7 change 5: "The Lead can review basic event information, assign a suitable Event Coordinator, and reassign events where necessary … Relevant users should be notified when assignments or reassignments occur." Earlier answer still in force: "Calendar view allows viewing of the event. Previous co-ordinator cannot edit the info."
+**Customer basis:** Week 7 change 5: "The Lead can review basic event information, assign a suitable Event Coordinator, and reassign events where necessary … Relevant users should be notified when assignments or reassignments occur."
 
 **Change log**
 
