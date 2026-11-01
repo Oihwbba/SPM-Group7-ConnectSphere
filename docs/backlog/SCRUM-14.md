@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-14 - Submit an event request for review
@@ -16,6 +16,8 @@
 
 ---
 
+**Superseded in part:** AC1's automatic assignment is superseded by SCRUM-165 AC1: a submitted request gets no Coordinator and stays Submitted in the Lead's Unassigned queue until the Lead assigns one, which moves it to Under Review (SCRUM-165 AC5). The criteria below are kept as accepted in Sprint 1.
+
 **As an Event Organiser**, I want to submit my completed event request, so that an Event Coordinator can begin reviewing it.
 
 **Acceptance Criteria:**
@@ -29,5 +31,9 @@
 
 **INVEST:** Independent (only needs "Create an event request" to exist, not the review flow); Negotiable (validation rules can be refined with the team); Valuable (nothing reaches a Coordinator without this); Estimable/Small (one state transition); Testable (all three branches of the Given/When/Then are checkable).
 
+
+**Change log**
+
+* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-165. Criteria unchanged.
 
 Functionality Area: Event Request Creation
