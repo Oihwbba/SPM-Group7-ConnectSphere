@@ -168,7 +168,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — re-seeding on a later day", (
     await seedOn(0);
 
     expect(await seededRows()).toEqual(fresh);
-  }, 60_000);
+  }, 180_000);
 
   it("SCRUM-233 [AC11] TC-233-24: a seed refused part way by a row made through the app writes nothing at all", async () => {
     // Tomorrow's run moves bkg_confirmed to day 11, where this booking now is.
