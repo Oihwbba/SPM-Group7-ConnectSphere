@@ -405,10 +405,12 @@ function NextStepBanner({
   }
 
   const mine = step.kind === "yours";
+  // Small enough to sit beside the words rather than under them.
+  const NEXT_STEP_BUTTON = "h-8 gap-1 px-2.5 text-[11px] sm:text-xs";
   // AC2: who is handling the event, beside what happens next.
   const handledBy = (
     <span
-      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+      className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground sm:text-xs"
       data-testid="current-coordinator"
     >
       Handled by{" "}
@@ -425,9 +427,9 @@ function NextStepBanner({
       data-testid="next-step"
       data-kind={step.kind}
       className={cn(
-        // The words stay on the left and the button on the right, so the card
-        // is no taller than it needs to be on a phone.
-        "flex items-center justify-between gap-3 rounded-xl border-l-4 px-3 py-2 text-sm",
+        // The words stay on the left and the button on the right, both set
+        // small, so the card is no taller than it needs to be on a phone.
+        "flex items-center justify-between gap-2 rounded-xl border-l-4 px-3 py-2 text-xs sm:text-sm",
         mine ? "border-primary bg-primary/5" : "border-muted-foreground/40 bg-muted/40",
       )}
     >
@@ -439,10 +441,11 @@ function NextStepBanner({
         {handledBy}
       </div>
       {step.kind === "yours" && (
-        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
           {step.action.kind === "tab" && (
             <Button
               size="sm"
+              className={NEXT_STEP_BUTTON}
               onClick={() => {
                 const action = step.action as { tab: EventTab; section?: ArrangementSection };
                 onTab(action.tab, action.section);
@@ -452,18 +455,18 @@ function NextStepBanner({
             </Button>
           )}
           {step.action.kind === "link" && (
-            <Button asChild size="sm">
+            <Button asChild size="sm" className={NEXT_STEP_BUTTON}>
               <Link href={step.action.href}>{step.action.label}</Link>
             </Button>
           )}
           {step.action.kind === "resume" && (
-            <Button size="sm" onClick={onResume}>
+            <Button size="sm" className={NEXT_STEP_BUTTON} onClick={onResume}>
               Resume draft
             </Button>
           )}
           {/* SCRUM-18, SCRUM-19: the Coordinator decides right here. */}
           {step.action.kind === "review" && (
-            <ReviewDecision event={event} buttonClassName="h-8 gap-1.5 text-xs" />
+            <ReviewDecision event={event} buttonClassName={NEXT_STEP_BUTTON} />
           )}
         </div>
       )}

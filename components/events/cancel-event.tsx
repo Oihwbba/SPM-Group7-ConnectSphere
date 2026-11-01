@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -31,14 +32,18 @@ export function CancelEvent({ eventId }: { eventId: string }) {
 
   return (
     <ConfirmDialog
+      // A cross alone, beside the pencil; the dialog it opens still spells
+      // out what cancelling does.
       trigger={
         <Button
           size="sm"
           variant="outline"
-          className="text-destructive"
+          aria-label="Cancel event"
+          title="Cancel event"
+          className="h-9 w-9 p-0 text-destructive"
           onClick={() => setReason("")}
         >
-          Cancel event
+          <X className="h-4 w-4" />
         </Button>
       }
       title="Cancel this event"
