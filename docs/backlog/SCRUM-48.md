@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-48 - User views their notification list
@@ -31,7 +31,7 @@
 
 **Related:** the Sprint 1 and 2 code already creates notifications (assignment, clarification, equipment-request updates), so this list is the first place users can read them. The Notifications placeholder page in the code still names SCRUM-51; it should name this story.
 
-**Customer basis:** "The notification delivery channel is up to your implementation (can be in-app or external)." Week 7 change 4: "The Event Coordinator should be informed before or when the hold expires."
+**Customer basis:** Week 7 change 4: "The Event Coordinator should be informed before or when the hold expires."
 
 **Change log**
 
@@ -40,5 +40,6 @@
 * 2026-10-01 (audit): removed SCRUM-122 from the sources (beyond Release 1) and added the equipment-request updates SCRUM-28 already sends.
 * 2026-10-07 (Week 7 changes 4 and 6): AC8 adds notifications with a show-from time, so hold reminders work without a scheduler (SCRUM-163). AC5 sends a Safety Officer to the safety check (SCRUM-166).
 * 2026-10-07 (backlog refinement): AC5 points to SCRUM-85, which SCRUM-133 was merged into.
+* 2026-10-29 (SCRUM-244, logged 2026-11-01): removed "The notification delivery channel is up to your implementation (can be in-app or external)." from the Customer basis. Criteria unchanged.
 
 Functionality Area: Notification System
