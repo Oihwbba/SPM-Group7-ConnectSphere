@@ -20,6 +20,7 @@ import { sgtPeriod } from "../one-day-period";
 const tx = vi.hoisted(() => ({
   event: {
     findUnique: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn(),
     create: vi.fn(),
@@ -70,6 +71,8 @@ beforeEach(() => {
   tx.auditLog.findFirst.mockResolvedValue(null);
   tx.clarificationRequest.updateMany.mockResolvedValue({ count: 0 });
   tx.user.findMany.mockResolvedValue([]);
+  // SCRUM-249: what approval reads under the lock; no start, so not overdue.
+  tx.event.findUniqueOrThrow.mockResolvedValue({ status: "UNDER_REVIEW", startAt: null });
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -413,7 +416,7 @@ describe("startRequestFromRejected — SCRUM-126 AC4", () => {
     expect(tx.event.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-126 [Exit path]: an unexpected database failure propagates instead of being reported as a refusal", async () => {
+  it("SCRUM-126: [Exit path] an unexpected database failure propagates instead of being reported as a refusal", async () => {
     mockAuth.mockResolvedValue(organiser());
     tx.event.findFirst.mockRejectedValue(new Error("connection lost"));
 

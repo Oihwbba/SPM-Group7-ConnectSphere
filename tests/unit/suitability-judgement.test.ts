@@ -214,7 +214,7 @@ describe("recordSuitabilityJudgement — SCRUM-40 AC8", () => {
     },
   );
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-40 [AC8]: does not swallow an unexpected database error", async () => {
     const failure = new Error("connection reset");
     db.$transaction.mockRejectedValue(failure);
 

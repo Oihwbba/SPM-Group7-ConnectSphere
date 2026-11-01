@@ -71,6 +71,8 @@ export type NextStepFacts = {
   cancellationReason: string | null;
   cancelledAt: string | null;
   completedAt?: string | null;
+  /** SCRUM-82 AC10: its start passed before anyone decided or confirmed it. */
+  overdue: boolean;
 };
 
 const coordinator = (facts: NextStepFacts) =>
@@ -195,6 +197,21 @@ export function nextStep(facts: NextStepFacts): NextStep {
         tab: "request",
         action: { kind: "resume" },
       };
+  }
+
+  // SCRUM-249 AC4: it can no longer be approved or confirmed, so nothing else
+  // on the event matters until its Coordinator closes it.
+  if (mine && facts.overdue) {
+    return {
+      kind: "yours",
+      text: "Your turn: this event is overdue, so reject it or cancel it",
+      ...(facts.status === "PLANNING"
+        ? {
+            tab: "arrangements",
+            action: { kind: "tab", label: "Go to Arrangements", tab: "arrangements" },
+          }
+        : { tab: "request", action: { kind: "review" } }),
+    };
   }
 
   if (mine && facts.flaggedArrangements > 0) {

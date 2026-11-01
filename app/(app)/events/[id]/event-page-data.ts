@@ -2,6 +2,7 @@ import type { Event, EventStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { can, type SessionUser } from "@/lib/auth/can";
+import { isOverdue } from "@/lib/event-closing";
 import {
   getReadinessChecklist,
   withoutInternalReasons,
@@ -115,6 +116,7 @@ export async function getEventPageData(
     rejectionOutcome: event.rejectionOutcome,
     cancellationReason: event.cancellationReason,
     cancelledAt: event.cancelledAt?.toISOString() ?? null,
+    overdue: isOverdue(event, now),
   });
 
   return {

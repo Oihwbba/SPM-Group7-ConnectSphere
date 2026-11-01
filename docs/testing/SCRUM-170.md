@@ -117,7 +117,7 @@ automated by SCRUM-38's venue search (#216), which reuses
 | Test Data | — |
 | Expected Result | The checklist lists Equipment as "Not decided", incomplete, with **No equipment needed** offered to the Coordinator; the summary counts fewer than "3/3 items completed". The latest outcome decides, by when each request ended (its last status change), not when it was made: an event whose last request to end was rejected shows "Rejected" and is offered the same; a rejection followed by a cancelled request shows "Not decided" (Product Owner, 19 Oct; the venue item follows the same rule, SCRUM-26). (SCRUM-110 AC 3, which left the item out, is superseded.) |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-170 [AC4] TC-170-07: with no equipment request and nothing decided …", "SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: …", "SCRUM-170 [AC4] TC-170-07: a rejected request followed by a cancelled one leaves Equipment Not decided …", "SCRUM-170 [AC4] TC-170-07: a cancelled request followed by a rejected one leaves Equipment Rejected …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-170 [AC4] TC-170-07: with no equipment request and nothing decided …", "SCRUM-110 [AC3, AC4] TC-110-09, SCRUM-170 [AC4] TC-170-07: …", "SCRUM-170 [AC4] TC-170-07: a rejected request followed by a cancelled one leaves Equipment Not decided …", "SCRUM-170 [AC4] TC-170-07: a cancelled request followed by a rejected one leaves Equipment Rejected …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
 
 ### TC-170-08
 
