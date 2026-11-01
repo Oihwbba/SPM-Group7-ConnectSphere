@@ -64,6 +64,8 @@ export type NextStepFacts = {
   pendingChangeRequests: number;
   /** Flagged arrangements (SCRUM-26), counted for the Coordinator only. */
   flaggedArrangements: number;
+  /** Flagged arrangements for any viewer: only ever shown as waiting. */
+  unresolvedFlags: number;
   /** The readiness checklist, for an event in Planning. */
   checklist: ReadinessChecklist | null;
   decisionReason: string | null;
@@ -203,6 +205,15 @@ export function nextStep(facts: NextStepFacts): NextStep {
       text: "Your turn: decide what happens to the flagged arrangements",
       tab: "changes",
       action: { kind: "tab", label: "Go to Changes", tab: "changes" },
+    };
+  }
+  // SCRUM-258 AC1: no checklist names the flag on a Confirmed event, and its
+  // arrangements aren't secured while one stands.
+  if (facts.status === "CONFIRMED" && facts.unresolvedFlags > 0) {
+    return {
+      kind: "waiting",
+      text: `Waiting for ${coordinator(facts)} to decide what happens to the flagged arrangements`,
+      tab: "changes",
     };
   }
   if (facts.pendingChangeRequests > 0) {

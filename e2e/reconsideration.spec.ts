@@ -288,6 +288,70 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     await expect(equipment).not.toContainText("Confirmed");
   });
 
+  test("SCRUM-258 [AC1, AC2, AC3] TC-258-09: on a Confirmed event the banner doesn't call flagged arrangements secured, and Confirmed arrangements badges them without the reason", async ({
+    page,
+  }) => {
+    const name = `SCRUM-258 Confirmed ${Date.now()}`;
+    ({ eventId } = await eventWithFlaggedBooking(name, "CONFIRMED"));
+    await prisma.reservation.create({
+      data: {
+        eventId,
+        equipmentId: "eqp_projector",
+        quantity: 2,
+        startAt: START,
+        endAt: END,
+        status: "CONFIRMED",
+        reservedById: "usr_techsupport",
+        needsReconsideration: true,
+        reconsiderationFlaggedAt: new Date(),
+        reconsiderationReason: EQUIPMENT_REASON,
+      },
+    });
+    await prisma.reservation.create({
+      data: {
+        eventId,
+        equipmentId: "eqp_mic",
+        quantity: 1,
+        startAt: START,
+        endAt: END,
+        status: "CONFIRMED",
+        reservedById: "usr_techsupport",
+      },
+    });
+
+    await signIn(page, "organiser@test.local");
+    await openEvent(page, name);
+    const banner = page.getByTestId("next-step");
+    await expect(banner).toHaveText(
+      /Waiting for .+ to decide what happens to the flagged arrangements/,
+    );
+    await expect(banner).not.toContainText("secured");
+    // AC1: the page opens on Changes, where the flag is listed.
+    await expect(page.getByTestId("reconsideration-panel")).toBeVisible();
+
+    await page.getByRole("tab", { name: /^Arrangements/ }).click();
+    const panel = page.getByTestId("confirmed-arrangements");
+    const equipment = panel.getByTestId("confirmed-equipment");
+    await expect(equipment).toContainText("Projector × 2");
+    await expect(equipment).toContainText("Wireless Microphone × 1");
+    await expect(equipment.getByTestId("needs-reconsideration")).toHaveCount(1);
+    await expect(equipment.locator("span", { hasText: "Wireless Microphone" })).not.toContainText(
+      "Needs Reconsideration",
+    );
+    const booking = panel.getByTestId("event-venue-booking");
+    await expect(booking).toContainText("Exhibition Hall");
+    await expect(booking).toContainText("Approved");
+    await expect(booking.getByTestId("needs-reconsideration")).toHaveText("Needs Reconsideration");
+    await expect(panel).not.toContainText(REASON);
+    await expect(panel).not.toContainText(EQUIPMENT_REASON);
+
+    await signIn(page, "coordinator@test.local");
+    await openEvent(page, name);
+    await expect(page.getByTestId("next-step")).toContainText(
+      "Your turn: decide what happens to the flagged arrangements",
+    );
+  });
+
   test("SCRUM-26 [AC8, AC9] TC-26-08, TC-26-10: a flagged reservation that no longer covers its request can't stand, and Cancel arrangement releases it", async ({
     page,
   }) => {

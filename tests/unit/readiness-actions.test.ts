@@ -215,6 +215,7 @@ const arrangements: ConfirmedArrangements = {
   endAt: new Date("2031-06-02T09:00:00Z"),
   timezone: "Asia/Singapore",
   equipment: ["Projector × 2"],
+  flaggedEquipment: [],
 };
 
 describe("getEventReadiness — SCRUM-81 Confirm action", () => {
