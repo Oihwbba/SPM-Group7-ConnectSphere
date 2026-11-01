@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-76 - View my registration status
@@ -38,7 +38,7 @@
 * 2026-10-01 (mid-sprint correction, no new scope): status names aligned with SCRUM-131.
 * 2026-10-01 (audit): Waitlisted removed, because the waiting list (SCRUM-79) is beyond Release 1.
 * 2026-10-07: the Related note points to SCRUM-85, which SCRUM-133 was merged into.
-* 2026-10-29 (SCRUM-239, PO approval pending): removed the Related note's sentence that the My Registrations page still names SCRUM-42; SCRUM-146 fixed that. Marked AC1 as superseded in part by SCRUM-162 AC7 and AC2 as extended by SCRUM-85 AC8. Criteria unchanged; story stays Done.
-* 2026-10-29 (SCRUM-239, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): removed the Related note's sentence that the My Registrations page still names SCRUM-42; SCRUM-146 fixed that. Marked AC1 as superseded in part by SCRUM-162 AC7 and AC2 as extended by SCRUM-85 AC8. Criteria unchanged; story stays Done.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Attendee Registration

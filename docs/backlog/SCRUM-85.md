@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-85 - Attendees are kept informed when an event they registered for changes or is cancelled
@@ -49,6 +49,6 @@
 * 2026-10-07 (Week 7 changes 2 and 3): AC2 covers any of the event's booked venues and lists them all (SCRUM-162), including a venue replaced after it became unavailable (SCRUM-161).
 * 2026-10-07 (backlog refinement): merged SCRUM-133; its AC1–AC5 are AC8–AC12 here. Both stories covered the same Attendee and the same triggers (return to Planning, Confirmed again, cancelled) and pointed at each other. SCRUM-133's own history: on 2026-10-07 (Week 7 change 3) its AC2, now AC9, was changed to show every last confirmed venue. Re-estimated from 3 to 5.
 * 2026-10-07 (backlog refinement): group headings removed; the criteria are one numbered list.
-* 2026-10-29 (SCRUM-239, PO approval pending): added the Supersedes line for SCRUM-72 AC7 and AC8 and SCRUM-76 AC2, which AC8 and AC9 already changed; both stories now carry a matching note. Criteria unchanged.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): added the Supersedes line for SCRUM-72 AC7 and AC8 and SCRUM-76 AC2, which AC8 and AC9 already changed; both stories now carry a matching note. Criteria unchanged.
 
 Functionality Area: Notification System, Attendee Registration

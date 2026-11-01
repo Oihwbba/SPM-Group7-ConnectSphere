@@ -62,3 +62,4 @@ Out of scope: SCRUM-212 AC1, which listed four registration states while SCRUM-7
 * 2026-10-29: AC5 extended to the test cases of the superseded criteria (TC-72-06, TC-72-07, TC-73-05, TC-76-01), found when checking that the superseded stories' tests still test the right thing. Their tests needed no change.
 * 2026-10-31 (PR #312): the out-of-scope note says how SCRUM-212 AC1 was settled: the PO approved the wording on 30 Oct. Criteria unchanged.
 * 2026-11-01: references to an archived item removed. Criteria unchanged.
+* 2026-11-01 (PR #312): the PO approved the wording (AC4), so each story's change-log line now says PO approved 2026-11-01. Criteria unchanged.

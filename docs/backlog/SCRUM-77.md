@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-77 - Withdraw my registration
@@ -36,6 +36,6 @@
 
 * 2026-10-01: rewritten in one format; start-time boundary aligned with the other periods; notification owner named.
 * 2026-10-01 (audit): AC6 matches the data model built for SCRUM-73, which keeps one registration per Attendee per event and reactivates it on re-registering. Removed the waiting-list hand-off, because SCRUM-79 is beyond Release 1. Noted what the SCRUM-74 code already delivers.
-* 2026-10-29 (SCRUM-239, PO approval pending): the Related note no longer says AC3, AC4 and AC6's history entry remain; they were built and the story is Done. Criteria unchanged.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): the Related note no longer says AC3, AC4 and AC6's history entry remain; they were built and the story is Done. Criteria unchanged.
 
 Functionality Area: Attendee Registration
