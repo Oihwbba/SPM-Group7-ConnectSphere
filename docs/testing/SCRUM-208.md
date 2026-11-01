@@ -37,20 +37,20 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 |---|---|---|---|
 | [TC-208-01](#tc-208-01) | Positive | AC 1 | Unit, e2e |
 | [TC-208-02](#tc-208-02) | Positive | AC 2 | Unit, e2e |
-| [TC-208-03](#tc-208-03) | Positive | AC 2 | Unit, e2e |
+| [TC-208-03](#tc-208-03) | Positive | AC 2 | Unit, integration, e2e |
 | [TC-208-04](#tc-208-04) | Positive | AC 2 | Unit, e2e |
-| [TC-208-05](#tc-208-05) | Positive | AC 2 | Unit |
-| [TC-208-06](#tc-208-06) | Positive | AC 2 | Unit, e2e |
-| [TC-208-07](#tc-208-07) | Positive | AC 2 | Unit, e2e |
+| [TC-208-05](#tc-208-05) | Positive | AC 2 | Unit, integration |
+| [TC-208-06](#tc-208-06) | Positive | AC 2 | Unit, integration, e2e |
+| [TC-208-07](#tc-208-07) | Positive | AC 2 | Unit, integration, e2e |
 | [TC-208-08](#tc-208-08) | Positive | AC 3 | Unit, e2e |
 | [TC-208-09](#tc-208-09) | Negative | AC 3 | Unit, e2e |
 | [TC-208-10](#tc-208-10) | Positive | AC 3 | e2e |
 | [TC-208-11](#tc-208-11) | Positive, Negative | AC 3, AC 4 | Unit, e2e |
 | [TC-208-12](#tc-208-12) | Boundary | AC 3, AC 4 | e2e |
-| [TC-208-13](#tc-208-13) | Negative | AC 5 | e2e |
+| [TC-208-13](#tc-208-13) | Negative | AC 5 | Integration, e2e |
 | [TC-208-14](#tc-208-14) | Positive | SCRUM-132 (phone) | e2e |
 | [TC-208-15](#tc-208-15) | Negative | AC 1 (Attendees unchanged) | e2e |
-| [TC-208-16](#tc-208-16) | Positive | SCRUM-24 (live view) | e2e |
+| [TC-208-16](#tc-208-16) | Positive | SCRUM-24 (live view) | Unit, e2e |
 | [TC-208-17](#tc-208-17) | Positive | AC 2, AC 3 | Unit, e2e |
 | [TC-208-18](#tc-208-18) | Positive, Negative | AC 3, AC 4 | Integration, e2e |
 | [TC-208-19](#tc-208-19) | Boundary | AC 4 | Integration, e2e |

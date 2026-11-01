@@ -27,7 +27,7 @@ needs them.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-31-01](#tc-31-01) | Positive | AC 1, AC 7 | Unit, e2e |
+| [TC-31-01](#tc-31-01) | Positive | AC 1, AC 7 | Unit, integration, e2e |
 | [TC-31-02](#tc-31-02) | Positive | AC 2 | Unit, integration |
 | [TC-31-03](#tc-31-03) | Negative | AC 3 | Unit, integration |
 | [TC-31-04](#tc-31-04) | Boundary | AC 1, AC 3 | Unit, integration |
@@ -169,7 +169,7 @@ needs them.
 | Test Data | As in TC-155-10. |
 | Expected Result | As in TC-155-10. |
 
-**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31 TC-31-10, SCRUM-81 TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
 
 ### TC-31-11
 
@@ -182,4 +182,4 @@ needs them.
 | Test Data | Roles: ORGANISER, COORDINATOR, VENUE_STAFF, ATTENDEE (seeded `@test.local` accounts, password `Password123!`) <br> Equipment type: Lectern <br> Quantity: 1 |
 | Expected Result | Each reservation attempt is refused with a permission message, and nothing is written. Attendee's availability check is refused without reading the equipment. |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "refuses a role without equipment:reserve before reading anything"; `tests/unit/reservation.test.ts` › "refuses a role without equipment:read"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-31 TC-31-11: refuses a role without equipment:reserve before reading anything"; `tests/unit/reservation.test.ts` › "SCRUM-31 TC-31-11: refuses a role without equipment:read" and "SCRUM-31 TC-31-11: the every-type check refuses a role without equipment:read"

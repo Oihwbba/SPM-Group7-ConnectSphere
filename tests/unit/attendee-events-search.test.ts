@@ -11,28 +11,28 @@ const events = [
 ];
 
 describe("filterBrowsableEvents — SCRUM-72 review", () => {
-  it("[Positive] keeps events whose name contains the keyword", () => {
+  it("SCRUM-72 [AC1] TC-72-08: [Positive] keeps events whose name contains the keyword", () => {
     expect(filterBrowsableEvents(events, "wine").map((e) => e.name)).toEqual([
       "Wine Tasting Evening",
     ]);
   });
 
-  it("[Positive] matches the description too, ignoring upper/lower case", () => {
+  it("SCRUM-72 [AC1] TC-72-08: [Positive] matches the description too, ignoring upper/lower case", () => {
     expect(filterBrowsableEvents(events, "Career").map((e) => e.name)).toEqual([
       "Career Fair",
       "Summer Camp",
     ]);
   });
 
-  it("[Positive] a blank or whitespace keyword keeps every event", () => {
+  it("SCRUM-72 [AC1] TC-72-08: [Positive] a blank or whitespace keyword keeps every event", () => {
     expect(filterBrowsableEvents(events, "   ")).toEqual(events);
   });
 
-  it("[Negative] a keyword nothing contains returns no events", () => {
+  it("SCRUM-72: [Negative] a keyword nothing contains returns no events", () => {
     expect(filterBrowsableEvents(events, "zzz")).toEqual([]);
   });
 
-  it("[Boundary] trims surrounding spaces before matching", () => {
+  it("SCRUM-72 [AC1] TC-72-08: [Boundary] trims surrounding spaces before matching", () => {
     expect(
       filterBrowsableEvents(events, "  tasting ").map((e) => e.name),
     ).toEqual(["Wine Tasting Evening"]);

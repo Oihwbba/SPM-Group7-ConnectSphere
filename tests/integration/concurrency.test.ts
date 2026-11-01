@@ -35,15 +35,8 @@ import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
 // needs a real concurrent test against a live Postgres — see
-// docs/data-model.md, decision 4.4. Replace each `it.todo` as the feature lands.
-describe("concurrency", () => {
-  // Enforced by the `booking_no_double_booking` EXCLUDE constraint.
-  it.todo("rejects the second of two simultaneous overlapping approvals (SCRUM-53)");
-  it.todo("allows a booking that starts exactly when another ends (SCRUM-38/50)");
-
-  // SCRUM-74's version of this landed — see the
-  // "concurrency — registration capacity (SCRUM-74)" describe block below.
-});
+// docs/data-model.md, decision 4.4. Simultaneous overlapping approvals are
+// SCRUM-53's TC-53-05 and touching ones TC-53-06, below.
 
 // SCRUM-31 — enforced by SELECT ... FOR UPDATE on the Equipment row; a counted
 // pool cannot use an exclusion constraint. These WRITE to the database (a
@@ -628,7 +621,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     }
   });
 
-  it("SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
+  it("SCRUM-24 [AC7] TC-24-04, SCRUM-135 [AC14] TC-135-14, SCRUM-19 [AC6] TC-19-06: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
     (auth as unknown as Mock).mockResolvedValue({
       user: { id: "usr_coordinator", role: "COORDINATOR", name: "Cody", email: "coordinator@test.local" },
       expires: "2999-01-01T00:00:00.000Z",
@@ -779,7 +772,7 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
     await prisma.event.deleteMany({ where: { id: { in: ids } } });
   });
 
-  it("SCRUM-14 AC: submitting the same event again is refused, creates no second request and sends no additional notification", async () => {
+  it("SCRUM-14 [AC3] TC-14-04: submitting the same event again is refused, creates no second request and sends no additional notification", async () => {
     const first = await submitEventRequest(submission(eventId, name));
     expect(first.ok).toBe(true);
 
@@ -792,7 +785,7 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
     expect(await prisma.notification.count({ where: { eventId } })).toBe(notificationsBefore);
   });
 
-  it("SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once", async () => {
+  it("SCRUM-124 [AC10] TC-124-10, SCRUM-14 [AC3] TC-14-05, SCRUM-45 [AC1] TC-45-01: two simultaneous submissions of one draft succeed once and notify once", async () => {
     const raceName = `${name} (simultaneous)`;
     const draft = await prisma.event.create({
       data: { name: raceName, status: "DRAFT", organiserId: "usr_organiser" },
@@ -936,7 +929,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — clarification (SCRUM-18)", 
     await prisma.event.deleteMany({ where: { id: { in: ids } } });
   });
 
-  it("SCRUM-18: two simultaneous requests on one event create exactly one OPEN clarification and refuse the other", async () => {
+  it("SCRUM-18 [AC4, AC5] TC-18-08: two simultaneous requests on one event create exactly one OPEN clarification and refuse the other", async () => {
     asCoordinator();
 
     const results = await Promise.all([
@@ -951,7 +944,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — clarification (SCRUM-18)", 
     ).toBe(1);
   });
 
-  it("SCRUM-18: two simultaneous replies leave one ANSWERED row, refuse the other, and notify the coordinator once", async () => {
+  it("SCRUM-18 [AC4, AC5] TC-18-08: two simultaneous replies leave one ANSWERED row, refuse the other, and notify the coordinator once", async () => {
     asOrganiser();
     const open = await prisma.clarificationRequest.findFirstOrThrow({
       where: { eventId, status: "OPEN" },
@@ -982,7 +975,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — clarification (SCRUM-18)", 
     ).toBe(1);
   });
 
-  it("SCRUM-18: a question asked at the same instant as a decision never leaves an OPEN clarification on the decided event", async () => {
+  it("SCRUM-18 [AC4, AC5] TC-18-08: a question asked at the same instant as a decision never leaves an OPEN clarification on the decided event", async () => {
     asCoordinator();
     const event = await prisma.event.create({
       data: {
@@ -1033,7 +1026,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — registration capacity (SCRU
     });
   });
 
-  it("SCRUM-74: exactly one of two simultaneous registrations for the last place succeeds", async () => {
+  it("SCRUM-74 [AC3] TC-74-03: exactly one of two simultaneous registrations for the last place succeeds", async () => {
     (auth as unknown as Mock).mockResolvedValue({
       user: { id: "usr_attendee_3", role: "ATTENDEE", name: "Attendee Three", email: "attendee3@test.local" },
       expires: "2999-01-01T00:00:00.000Z",
@@ -1098,7 +1091,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — withdrawal reopens capacity
     await prisma.event.delete({ where: { id: eventId } });
   });
 
-  it("withdrawing the sole registration on a full event lets a new registration succeed", async () => {
+  it("SCRUM-74 [AC2] TC-74-06: withdrawing the sole registration on a full event lets a new registration succeed", async () => {
     asAttendee("usr_attendee_3", "attendee3@test.local");
     const first = await registerForEvent({ eventId });
     expect(first.ok).toBe(true);

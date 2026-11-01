@@ -60,7 +60,7 @@ describe("showSaveReply — SCRUM-25", () => {
     expect(ui.refresh).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-25 [AC1] TC-25-21: a refused save changed nothing, so the dialog stays open and nothing around it reads again", () => {
+  it("SCRUM-25 [AC1, AC3] TC-25-21: a refused save changed nothing, so the dialog stays open and nothing around it reads again", () => {
     const ui = dialogUi();
 
     showSaveReply(

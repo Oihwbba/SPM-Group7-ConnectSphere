@@ -122,7 +122,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | The Organiser; another Coordinator; any Coordinator when the event has no assigned Coordinator; Venue Staff; Technical Support; an Attendee; signed out |
 | Expected Result | Refused every time. The event stays Planning and no history entry is written.                                                                           |
 
-**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC7] TC-81-07: …"; `tests/unit/auth.test.ts` › "SCRUM-81 [AC7] TC-81-07: only the event's assigned Coordinator may confirm it"
+**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC7] TC-81-07: …"; `tests/unit/auth.test.ts` › "SCRUM-81 [AC7] TC-81-07: only the event's assigned Coordinator may confirm it" and "SCRUM-81 [AC7] TC-81-07, SCRUM-165 [AC8] TC-165-11: no Coordinator may confirm or open an event nobody is assigned to"
 
 ### TC-81-08
 
@@ -187,7 +187,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | —                                                                                                                                                                                           |
 | Expected Result | The reservation is created.                                                                                                                                                                 |
 
-**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-31 TC-31-10, SCRUM-81 TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"
 
 ### TC-81-13
 

@@ -34,7 +34,7 @@ password is `Password123!`.
 | [TC-141-04](#tc-141-04) | Positive, Negative | AC 2 | Unit, e2e |
 | [TC-141-05](#tc-141-05) | Positive, Negative | AC 3 | Unit, e2e |
 | [TC-141-06](#tc-141-06) | Positive, Negative | AC 3 | Unit, e2e |
-| [TC-141-07](#tc-141-07) | Positive | AC 4 | Unit |
+| [TC-141-07](#tc-141-07) | Positive | AC 4 | Unit, e2e |
 | [TC-141-08](#tc-141-08) | Positive, Negative | AC 5 | Unit, e2e |
 | [TC-141-09](#tc-141-09) | Negative | AC 1, AC 6 | Unit, e2e |
 | [TC-141-10](#tc-141-10) | Negative | AC 7 | e2e |
