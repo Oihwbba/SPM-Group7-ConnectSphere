@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-77 - Withdraw my registration
@@ -28,7 +28,7 @@
 6. Given I withdrew, I can register again while registration is open, the event is Confirmed and places are available. Registering again reactivates my same registration under the rules of SCRUM-73–75, and the earlier withdrawal stays in the event's history.
 7. Withdrawn registrations are kept, not deleted.
 
-**Related:** AC1, AC2 and AC5 are already built (the withdraw action shipped with SCRUM-74). AC3, AC4 and the history entry in AC6 remain.
+**Related:** the withdraw action first shipped with SCRUM-74 (AC1, AC2 and AC5); this story added AC3, AC4 and the history entry in AC6.
 
 **Notifications:** Organiser and Coordinator when someone withdraws from a full event (SCRUM-45).
 
@@ -36,5 +36,6 @@
 
 * 2026-10-01: rewritten in one format; start-time boundary aligned with the other periods; notification owner named.
 * 2026-10-01 (audit): AC6 matches the data model built for SCRUM-73, which keeps one registration per Attendee per event and reactivates it on re-registering. Removed the waiting-list hand-off, because SCRUM-79 is beyond Release 1. Noted what the SCRUM-74 code already delivers.
+* 2026-10-29 (SCRUM-239, PO approval pending): the Related note no longer says AC3, AC4 and AC6's history entry remain; they were built and the story is Done. Criteria unchanged.
 
 Functionality Area: Attendee Registration
