@@ -34,12 +34,15 @@ export function PageHeader({
       {/* The actions sit beside the title, on a phone as on a desktop; the
           description keeps the full width beneath them both. */}
       <div className="space-y-1">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="flex min-w-0 flex-wrap items-center gap-2 break-words text-2xl font-semibold tracking-tight">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          {/* The title keeps a floor of its own, so wide actions beside it
+              cannot squeeze it away; where even that will not fit — a 320px
+              screen — the actions drop beneath it rather than off the edge. */}
+          <h1 className="flex min-w-[7rem] flex-1 flex-wrap items-center gap-2 break-words text-2xl font-semibold tracking-tight">
             {title}
           </h1>
           {actions && (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
               {actions}
             </div>
           )}
