@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-53 - Approve or reject a booking request
@@ -33,7 +33,7 @@
 
 **Related:** the Coordinator is notified of the decision (SCRUM-124); first-come, first-served between competing requests is SCRUM-134; flagged requests can't be approved (SCRUM-26).
 
-**Customer basis:** "Venue Staff may provide a reason or suggest an alternative venue/arrangement." "Optional, this is not considered as core requirement. Resubmission counts as new booking for audit." The free-text form follows the customer's answer "Free text reason is reasonable", which was given for Coordinator rejections and is applied here as a team decision.
+**Customer basis:** "Free text reason is reasonable", which was given for Coordinator rejections and is applied here as a team decision.
 
 **Change log**
 
