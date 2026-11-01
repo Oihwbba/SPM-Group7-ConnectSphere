@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-24 - Keep event status consistent with actions taken
@@ -43,4 +43,8 @@ This story defines the single source of truth for event status. It does not reim
 
 **Authoritative model:** see the Confluence page **ConnectSphere Cross-Cutting Requirements Model**.
 
-**Current ownership note (2026-10-02):** SCRUM-135 is the current authoritative lifecycle-transition story and supersedes the transition table from the original Sprint 1 wording. This story remains the cross-cutting integrity rule; it does not reintroduce the merged SCRUM-43/SCRUM-83 stories.
+**Current ownership note (2026-10-02):** SCRUM-135 is the current authoritative lifecycle-transition story and supersedes the transition table from the original Sprint 1 wording. This story remains the cross-cutting integrity rule; it does not reintroduce the merged SCRUM-43/SCRUM-83 stories. Since Week 7 change 5, Submitted → Under Review is the Lead's assignment (SCRUM-165 AC5, SCRUM-135 AC2), not SCRUM-20's automatic assignment.
+
+**Change log**
+
+* 2026-10-29 (SCRUM-243, PO approval pending): the ownership note names SCRUM-165 as the owner of Submitted → Under Review. Criteria unchanged.
