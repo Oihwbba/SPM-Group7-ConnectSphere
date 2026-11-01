@@ -301,7 +301,7 @@ describe("recordSafetyCheckOutcome — refusals (SCRUM-166 AC3, AC6–AC8, AC13)
     });
   });
 
-  it("SCRUM-166 [AC15] TC-166-11: an event no longer in Planning can't have its check recorded", async () => {
+  it("SCRUM-166 [AC7, AC15] TC-166-11: an event no longer in Planning can't have its check recorded", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue({ status: "CANCELLED" });
 
     expect(
@@ -313,7 +313,7 @@ describe("recordSafetyCheckOutcome — refusals (SCRUM-166 AC3, AC6–AC8, AC13)
     expectNothingWritten();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-166 [AC3]: does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(
       recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" }),

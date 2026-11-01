@@ -447,7 +447,7 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
 });
 
 describe("transitionEventStatus — SCRUM-165 AC8 an unassigned request", () => {
-  it("SCRUM-165 [AC8] TC-165-11 (supersedes SCRUM-108 AC11): a Coordinator can't reject a request nobody was assigned to; it waits for the Lead", async () => {
+  it("SCRUM-165 [AC8] TC-165-11, SCRUM-135 [AC4] TC-135-04: [supersedes SCRUM-108 AC11] a Coordinator can't reject a request nobody was assigned to; it waits for the Lead", async () => {
     mockAuth.mockResolvedValue(coordinator());
     tx.event.findUnique.mockResolvedValue({
       id: "evt1",
@@ -643,7 +643,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     },
     { when: "it was rejected before anyone was assigned", coordinatorId: null },
   ])(
-    "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator",
+    "SCRUM-165 [AC9] TC-165-12, SCRUM-135 [AC2, AC6] TC-135-02: [supersedes SCRUM-108 AC11] when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator",
     async ({ coordinatorId }) => {
       tx.event.findFirst.mockResolvedValue(rejectedRow(coordinatorId));
       tx.user.findFirst.mockResolvedValue(null);

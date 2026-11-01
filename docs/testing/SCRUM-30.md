@@ -41,7 +41,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | The seeded projector pool |
 | Expected Result | The upcoming reservations, with their events, and the maintenance are listed in time order, each with its period and quantity; the finished one isn't. Overlapping reservations are listed as they are, without a verdict. The new reservation appears without a reload. |
 
-**Automated by:** `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC1]: lists current and future reservations with the event they serve", "SCRUM-30 [AC1]: reports overlapping reservations as they stand, without judging them", "returns entries in chronological order, reservations and repairs together"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC1]: lists current and future commitments with the event name, and drops finished ones"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1] TC-30-01: the seeded maintenance on the projector pool is listed", "SCRUM-30 [AC1] TC-30-01, SCRUM-156 [AC6] TC-156-06: a reservation made in the request card appears in the commitments without a reload"
+**Automated by:** `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC1] TC-30-01: lists current and future reservations with the event they serve", "SCRUM-30 [AC1] TC-30-01: reports overlapping reservations as they stand, without judging them", "SCRUM-30 [AC1] TC-30-01: returns entries in chronological order, reservations and repairs together"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC1] TC-30-01: lists current and future commitments with the event name, and drops finished ones"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1] TC-30-01: the seeded maintenance on the projector pool is listed", "SCRUM-30 [AC1] TC-30-01, SCRUM-156 [AC6] TC-156-06: a reservation made in the request card appears in the commitments without a reload"
 
 ### TC-30-02
 
@@ -54,7 +54,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | 10 May 2031, 09:00 to 17:00 SGT |
 | Expected Result | The overlapping ones are under "Commitments during requested period", below the chosen type. The rest are under "Other commitments", even ones that overlap each other, and don't reduce the period's availability. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC2]: puts commitments that share time with the requested period under it", "SCRUM-30 [AC2]: commitments wholly outside the period are other commitments, even if they overlap each other", "splits on the same rule the requested-period availability is computed from"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC2]: other commitments, even ones that overlap each other, do not reduce the requested period's availability"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1, AC2] TC-30-02: commitments overlapping the requested period are listed under it, the rest under other commitments", "SCRUM-30 [AC2] TC-30-02: the requested-period section sits under the selected item, and other commitments below the other equipment", "SCRUM-30 [AC2] TC-30-02: other commitments stay neutral even when they overlap each other"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC2] TC-30-02: puts commitments that share time with the requested period under it", "SCRUM-30 [AC2] TC-30-02: commitments wholly outside the period are other commitments, even if they overlap each other", "SCRUM-30 [AC2] TC-30-02: splits on the same rule the requested-period availability is computed from"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC2] TC-30-02: other commitments, even ones that overlap each other, do not reduce the requested period's availability"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1, AC2] TC-30-02: commitments overlapping the requested period are listed under it, the rest under other commitments", "SCRUM-30 [AC2] TC-30-02: the requested-period section sits under the selected item, and other commitments below the other equipment", "SCRUM-30 [AC2] TC-30-02: other commitments stay neutral even when they overlap each other"
 
 ### TC-30-03
 
@@ -67,7 +67,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | Quantities 2 and 3 |
 | Expected Result | At 2 the commitments are amber: they affect availability but aren't a conflict. At 3 they turn red, with the shortfall: 1 short. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC3]: amber while the requested quantity can still be fulfilled", "SCRUM-30 [AC4]: red only when the requested quantity exceeds what is free", "agrees with checkQuantity at the boundary: exactly the free quantity is amber, one more is red"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC3]: commitments during the period are amber while the request still fits", "SCRUM-30 [AC4]: they turn red, with the shortfall, once the request exceeds what is free"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC3] TC-30-03: commitments during the period are amber while the requested quantity can still be fulfilled", "SCRUM-30 [AC4] TC-30-03: they turn red with the shortfall only when the requested quantity exceeds what is free"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC3] TC-30-03: amber while the requested quantity can still be fulfilled", "SCRUM-30 [AC4] TC-30-03: red only when the requested quantity exceeds what is free", "SCRUM-30 [AC3, AC4] TC-30-03: agrees with checkQuantity at the boundary: exactly the free quantity is amber, one more is red"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC3] TC-30-03: commitments during the period are amber while the request still fits", "SCRUM-30 [AC4] TC-30-03: they turn red, with the shortfall, once the request exceeds what is free"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC3] TC-30-03: commitments during the period are amber while the requested quantity can still be fulfilled", "SCRUM-30 [AC4] TC-30-03: they turn red with the shortfall only when the requested quantity exceeds what is free"
 
 ### TC-30-04
 
@@ -80,7 +80,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | The reservations above |
 | Expected Result | The two reservations are listed as separate, adjacent commitments, not a conflict. The one that only touches the period is under "Other commitments", and the period is fully available. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC2, AC5]: a commitment that only touches the period at an endpoint is an other commitment"; `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC5]: reports back-to-back reservations as two separate commitments"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC2, AC5]: splits real commitments by the requested period, with touching ones under other commitments"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC2, AC5] TC-30-04: commitments that only touch the period are other commitments and leave it fully available"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC2, AC5] TC-30-04: a commitment that only touches the period at an endpoint is an other commitment"; `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC5] TC-30-04: reports back-to-back reservations as two separate commitments"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC2, AC5] TC-30-04: splits real commitments by the requested period, with touching ones under other commitments"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC2, AC5] TC-30-04: commitments that only touch the period are other commitments and leave it fully available"
 
 ### TC-30-05
 
@@ -93,7 +93,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | The seeded records |
 | Expected Result | Each shows its reason ("Under maintenance", "Damaged"), its note (the speaker's is "Blown driver, awaiting write-off."), its quantity (for example "1 unit(s)") and its period in SGT. |
 
-**Automated by:** `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC6]: shows the reason and duration of unavailability"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC6]: shows the reason, note and period of unavailability, alongside reservations in time order"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC6] TC-30-05: selecting a seeded item shows its commitments with the reason", "SCRUM-30 [AC6] TC-30-05: an outage shows its reason, note and period"
+**Automated by:** `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC6] TC-30-05: shows the reason and duration of unavailability"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC6] TC-30-05: shows the reason, note and period of unavailability, alongside reservations in time order"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC6] TC-30-05: selecting a seeded item shows its commitments with the reason", "SCRUM-30 [AC6] TC-30-05: an outage shows its reason, note and period"
 
 ### TC-30-06
 
@@ -106,7 +106,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | A newly created type with nothing reserved or recorded |
 | Expected Result | It is reported as fully available, not shown as an empty list. |
 
-**Automated by:** `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC7]: an item with nothing committed reports fully available, not an empty list"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC7]: an item with nothing committed from `from` onwards is reported fully available"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC7] TC-30-06: an item with nothing committed says so instead of showing an empty list"
+**Automated by:** `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC7] TC-30-06: an item with nothing committed reports fully available, not an empty list"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC7] TC-30-06: an item with nothing committed from `from` onwards is reported fully available"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC7] TC-30-06: an item with nothing committed says so instead of showing an empty list"
 
 ### TC-30-07
 
@@ -119,4 +119,4 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | A made-up type id; "not-a-date" |
 | Expected Result | Each is refused with its reason, and nothing is read. |
 
-**Automated by:** `tests/unit/equipment-schedule.test.ts` › "refuses a role without equipment:read, and an unknown item", "rejects a malformed request with field errors and reads nothing", "rejects a `from` that is not a date"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1] TC-30-07: shows the schedule's own error when the item can no longer be read, and keeps the form" (a type retired while the page is open: the panel says "Equipment type is unavailable." and the availability check stays usable)
+**Automated by:** `tests/unit/equipment-schedule.test.ts` › "SCRUM-30 [AC1] TC-30-07: refuses a role without equipment:read, and an unknown item", "SCRUM-30 [AC1] TC-30-07: rejects a malformed request with field errors and reads nothing", "SCRUM-30 [AC1] TC-30-07: rejects a `from` that is not a date"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1] TC-30-07: shows the schedule's own error when the item can no longer be read, and keeps the form" (a type retired while the page is open: the panel says "Equipment type is unavailable." and the availability check stays usable)

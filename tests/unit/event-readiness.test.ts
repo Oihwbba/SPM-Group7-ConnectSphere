@@ -509,7 +509,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
     expect(equipment(result)?.complete).toBe(false);
   });
 
-  it("SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: a cancelled request leaves Equipment Not decided, so it blocks confirmation until the Coordinator decides", async () => {
+  it("SCRUM-110 [AC3, AC4] TC-110-09, SCRUM-170 [AC4] TC-170-07: a cancelled request leaves Equipment Not decided, so it blocks confirmation until the Coordinator decides", async () => {
     const result = await checklistOf(
       planningEvent({
         ...undecided,
@@ -680,7 +680,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
     },
   );
 
-  it("SCRUM-110 TC-110-13: an id that matches no event has no checklist", async () => {
+  it("SCRUM-110 [AC6] TC-110-13: an id that matches no event has no checklist", async () => {
     expect(await checklistOf(null)).toBeNull();
   });
 
@@ -951,7 +951,7 @@ describe("getReadinessChecklist — several venues (SCRUM-162 AC8)", () => {
     expect(venue(result)?.complete).toBe(false);
   });
 
-  it("SCRUM-162 [AC8], SCRUM-110 [AC6] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason", () => {
+  it("SCRUM-110 [AC6] TC-110-12, SCRUM-162 [AC8] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason", () => {
     const flaggedLine = listed(hall("APPROVED", 1), {
       complete: false,
       needsReconsideration: true,
