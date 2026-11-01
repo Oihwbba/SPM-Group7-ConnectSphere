@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-135 - Refuse any event status change the lifecycle does not allow
@@ -49,6 +49,6 @@
 * 2026-10-07 (Week 7 changes 5 and 6): AC2 has the Lead assign the Coordinator (SCRUM-165). AC3 and AC4 no longer let a Coordinator decide a Submitted request with no Coordinator, because Coordinators manage only events assigned to them. AC6 returns a resubmitted request to the Lead's queue if its Coordinator no longer holds the role. AC7 needs an approved safety check (SCRUM-167). AC16 keeps the safety check and reassignment out of the status list. Re-estimated from 2 to 3 points.
 * 2026-10-07 (backlog refinement): AC7 and AC16 point to SCRUM-166, which SCRUM-167 was merged into.
 * 2026-10-09 (PO review): added a Customer basis and a Supersedes line matching SCRUM-165.
-* 2026-10-29 (SCRUM-243, PO approval pending): the Supersedes line names SCRUM-24's transition list, which the "Why" already said this story supersedes. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the Supersedes line names SCRUM-24's transition list, which the "Why" already said this story supersedes. Criteria unchanged.
 
 Functionality Area: Event Status Management

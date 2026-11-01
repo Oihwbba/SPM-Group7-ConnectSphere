@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-129 - Show and store all event times in Singapore time
@@ -35,6 +35,6 @@
 **Change log**
 
 * 2026-10-01 (audit): AC3 names the all-events list (SCRUM-141) instead of the event calendar (SCRUM-120, beyond Release 1). Opening hours are owned by SCRUM-34.
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Supersedes line for SCRUM-13 AC1, AC4 and AC6, which AC1 already changed; SCRUM-13 now carries a matching note. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Supersedes line for SCRUM-13 AC1, AC4 and AC6, which AC1 already changed; SCRUM-13 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Event Request Creation

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-73 - Register for an event
@@ -38,7 +38,7 @@
 **Change log**
 
 * 2026-10-01 (audit): written as one numbered list. "Enabled when registration needs is Yes" is replaced by "opens when the event is Confirmed (SCRUM-81)": the request form's registration needs is free text, and nothing in the code switched registration on, so only seeded events could take registrations. The cut-off at the event's start moved to SCRUM-75 AC8, which already states it; the merged code doesn't check it yet.
-* 2026-10-29 (SCRUM-239, PO approval pending): marked AC6 as superseded in part by SCRUM-75's 8 Oct refinement (no window is set) and narrowed by SCRUM-171 AC4 (Registration needed: No). The Business rule now says how Organiser discretion works since that refinement. Criteria unchanged; story stays Done.
-* 2026-10-29 (SCRUM-239, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): marked AC6 as superseded in part by SCRUM-75's 8 Oct refinement (no window is set) and narrowed by SCRUM-171 AC4 (Registration needed: No). The Business rule now says how Organiser discretion works since that refinement. Criteria unchanged; story stays Done.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Attendee Registration

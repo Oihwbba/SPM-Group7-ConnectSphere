@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-84 - Organiser views their own event requests
@@ -16,7 +16,7 @@
 
 ---
 
-**Superseded in part:** AC2's status names are shown as in SCRUM-131 AC1 (Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected), and the tab that lists every request that isn't a draft is named "Sent", not "Submitted", so it isn't mistaken for the Submitted status (SCRUM-131 AC1). The criteria below are kept as accepted in Sprint 1.
+**Superseded in part:** AC2's status names are shown as in SCRUM-131 AC1 (Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected), and the tab that lists every request that isn't a draft is named "Sent", not "Submitted", so it isn't mistaken for the Submitted status (SCRUM-131 AC1). No event rests in Approved, because approval saves Planning (SCRUM-81 AC1, SCRUM-135 AC12), so AC2's Approved appears only in an event's history, and the status filter doesn't offer it (SCRUM-233). The criteria below are kept as accepted in Sprint 1.
 
 **As an Event Organiser**, I want to see a list of all my own event requests regardless of status, so that I can find drafts to resume and track anything I've already submitted.
 
@@ -59,11 +59,11 @@
     * Search matches partial substrings (e.g., typing "annual" matches "Annual Tech Conference").
     * Clearing the search input immediately restores the full filtered list according to the active status tab.
 
-
 **Note:** closes a dependency three existing stories already assumed without anyone building it — "Save an event request as a draft" ("Organiser can find and resume any of their saved drafts"), "Distinguish drafts from submitted requests" (drafts must look distinct "wherever they appear alongside submitted requests"), and "View only the events I own" ("An Organiser's event list contains only events where they are the submitting Organiser"). All three describe rules for this list; this story is the list itself. Added 2026-09-06 following the full backlog synthesis.
 
 **Change log**
 
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-131. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Superseded in part note for SCRUM-131. Criteria unchanged.
+* 2026-10-29 (SCRUM-233, PO approved 2026-11-01): the Superseded in part note now says AC2's Approved appears only in an event's history, since no event rests in it, and isn't offered as a filter. Criteria unchanged; no code change for this story; it stays Done.
 
 Functionality Area: Draft Event Requests, Event Status Management

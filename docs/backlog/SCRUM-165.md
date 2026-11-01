@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-165 - Lead assigns new requests from an unassigned queue
@@ -46,6 +46,6 @@
 
 * 2026-10-07 (Week 7 change 5): created.
 * 2026-10-16 (W9 clarifications, PO approved): AC11 added. The Lead who assigns a request becomes its supervising Lead ("Lead is responsible for supervising the co-ordinator that he/she allocated for an event request"), recorded in the field SCRUM-172 AC12 added.
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-211 AC1 (decision by Felicia, 29 Oct). The change log is one list, oldest first; it was nested by mistake. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Superseded in part note for SCRUM-211 AC1 (decision by Felicia, 29 Oct). The change log is one list, oldest first; it was nested by mistake. Criteria unchanged.
 
 Functionality Area: Coordinator Assignment

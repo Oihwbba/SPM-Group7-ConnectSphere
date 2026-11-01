@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-110 - See an event's readiness checklist
@@ -43,8 +43,8 @@
 * 2026-10-04: AC4 names the items not yet reserved in full, without counts, so the Coordinator can see what is missing (PO decision).
 * 2026-10-07: the "Not requested yet" extension points to SCRUM-170, which took it over when SCRUM-127 was split.
 * 2026-10-12: the extension list adds SCRUM-142 AC10 (a request awaiting re-check blocks Confirm).
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-162, SCRUM-163, SCRUM-166 and SCRUM-170. The SCRUM-170 extension says "Not decided", as SCRUM-170 AC4 does, instead of "Not requested yet". Criteria unchanged.
-* 2026-10-29 (SCRUM-243, PO approval pending): merged the "Extended by later stories" list into the Superseded in part note, as on SCRUM-13 and SCRUM-76; SCRUM-170 AC4 was listed in both. Criteria unchanged.
-* 2026-10-29 (SCRUM-243, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Superseded in part note for SCRUM-162, SCRUM-163, SCRUM-166 and SCRUM-170. The SCRUM-170 extension says "Not decided", as SCRUM-170 AC4 does, instead of "Not requested yet". Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): merged the "Extended by later stories" list into the Superseded in part note, as on SCRUM-13 and SCRUM-76; SCRUM-170 AC4 was listed in both. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Event Status Management

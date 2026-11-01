@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-171 - Record whether an event needs registration
@@ -41,7 +41,7 @@
 * 2026-10-10: Reword SCRUM-171 AC5 such that coordinator cannot edit the routine registration field (SCRUM-25) while registrations are active.
 * 2026-10-14 (PO approved): AC4 drops the sentence about closed events staying listed (owned by SCRUM-75 AC6 and SCRUM-72 AC4). AC5's last sentence, opening registration when a Confirmed event changes to Yes, moved to SCRUM-75 AC11.
 * 2026-10-17 (PO approved): AC5's change-request case moved to SCRUM-128 AC11, which applies change requests; this story keeps the rule for a direct edit (built in #209). No re-estimate: the rule and its message were built here and are reused by SCRUM-128.
-* 2026-10-29 (SCRUM-239, PO approval pending): added the Supersedes line for SCRUM-72 AC1 and AC8 and SCRUM-73 AC6, which AC4 already changed; both stories now carry a matching note. Criteria unchanged.
-* 2026-10-29 (SCRUM-243, PO approval pending): the Supersedes line also names SCRUM-13 AC1 and AC4's registration needs, which AC1 and AC2 already changed (decision by Felicia, 29 Oct); SCRUM-13 now carries a matching note. Criteria unchanged.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): added the Supersedes line for SCRUM-72 AC1 and AC8 and SCRUM-73 AC6, which AC4 already changed; both stories now carry a matching note. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the Supersedes line also names SCRUM-13 AC1 and AC4's registration needs, which AC1 and AC2 already changed (decision by Felicia, 29 Oct); SCRUM-13 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Event Request Creation, Attendee Registration

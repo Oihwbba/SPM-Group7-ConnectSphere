@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-243 - Chore: Fix what the SCRUM-6 epic check found in the docs and Jira notes
@@ -58,3 +58,4 @@ Done stories are not reopened: only notes, Supersedes lines and change logs are 
 * 2026-10-29: created from the SCRUM-213 epic check.
 * 2026-10-29: ADR 0014 added to the docs found out of date, and to AC5.
 * 2026-10-29: AC5 extended to the test cases of every superseded criterion (SCRUM-16, 19, 84, 110 and 117 added), found when checking that the superseded stories' tests still test the right thing. Their tests needed no change.
+* 2026-11-01 (PR #319): the PO approved the wording (AC4), so each story's change-log line now says PO approved 2026-11-01. Criteria unchanged.

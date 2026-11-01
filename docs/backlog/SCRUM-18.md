@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-18 - Request clarification on an event under review
@@ -33,4 +33,4 @@
 
 **Change log**
 
-* 2026-10-29 (SCRUM-243, PO approval pending): added the References moved note for SCRUM-109 and SCRUM-56. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the References moved note for SCRUM-109 and SCRUM-56. Criteria unchanged.

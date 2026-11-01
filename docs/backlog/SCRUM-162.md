@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-162 - Book several venues for one event
@@ -40,6 +40,6 @@
 
 * 2026-10-07 (Week 7 change 3): created.
 * 2026-10-16 (W9 clarifications, `PO approved`): AC9 added. Each venue request records its own attendance, required facilities, accessibility features and layout, so a replacement room keeps needs such as wheelchair access (accessibility counts for suitability per G4, and the safety check shows it per venue, SCRUM-166 AC2). A separate capacity refusal isn't needed; SCRUM-50 AC6 already covers it.
-* 2026-10-29 (SCRUM-239, PO approval pending): the Supersedes line adds SCRUM-76 AC1. My Registrations shows every Approved venue, as TC-76-01 already records, and SCRUM-76 now carries a matching note. Criteria unchanged.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): the Supersedes line adds SCRUM-76 AC1. My Registrations shows every Approved venue, as TC-76-01 already records, and SCRUM-76 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Venue Booking Request, Venue Suitability Checking, Booking Conflict Detection

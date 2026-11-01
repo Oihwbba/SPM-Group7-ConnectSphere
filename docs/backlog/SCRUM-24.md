@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-24 - Keep event status consistent with actions taken
@@ -47,4 +47,4 @@ This story defines the single source of truth for event status. It does not reim
 
 **Change log**
 
-* 2026-10-29 (SCRUM-243, PO approval pending): the ownership note names SCRUM-165 as the owner of Submitted → Under Review. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the ownership note names SCRUM-165 as the owner of Submitted → Under Review. Criteria unchanged.

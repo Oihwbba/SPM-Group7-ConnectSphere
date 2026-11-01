@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-211 - One layout for every work queue
@@ -37,6 +37,6 @@
 
 * 2026-10-21: created at Sprint 3 review for Sprint 4 (UI revamp U5). Owner Caylern.
 * 2026-10-27 (PO approved, Hann Qian): AC1 reworded. "Oldest item first" conflicted with SCRUM-52 AC1 (Bookings: soonest event first), so each queue keeps its current default order and users can sort. "Waiting since" becomes "requested" (date and how long ago), which still shows the submission time first-come-first-served needs (SCRUM-134). The table is limited to four columns so it stays easy to scan; other details move to the opened item. No re-estimate.
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Supersedes line for SCRUM-165 AC2 (decision by Felicia, 29 Oct); SCRUM-165 now carries a matching note. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Supersedes line for SCRUM-165 AC2 (decision by Felicia, 29 Oct); SCRUM-165 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Venue Booking Approval, Equipment Request Management, Coordinator Assignment

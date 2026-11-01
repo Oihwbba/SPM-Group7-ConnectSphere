@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-72 - View an event I could attend
@@ -43,7 +43,7 @@
 * 2026-10-01 (audit): AC1 restored to the built behaviour: every Confirmed event is listed. The code has one registration flag, so hiding "registration turned off" events contradicted AC4 (manually closed events stay listed). Hiding events that don't need registration moved to SCRUM-127, which adds the Registration needed choice.
 * 2026-10-07: the Boundary note points hiding events that don't need registration to SCRUM-171, which took the Registration needed choice over when SCRUM-127 was split.
 * 2026-10-07: the Boundary note points to SCRUM-85, which SCRUM-133 was merged into.
-* 2026-10-29 (SCRUM-239, PO approval pending): marked AC2 as superseded in part by SCRUM-162 AC7, which already names SCRUM-72 AC2 in its Supersedes line; AC1 and AC8 as narrowed by SCRUM-171 AC4; and AC7 and AC8's exception for an event being re-planned (SCRUM-85 AC9). Criteria unchanged; story stays Done.
-* 2026-10-29 (SCRUM-239, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): marked AC2 as superseded in part by SCRUM-162 AC7, which already names SCRUM-72 AC2 in its Supersedes line; AC1 and AC8 as narrowed by SCRUM-171 AC4; and AC7 and AC8's exception for an event being re-planned (SCRUM-85 AC9). Criteria unchanged; story stays Done.
+* 2026-10-29 (SCRUM-239, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Attendee Registration

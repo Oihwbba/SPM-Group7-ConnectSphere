@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-19 - Approve or reject an event request
@@ -38,5 +38,5 @@
 
 **Change log**
 
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-81, SCRUM-126, SCRUM-135 and SCRUM-165. Criteria unchanged.
-* 2026-10-29 (SCRUM-243, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Superseded in part note for SCRUM-81, SCRUM-126, SCRUM-135 and SCRUM-165. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.

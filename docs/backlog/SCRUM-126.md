@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-126 - Coordinator decides whether a rejected request is amended or submitted as new
@@ -37,6 +37,6 @@
 **Change log**
 
 * 2026-10-01 (audit): moved into Sprint 2 because SCRUM-108 and SCRUM-117 depend on it. AC4 names equipment requests and reservations (the built equipment model).
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Supersedes line for SCRUM-19 AC3 and AC4, which AC1 to AC3 already changed; SCRUM-19 now carries a matching note. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Supersedes line for SCRUM-19 AC3 and AC4, which AC1 to AC3 already changed; SCRUM-19 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Event Review and Approval

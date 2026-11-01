@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-81 - Move an approved event through planning to confirmed
@@ -42,7 +42,7 @@
 * 2026-10-01 (mid-sprint correction, no new scope): AC1 states that Approved is passed through in the same action.
 * 2026-10-01 (audit): AC2 states what the branch already does for an unassigned request. AC6 says reserved equipment, as the branch shows. AC5 adds opening registration on confirmation, one line in the confirm action (set the event's registration as enabled). Without it, an event that went through the app could never take registrations, which the Sprint 2 goal needs.
 * 2026-10-07: AC5 points the Registration needed choice to SCRUM-171, which took it over when SCRUM-127 was split.
-* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-135, SCRUM-162, SCRUM-165 and SCRUM-166. The Related note no longer says SCRUM-81 and SCRUM-110 must merge together; both were merged in Sprint 2. Criteria unchanged.
-* 2026-10-29 (SCRUM-243, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Superseded in part note for SCRUM-135, SCRUM-162, SCRUM-165 and SCRUM-166. The Related note no longer says SCRUM-81 and SCRUM-110 must merge together; both were merged in Sprint 2. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Event Status Management

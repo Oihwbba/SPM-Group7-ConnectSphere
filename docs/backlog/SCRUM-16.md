@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-16 - Distinguish drafts from submitted requests
@@ -43,7 +43,6 @@
 
 **Change log**
 
-* 2026-10-29 (SCRUM-243, PO approval pending): the dependency note names SCRUM-84, which built the list; it used to say no story built it and asked backlog refinement to decide. Criteria unchanged.
-
+* 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the dependency note names SCRUM-84, which built the list; it used to say no story built it and asked backlog refinement to decide. Criteria unchanged.
 
 Functionality Area: Draft Event Requests & Event Status Management
