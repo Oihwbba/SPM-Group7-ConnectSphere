@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-31. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-239 - Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes
@@ -16,7 +16,7 @@
 
 ---
 
-Found during the SCRUM-218 epic check (AC2, AC3, AC4). SCRUM-242 was merged into this chore on 29 Oct, so one PR carries every fix.
+Found during the SCRUM-218 epic check (AC2, AC3, AC4).
 
 **Done stories that don't record what later stories changed.** Later stories changed what SCRUM-72 to 77 say, but the old stories don't record it, so a reader of SCRUM-72, 73 or 76 sees criteria that no longer describe the code:
 
@@ -30,7 +30,7 @@ Found during the SCRUM-218 epic check (AC2, AC3, AC4). SCRUM-242 was merged into
 
 Done stories are not reopened: only notes, Supersedes lines and change logs are edited, never a Done story's user story, criteria or title.
 
-**Docs that disagree with Jira** (from SCRUM-242):
+**Docs that disagree with Jira:**
 
 * The Release 1 feature table in docs/product-context.md lists SCRUM-70 as a main story of feature #18 Attendee registration (SCRUM-11), but in Jira SCRUM-70 belongs to SCRUM-9 Access Control.
 * SCRUM-212 belongs to SCRUM-11 Attendee Registration in Jira, but the feature table doesn't list it under feature #18, and docs/backlog (synced 21 Oct, before it was linked) still files it under "Stories with no epic".
@@ -58,6 +58,7 @@ Out of scope: SCRUM-212 AC1, which listed four registration states while SCRUM-7
 
 * 2026-10-29: SCRUM-212 AC1 taken out of scope, to be raised with Caylern and Hann Qian instead; its Jira edit was reverted.
 * 2026-10-29: a second pass of the epic added SCRUM-76 AC1 (SCRUM-162), SCRUM-85's changes to SCRUM-72 and SCRUM-76, and the SCRUM-73 test-doc note.
-* 2026-10-29: SCRUM-242 merged in as AC6 to AC11 (its AC1 to AC6, in the same order); renamed from "Record which later stories supersede the Attendee Registration stories (SCRUM-72 to 77)". AC1 to AC5 are unchanged.
+* 2026-10-29: AC6 to AC11 added; renamed from "Record which later stories supersede the Attendee Registration stories (SCRUM-72 to 77)". AC1 to AC5 are unchanged.
 * 2026-10-29: AC5 extended to the test cases of the superseded criteria (TC-72-06, TC-72-07, TC-73-05, TC-76-01), found when checking that the superseded stories' tests still test the right thing. Their tests needed no change.
 * 2026-10-31 (PR #312): the out-of-scope note says how SCRUM-212 AC1 was settled: the PO approved the wording on 30 Oct. Criteria unchanged.
+* 2026-11-01: references to an archived item removed. Criteria unchanged.
