@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **79** |
+| Tasks | **90** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -268,11 +268,21 @@ _6 stories, 10 points_
 | [SCRUM-230](SCRUM-230.md) | Chore: Raise the CI job limit from 20 to 30 minutes | SCRUM Sprint 4 | Done |
 | [SCRUM-231](SCRUM-231.md) | Chore: Raise the CI build-and-test job's time limit from 20 to 35 minutes | SCRUM Sprint 4 | In Review |
 | [SCRUM-232](SCRUM-232.md) | Chore: Name every e2e test after the story, criteria and test case it proves | SCRUM Sprint 4 | In Review |
-| [SCRUM-233](SCRUM-233.md) | Chore: Bring the seed in line with the event lifecycle: no event left in Approved, every event within one day | SCRUM Sprint 4 | To Do |
+| [SCRUM-233](SCRUM-233.md) | Chore: Bring the seed in line with the event lifecycle: no event left in Approved, every event within one day | SCRUM Sprint 4 | In Review |
 | [SCRUM-234](SCRUM-234.md) | Chore: Add the missing e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation | SCRUM Sprint 4 | In Review |
 | [SCRUM-235](SCRUM-235.md) | Chore: Re-sync docs/backlog from Jira (28 Oct) | SCRUM Sprint 4 | To Do |
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | To Do |
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
-| [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
+| [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Review |
 | [SCRUM-239](SCRUM-239.md) | Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes | SCRUM Sprint 4 | In Review |
+| [SCRUM-240](SCRUM-240.md) | Bug: The live app hits Supabase's connection limit because the database pool has no maximum | SCRUM Sprint 4 | In Review |
+| [SCRUM-241](SCRUM-241.md) | Bug: The venue availability calendar shows closed hours as available | SCRUM Sprint 4 | In Review |
 | [SCRUM-243](SCRUM-243.md) | Chore: Fix what the SCRUM-6 epic check found in the docs and Jira notes | SCRUM Sprint 4 | In Review |
+| [SCRUM-244](SCRUM-244.md) | Chore: Re-sync docs/backlog for the SCRUM-7 to SCRUM-10 stories whose Customer basis was edited on 29 Oct | SCRUM Sprint 4 | In Review |
+| [SCRUM-245](SCRUM-245.md) | Chore: Stop three integration tests failing when another test file runs at the same time | SCRUM Sprint 4 | In Review |
+| [SCRUM-246](SCRUM-246.md) | Bug: The event request form shows equipment stock as "available" and doesn't show venues' opening hours | SCRUM Sprint 4 | In Review |
+| [SCRUM-247](SCRUM-247.md) | Bug: A Coordinator's edit during re-planning can set expected attendance below the people already registered, overbooking the event | SCRUM Sprint 4 | In Review |
+| [SCRUM-249](SCRUM-249.md) | Bug: An overdue event can still be approved or confirmed, so an event that never happened can end up Completed | SCRUM Sprint 4 | In Review |
+| [SCRUM-255](SCRUM-255.md) | Bug: Sign-in answers faster for an unknown email, which can reveal which accounts exist | SCRUM Sprint 4 | In Review |
+| [SCRUM-258](SCRUM-258.md) | Bug: A Confirmed event's flagged arrangements read as secured | SCRUM Sprint 4 | In Review |
+| [SCRUM-260](SCRUM-260.md) | Chore: Sync docs/backlog for the stories open pull requests need | SCRUM Sprint 4 | In Review |
