@@ -253,16 +253,17 @@ more days out, except the overdue ones, whose dates have passed:
 | Coordinator (`coordinator@`) | "Planning: Ready to Confirm — Alumni Networking Night" (venue, equipment and safety check done); "Planning: Arrangements Flagged — Sustainability Forum" (a booking flagged by a change and a reservation Technical Support reported, to resolve); "Planning: Hold Approved — Founders' Breakfast" (a hold to confirm or release); "Confirmed: Cancellation Requested — Spring Concert" (a cancellation to decide); "Confirmed: Reservation Reported — Film Screening" (a reported reservation to resolve: Cancel arrangement returns the event to Planning, SCRUM-26 AC10) |
 | Cara Coordinator (`coordinator2@`) | "Planning: Safety Changes Requested — Robotics Showcase": the Safety Officer asked for changes; No equipment needed recorded |
 | Lead (`lead@`) | "Submitted: Overdue — Orientation Volunteers Briefing", unassigned with a past start, plus the other Submitted requests |
-| Venue Staff (`venuestaff@`) | three pending requests (oldest first), a held Boardroom whose deadline was moved, an expired hold, a released hold, a withdrawn request, and three flagged bookings |
+| Venue Staff (`venuestaff@`) | three pending requests (oldest first), a held Boardroom, an expired hold, a released hold, two withdrawn requests, and three flagged bookings |
 | Technical Support (`techsupport@`) | a request in review with a line short of stock and Laptop suggested instead, an approved request ready to reserve ("Planning: Ready to Reserve — Robotics Open House"), two reservations reported as no longer available (SCRUM-32), and rejected and cancelled requests |
 | Safety Officer (`safety@`) | a check awaiting review ("Planning: Safety Check Awaiting — Engineering Open Day"), with checks that were approved, rejected, sent back for changes and outdated; the Exhibition Hall has a known restriction |
 | Organiser (`organiser@`) | a complete draft ready to submit, a discarded draft, a rejection that asks for a new request, a clarification naming the fields to change, and approved and rejected change requests |
-| Attendee (`attendee@`, `attendee2@`) | "Planning: Back From Confirmed — Jazz Night", still showing its last confirmed details: an approved change moved it a day later, so its original booking is cancelled, the new date is booked and its safety check is Outdated (SCRUM-128); a Confirmed event that takes no registrations |
+| Attendee (`attendee@`, `attendee2@`) | "Planning: Back From Confirmed — Jazz Night", still showing its last confirmed details: an approved change moved it a day later and flagged its original booking, so its Coordinator cancelled that one, the new date is booked and its safety check is Outdated (SCRUM-128); a Confirmed event that takes no registrations |
 | Anyone trying one state by hand | "Confirmed: Two Venues", "Confirmed: Re-confirmed With New Details", "Confirmed: Change Pending", "Planning: Safety Check Rejected", "Planning: Every Optional Answer", "Under Review: Overdue", "Planning: Overdue", "Planning: Overdue, Checklist Complete" (every readiness item done, and its date has passed), "Confirmed: Reservation Reported", "Rejected: From Planning", "Under Review: Clarification Answered" |
 | Multi-role (`multirole@`) | organises "Planning: Multi-role Organiser — Lab Tour", so it can't decide that venue request as Venue Staff; coordinates "Under Review: Multi-role Coordinator — Debate Finals" |
 
 Every notification type an action writes is seeded for the person who would
-receive it, some read, one shown only from tomorrow and one withdrawn. Venue and equipment
+receive it, some read, some shown only from a later date, and a released
+hold's reminder and expiry notice withdrawn. Venue and equipment
 unavailability has a row for every reason.
 
 > **To demo reserving equipment** (SCRUM-155): sign in as Technical Support
@@ -279,7 +280,9 @@ Re-seed whenever seeded dates have gone stale: "Confirmed: Registration Closed"
 is Completed after 5 days, for example, and a re-seed restores it. The run is
 one transaction. If a row made through the app now sits on a slot a seeded row
 moves to, the run stops, names the constraint and changes nothing (SCRUM-233);
-settle that row and run it again.
+settle that row and run it again. Operational notes can't be edited or deleted
+(SCRUM-25), so they keep the dates of their first run: after a gap of about ten
+days they read as older than their event's submission.
 
 For a scripted walkthrough of every core workflow on this seed, with a
 conflict, change or failure in each, see [`docs/demo.md`](docs/demo.md).

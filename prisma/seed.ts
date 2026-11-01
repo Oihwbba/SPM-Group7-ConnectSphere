@@ -746,6 +746,7 @@ async function seedBookings() {
       requiredFacilities: ["projector", "whiteboard"],
       requestedLayout: "Classroom",
       requestedById: U.coordinator,
+      createdAt: at(-8, 3),
     },
     {
       // SCRUM-53: a rejection carries its reason. The database would refuse
@@ -1008,7 +1009,6 @@ const NO_CHECK_OUTCOME = { note: null, decidedById: null, decidedAt: null, outda
 /**
  * SCRUM-233 — SCRUM-81 confirms only an event whose readiness checklist is
  * complete (SCRUM-110), which includes an Approved safety check (SCRUM-166).
- * Each check names the arrangements it reviewed.
  */
 async function seedConfirmedSafetyChecks() {
   const approved = (id: string, eventId: string, decidedDay: number) => ({
@@ -1034,22 +1034,6 @@ async function seedConfirmedSafetyChecks() {
     const { id, ...rest } = c;
     const data = { ...NO_CHECK_OUTCOME, ...rest };
     await prisma.safetyCheck.upsert({ where: { id }, update: data, create: { id, ...data } });
-  }
-  const arrangements = [
-    { id: "sfa_confirmed_booking", checkId: "sfc_confirmed", bookingId: "bkg_confirmed" },
-    { id: "sfa_confirmed_projector", checkId: "sfc_confirmed", reservationId: "res_confirmed_projector" },
-    { id: "sfa_confirmed_mic", checkId: "sfc_confirmed", reservationId: "res_confirmed_mic" },
-    { id: "sfa_full_booking", checkId: "sfc_full", bookingId: "bkg_full_event" },
-    { id: "sfa_last_seat_booking", checkId: "sfc_last_seat", bookingId: "bkg_last_seat_event" },
-    { id: "sfa_reg_not_open_booking", checkId: "sfc_reg_not_open", bookingId: "bkg_reg_not_open" },
-    { id: "sfa_reg_closed_booking", checkId: "sfc_reg_closed", bookingId: "bkg_reg_closed" },
-    { id: "sfa_winter_workshop_booking", checkId: "sfc_winter_workshop", bookingId: "bkg_cancelled" },
-    { id: "sfa_winter_workshop_laptop", checkId: "sfc_winter_workshop", reservationId: "res_cancelled" },
-    { id: "sfa_completed_booking", checkId: "sfc_completed", bookingId: "bkg_completed" },
-  ];
-  for (const a of arrangements) {
-    const { id, ...data } = a;
-    await prisma.safetyCheckArrangement.upsert({ where: { id }, update: data, create: { id, ...data } });
   }
   return checks.length;
 }
@@ -1173,9 +1157,33 @@ async function seedNotifications() {
 // previously assigned".
 // ---------------------------------------------------------------------------
 
+/**
+ * SCRUM-26: an Approved booking is cancelled only by resolving its flag, here
+ * the one an approved change to its date raised (SCRUM-128 AC4). The flag
+ * stays on the row, with who resolved it.
+ */
+const cancelledAfterFlag = (flaggedAt: Date, resolvedAt: Date) => ({
+  reconsiderationFlaggedAt: flaggedAt,
+  reconsiderationReason: "Change approved: Date and time.",
+  reconsiderationResolvedAt: resolvedAt,
+  reconsiderationResolvedById: U.coordinator,
+});
+const flagCancelledEntry = (id: string, bookingId: string, createdAt: Date) => ({
+  id,
+  entityType: "Booking",
+  entityId: bookingId,
+  action: "STATUS_CHANGED",
+  actorId: U.coordinator,
+  fieldName: "status",
+  oldValue: "APPROVED",
+  newValue: "CANCELLED",
+  summary: "Cancelled by the assigned coordinator after it was flagged for reconsideration (SCRUM-26)",
+  createdAt,
+});
+
 // SCRUM-233: each Confirmed event's history shows how it got there, once its
 // arrangements and safety check were in place.
-const confirmedHistory = (prefix: string, eventId: string, approvedAt: Date, confirmedAt: Date) => [
+const confirmedHistory =(prefix: string, eventId: string, approvedAt: Date, confirmedAt: Date) => [
   { id: `${prefix}_approved`, entityType: "Event", entityId: eventId, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "UNDER_REVIEW", newValue: "APPROVED", createdAt: approvedAt },
   { id: `${prefix}_planning`, entityType: "Event", entityId: eventId, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "APPROVED", newValue: "PLANNING", summary: "Moved to Planning on approval (SCRUM-81)", createdAt: new Date(approvedAt.getTime() + 1000) },
   { id: `${prefix}_confirmed`, entityType: "Event", entityId: eventId, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "PLANNING", newValue: "CONFIRMED", summary: "Confirmed by the assigned coordinator (SCRUM-81)", createdAt: confirmedAt },
@@ -1293,7 +1301,8 @@ async function seedWorkflowEvents() {
 
   const events: EventSeed[] = [
     // SCRUM-166: the Safety Officer's queue. Venue approved and equipment
-    // reserved, with a check awaiting review (an earlier one went Outdated).
+    // reserved, with a check awaiting review. An earlier one went Outdated when
+    // the Coordinator withdrew a fallback venue request (SCRUM-142 AC9).
     { id: W.safetyAwaiting, name: "Planning: Safety Check Awaiting — Engineering Open Day", description: "Venue and equipment in place; the safety check awaits review.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.safetyAwaiting, 150) },
     // SCRUM-166 AC3: Changes requested, for Cara Coordinator to act on; SCRUM-170:
     // No equipment needed recorded.
@@ -1378,14 +1387,23 @@ async function seedWorkflowEvents() {
   return events.length;
 }
 
-/** A layout each venue supports, as the request form spells it. */
 const SAFETY_CHANGES_NOTE = "Move the robot arena 3 m back from the front row and add a barrier.";
 const SAFETY_REJECTED_NOTE = "The exhibits block both fire exits.";
+const FIRST_PLAN_REJECTED_NOTE = "The first plan blocked a fire exit.";
+// SCRUM-166 AC11: a Rejected check flags all of the event's arrangements, and
+// its Coordinator kept them both before asking for a new check (SCRUM-26).
+const STILL_STANDS_AFTER_REJECTION = {
+  reconsiderationFlaggedAt: at(-6, 3),
+  reconsiderationReason: `Safety check rejected: ${FIRST_PLAN_REJECTED_NOTE}`,
+  reconsiderationResolvedAt: at(-5, 3),
+  reconsiderationResolvedById: U.coordinator,
+};
 const MICROPHONES_REPORT = "Two of the three microphones are booked for a graduation on the same day.";
 const MICROPHONES_REPORT_REASON = `Technical Support can no longer provide it: ${MICROPHONES_REPORT}`;
 const PROJECTOR_REPORT = "The reserved projector failed its lamp test.";
 const PROJECTOR_REPORT_REASON = `Technical Support can no longer provide it: ${PROJECTOR_REPORT}`;
 
+/** A layout each venue supports, as the request form spells it. */
 const LAYOUT_AT: Record<string, string> = {
   [V.auditorium]: "Theatre",
   [V.seminar]: "Classroom",
@@ -1427,10 +1445,25 @@ async function seedWorkflowBookings() {
 
   const bookings = [
     approved("bkg_safety_awaiting", W.safetyAwaiting, V.hall, WD.safetyAwaiting, 150),
+    // SCRUM-142 AC9: withdrawing it outdated the check then awaiting review.
+    {
+      id: "bkg_safety_fallback",
+      eventId: W.safetyAwaiting,
+      venueId: V.auditorium,
+      ...workday(WD.safetyAwaiting),
+      status: BookingStatus.CANCELLED,
+      requestedAttendance: 150,
+      requiredFacilities: [],
+      requestedLayout: "Theatre",
+      requestedById: U.coordinator,
+      createdAt: at(-4, 3),
+    },
     // SCRUM-166 AC10: Changes requested flags the arrangement it names.
     { ...approved("bkg_safety_changes", W.safetyChanges, V.auditorium, WD.safetyChanges, 300), requestedById: U.coordinator2, needsReconsideration: true, reconsiderationFlaggedAt: at(-1, 3), reconsiderationReason: `Safety check changes requested: ${SAFETY_CHANGES_NOTE}` },
-    // SCRUM-163: held first; the Coordinator confirmed the approved hold.
-    { ...approved("bkg_ready_to_confirm", W.readyToConfirm, V.seminar, WD.readyToConfirm, 50), heldAt: at(-10, 3), holdExpiresAt: at(-6, 3), holdNote: "Held while the caterer confirmed the room.", holdApprovedAt: at(-9, 3), holdApprovedById: U.venueStaff },
+    // SCRUM-163: held first; the Coordinator confirmed the approved hold, which
+    // records them as deciding it. SCRUM-26: it stood when the first check was
+    // rejected.
+    { ...approved("bkg_ready_to_confirm", W.readyToConfirm, V.seminar, WD.readyToConfirm, 50), decidedById: U.coordinator, heldAt: at(-10, 3), holdExpiresAt: at(-6, 3), holdNote: "Held while the caterer confirmed the room.", holdApprovedAt: at(-9, 3), holdApprovedById: U.venueStaff, ...STILL_STANDS_AFTER_REJECTION },
     // SCRUM-163: held until five days from now.
     {
       id: "bkg_held",
@@ -1496,12 +1529,13 @@ async function seedWorkflowBookings() {
       requiredFacilities: ["sound-system"],
       requestedLayout: "Theatre",
       requestedById: U.coordinator,
+      createdAt: at(-2, 3),
     },
     approved("bkg_cancellation_requested", W.cancellationRequested, V.auditorium, WD.cancellationRequested, 250),
     approved("bkg_no_registration", W.noRegistration, V.hall, WD.noRegistration, 80),
-    // SCRUM-128: the approved change moved the event a day later, so the
-    // Coordinator released the original booking and booked the new date.
-    { ...approved("bkg_replanning_original", W.replanning, V.hall, WD.replanning - 1, 150), status: BookingStatus.CANCELLED, decidedAt: at(-11, 3) },
+    // SCRUM-128: the approved change moved the event a day later and flagged
+    // the original booking, so the Coordinator cancelled it and booked the new date.
+    { ...approved("bkg_replanning_original", W.replanning, V.hall, WD.replanning - 1, 150), status: BookingStatus.CANCELLED, decidedAt: at(-11, 3), ...cancelledAfterFlag(at(-3, 3), at(-3, 4)) },
     { ...approved("bkg_replanning", W.replanning, V.hall, WD.replanning, 150), decidedAt: at(-2, 3) },
     // SCRUM-121 AC5: Morgan Multirole can't decide this one, as its Organiser.
     {
@@ -1514,6 +1548,7 @@ async function seedWorkflowBookings() {
       requiredFacilities: [],
       requestedLayout: "Boardroom",
       requestedById: U.coordinator,
+      createdAt: at(-1, 3),
     },
     // SCRUM-142 AC4: a pending request its Coordinator withdrew.
     {
@@ -1550,10 +1585,6 @@ async function seedWorkflowBookings() {
     const { id, ...data } = b;
     await prisma.booking.upsert({ where: { id }, update: data, create: { id, ...data } });
   }
-
-  // SCRUM-163 AC9: the hold's deadline was moved once.
-  const change = { bookingId: "bkg_held", oldExpiresAt: at(3, 4), newExpiresAt: at(5, 4), changedById: U.venueStaff, changedAt: at(-1, 6) };
-  await prisma.holdExpiryChange.upsert({ where: { id: "hxc_held_1" }, update: change, create: { id: "hxc_held_1", ...change } });
   return bookings.length;
 }
 
@@ -1566,7 +1597,7 @@ async function seedWorkflowEquipment() {
     { id: "eqr_in_review", eventId: W.equipmentInReview, requestedById: U.coordinator, status: EquipmentRequestStatus.IN_REVIEW, notes: "Projectors for every breakout room.", createdAt: at(-3, 3) },
     // SCRUM-28: closed requests on the same event, before the current one.
     { id: "eqr_rejected", eventId: W.equipmentInReview, requestedById: U.coordinator, status: EquipmentRequestStatus.REJECTED, notes: "First attempt.", decidedAt: at(-9, 3) },
-    { id: "eqr_cancelled", eventId: W.equipmentInReview, requestedById: U.coordinator, status: EquipmentRequestStatus.CANCELLED, notes: "Withdrawn by the Coordinator." },
+    { id: "eqr_cancelled", eventId: W.equipmentInReview, requestedById: U.coordinator, status: EquipmentRequestStatus.CANCELLED, notes: "Withdrawn by the Coordinator.", decidedAt: at(-8, 3) },
     // SCRUM-155: approved, nothing reserved yet.
     { id: "eqr_ready_to_reserve", eventId: W.readyToReserve, requestedById: U.coordinator, status: EquipmentRequestStatus.APPROVED, notes: "PA for the demo arena.", decidedAt: at(-2, 3) },
   ];
@@ -1626,7 +1657,7 @@ async function seedWorkflowEquipment() {
   });
   const reservations = [
     reservation("res_safety_mic", W.safetyAwaiting, "eqr_safety_awaiting", EQ.mic, 2, WD.safetyAwaiting),
-    reservation("res_ready_laptop", W.readyToConfirm, "eqr_ready_to_confirm", EQ.laptop, 2, WD.readyToConfirm),
+    { ...reservation("res_ready_laptop", W.readyToConfirm, "eqr_ready_to_confirm", EQ.laptop, 2, WD.readyToConfirm), ...STILL_STANDS_AFTER_REJECTION },
     // SCRUM-32/26: reported before the change was approved, and a flag keeps its
     // first reason, so it still shows the report.
     {
@@ -1643,13 +1674,13 @@ async function seedWorkflowEquipment() {
   return { requests: requests.length, lines: lines.length, reservations: reservations.length };
 }
 
-/** SCRUM-166 — a check in every state, with the arrangements it covered. */
+/** SCRUM-166 — a check in every state. Only Changes requested names arrangements (AC10). */
 async function seedSafetyChecks() {
   const checks = [
     { id: "sfc_outdated", eventId: W.safetyAwaiting, status: SafetyCheckStatus.OUTDATED, requestedById: U.coordinator, outdatedAt: at(-3, 3), createdAt: at(-5, 3) },
     { id: "sfc_awaiting", eventId: W.safetyAwaiting, status: SafetyCheckStatus.AWAITING_REVIEW, requestedById: U.coordinator, createdAt: at(-2, 3) },
     { id: "sfc_changes", eventId: W.safetyChanges, status: SafetyCheckStatus.CHANGES_REQUESTED, requestedById: U.coordinator2, note: SAFETY_CHANGES_NOTE, decidedById: U.safetyOfficer, decidedAt: at(-1, 3), createdAt: at(-4, 3) },
-    { id: "sfc_rejected", eventId: W.readyToConfirm, status: SafetyCheckStatus.REJECTED, requestedById: U.coordinator, note: "The first plan blocked a fire exit.", decidedById: U.safetyOfficer2, decidedAt: at(-6, 3), createdAt: at(-7, 3) },
+    { id: "sfc_rejected", eventId: W.readyToConfirm, status: SafetyCheckStatus.REJECTED, requestedById: U.coordinator, note: FIRST_PLAN_REJECTED_NOTE, decidedById: U.safetyOfficer2, decidedAt: at(-6, 3), createdAt: at(-7, 3) },
     { id: "sfc_approved", eventId: W.readyToConfirm, status: SafetyCheckStatus.APPROVED, requestedById: U.coordinator, decidedById: U.safetyOfficer, decidedAt: at(-2, 3), createdAt: at(-3, 3) },
     // SCRUM-233: the Confirmed events passed their safety check first.
     { id: "sfc_cancellation_requested", eventId: W.cancellationRequested, status: SafetyCheckStatus.APPROVED, requestedById: U.coordinator, decidedById: U.safetyOfficer2, decidedAt: at(-6, 3), createdAt: at(-7, 3) },
@@ -1662,20 +1693,8 @@ async function seedSafetyChecks() {
     const data = { ...NO_CHECK_OUTCOME, ...rest };
     await prisma.safetyCheck.upsert({ where: { id }, update: data, create: { id, ...data } });
   }
-  const arrangements = [
-    { id: "sfa_awaiting_booking", checkId: "sfc_awaiting", bookingId: "bkg_safety_awaiting" },
-    { id: "sfa_awaiting_reservation", checkId: "sfc_awaiting", reservationId: "res_safety_mic" },
-    { id: "sfa_changes_booking", checkId: "sfc_changes", bookingId: "bkg_safety_changes" },
-    { id: "sfa_approved_booking", checkId: "sfc_approved", bookingId: "bkg_ready_to_confirm" },
-    { id: "sfa_approved_reservation", checkId: "sfc_approved", reservationId: "res_ready_laptop" },
-    { id: "sfa_cancellation_requested_booking", checkId: "sfc_cancellation_requested", bookingId: "bkg_cancellation_requested" },
-    { id: "sfa_no_registration_booking", checkId: "sfc_no_registration", bookingId: "bkg_no_registration" },
-    { id: "sfa_replanning_booking", checkId: "sfc_replanning", bookingId: "bkg_replanning_original" },
-  ];
-  for (const a of arrangements) {
-    const { id, ...data } = a;
-    await prisma.safetyCheckArrangement.upsert({ where: { id }, update: data, create: { id, ...data } });
-  }
+  const picked = { checkId: "sfc_changes", bookingId: "bkg_safety_changes", createdAt: at(-1, 3) };
+  await prisma.safetyCheckArrangement.upsert({ where: { id: "sfa_changes_booking" }, update: picked, create: { id: "sfa_changes_booking", ...picked } });
   return checks.length;
 }
 
@@ -1815,7 +1834,7 @@ async function seedTestingScenarios() {
   const bookings = [
     booking("bkg_two_venues_auditorium", T.twoVenues, V.auditorium, 106, 200),
     booking("bkg_two_venues_hall", T.twoVenues, V.hall, 106, 50),
-    { ...booking("bkg_reconfirmed_original", T.reconfirmed, V.hall, 109, 150), status: BookingStatus.CANCELLED, decidedAt: at(-11, 3) },
+    { ...booking("bkg_reconfirmed_original", T.reconfirmed, V.hall, 109, 150), status: BookingStatus.CANCELLED, decidedAt: at(-11, 3), ...cancelledAfterFlag(at(-5, 3), at(-5, 4)) },
     { ...booking("bkg_reconfirmed", T.reconfirmed, V.hall, 110, 150), decidedAt: at(-4, 3) },
     booking("bkg_change_pending", T.changePending, V.studio, 112, 80),
     { ...booking("bkg_safety_rejected", T.safetyRejected, V.auditorium, 116, 120), needsReconsideration: true, reconsiderationFlaggedAt: at(-3, 3), reconsiderationReason: `Safety check rejected: ${SAFETY_REJECTED_NOTE}` },
@@ -1874,21 +1893,6 @@ async function seedTestingScenarios() {
     const data = { ...NO_CHECK_OUTCOME, ...rest };
     await prisma.safetyCheck.upsert({ where: { id }, update: data, create: { id, ...data } });
   }
-  const arrangements = [
-    { id: "sfa_two_venues_auditorium", checkId: "sfc_two_venues", bookingId: "bkg_two_venues_auditorium" },
-    { id: "sfa_two_venues_hall", checkId: "sfc_two_venues", bookingId: "bkg_two_venues_hall" },
-    { id: "sfa_reconfirmed_first", checkId: "sfc_reconfirmed_first", bookingId: "bkg_reconfirmed_original" },
-    { id: "sfa_reconfirmed", checkId: "sfc_reconfirmed", bookingId: "bkg_reconfirmed" },
-    { id: "sfa_change_pending", checkId: "sfc_change_pending", bookingId: "bkg_change_pending" },
-    { id: "sfa_safety_rejected", checkId: "sfc_safety_rejected", bookingId: "bkg_safety_rejected" },
-    { id: "sfa_overdue_ready", checkId: "sfc_overdue_ready", bookingId: "bkg_overdue_ready" },
-    { id: "sfa_reported_booking", checkId: "sfc_reservation_reported", bookingId: "bkg_reservation_reported" },
-    { id: "sfa_reported_projector", checkId: "sfc_reservation_reported", reservationId: "res_reported_projector" },
-  ];
-  for (const a of arrangements) {
-    const { id, ...data } = a;
-    await prisma.safetyCheckArrangement.upsert({ where: { id }, update: data, create: { id, ...data } });
-  }
 
   const registrations = [
     { id: "reg_two_venues_1", eventId: T.twoVenues, userId: U.attendee, status: RegistrationStatus.REGISTERED, registeredAt: at(-3, 4) },
@@ -1934,6 +1938,7 @@ async function seedTestingScenarios() {
     // SCRUM-32 AC5: the report, with who and when.
     { id: "aud_reservation_reported_report", entityType: "Reservation", entityId: "res_reported_projector", action: "REPORTED_UNPROVIDABLE", actorId: U.techSupport, fieldName: "needsReconsideration", oldValue: "false", newValue: "true", summary: PROJECTOR_REPORT, createdAt: at(-1, 4) },
     { id: "aud_reconfirmed_returned", entityType: "Event", entityId: T.reconfirmed, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "CONFIRMED", newValue: "PLANNING", summary: "An impactful change was approved (SCRUM-128)", createdAt: at(-5, 3) },
+    flagCancelledEntry("aud_reconfirmed_original_cancelled", "bkg_reconfirmed_original", at(-5, 4)),
     { id: "aud_reconfirmed_again", entityType: "Event", entityId: T.reconfirmed, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "PLANNING", newValue: "CONFIRMED", summary: "Confirmed by the assigned coordinator (SCRUM-81)", createdAt: at(-2, 4) },
     { id: "aud_rejected_from_planning_approved", entityType: "Event", entityId: T.rejectedPlanning, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "UNDER_REVIEW", newValue: "APPROVED", createdAt: at(-12, 3) },
     { id: "aud_rejected_from_planning_planning", entityType: "Event", entityId: T.rejectedPlanning, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "APPROVED", newValue: "PLANNING", summary: "Moved to Planning on approval (SCRUM-81)", createdAt: new Date(at(-12, 3).getTime() + 1000) },
@@ -2032,6 +2037,12 @@ async function seedWorkflowHistory() {
     changed("endAt", at(WD.replanning - 1, 9), at(WD.replanning, 9)),
     // SCRUM-128: what approving an impactful change writes for a Confirmed event.
     { id: "aud_replanning_returned", entityType: "Event", entityId: W.replanning, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "CONFIRMED", newValue: "PLANNING", summary: "An impactful change was approved (SCRUM-128)", createdAt: at(-3, 3) },
+    flagCancelledEntry("aud_replanning_original_cancelled", "bkg_replanning_original", at(-3, 4)),
+    // SCRUM-26: what Still stands writes, for the flags the rejected check raised.
+    { id: "aud_ready_booking_stands", entityType: "Booking", entityId: "bkg_ready_to_confirm", action: "RECONSIDERATION_RESOLVED", actorId: U.coordinator, fieldName: "needsReconsideration", oldValue: "true", newValue: "false", summary: "Still stands (SCRUM-26)", createdAt: at(-5, 3) },
+    { id: "aud_ready_laptop_stands", entityType: "Reservation", entityId: "res_ready_laptop", action: "RECONSIDERATION_RESOLVED", actorId: U.coordinator, fieldName: "needsReconsideration", oldValue: "true", newValue: "false", summary: "Still stands (SCRUM-26)", createdAt: at(-5, 3) },
+    // SCRUM-142 AC4: what withdrawing a pending request writes.
+    { id: "aud_safety_fallback_withdrawn", entityType: "Booking", entityId: "bkg_safety_fallback", action: "WITHDRAWN", actorId: U.coordinator, fieldName: "status", oldValue: "PENDING", newValue: "CANCELLED", summary: "Withdrawn by the Coordinator (SCRUM-142)", createdAt: at(-3, 3) },
     // SCRUM-32 AC5: the report, with who and when.
     { id: "aud_flagged_reported", entityType: "Reservation", entityId: "res_flagged_mic", action: "REPORTED_UNPROVIDABLE", actorId: U.techSupport, fieldName: "needsReconsideration", oldValue: "false", newValue: "true", summary: MICROPHONES_REPORT, createdAt: at(-1, 4) },
   ];
@@ -2090,6 +2101,8 @@ async function seedWorkflowNotifications() {
   // As each action words them. RESERVATION_CANCELLED has no row: nothing writes it.
   const held = `Executive Boardroom for "Planning: Venue Held — Design Week Kickoff"`;
   const fallback = `Exhibition Hall for "Planning: Venue Held — Design Week Kickoff"`;
+  const released = `Grand Auditorium for "Planning: Venue Held — Design Week Kickoff"`;
+  const releasedUntil = formatDateTime(at(2, 4));
   const flaggedEvent = "Planning: Arrangements Flagged — Sustainability Forum";
   const inReview = "Planning: Equipment In Review — Media Workshop";
   const heldUntil = formatDateTime(at(5, 4));
@@ -2125,14 +2138,18 @@ async function seedWorkflowNotifications() {
     { id: "ntf_flagged_coordinator", userId: U.coordinator, type: T.ARRANGEMENT_FLAGGED, title: "Arrangements flagged for reconsideration", message: `Wireless Microphone × 3 for "${flaggedEvent}" needs reconsideration. ${MICROPHONES_REPORT_REASON}`, eventId: W.flagged, createdAt: at(-1, 4) },
     { id: "ntf_flagged_coordinator_change", userId: U.coordinator, type: T.ARRANGEMENT_FLAGGED, title: "Arrangements flagged for reconsideration", message: `Grand Auditorium (Approved) for "${flaggedEvent}" needs reconsideration. Change approved: Expected attendance.`, eventId: W.flagged, createdAt: at(-1, 5) },
     { id: "ntf_flagged_reservation", userId: U.techSupport, type: T.ARRANGEMENT_FLAGGED, title: "Reservations flagged for reconsideration", message: `Wireless Microphone × 3 for "${flaggedEvent}" needs reconsideration, and waits for the event's Coordinator to decide. ${MICROPHONES_REPORT_REASON}`, link: "/equipment", eventId: W.flagged, createdAt: at(-1, 4) },
-    { id: "ntf_flag_resolved", userId: U.techSupport, type: T.ARRANGEMENT_FLAG_RESOLVED, title: "A flagged reservation still stands", message: `The Coordinator kept Laptop × 2 for "Planning: Ready to Confirm — Alumni Networking Night": it no longer needs reconsideration.`, link: "/equipment", eventId: W.readyToConfirm, createdAt: at(-6, 3), readAt: at(-6, 4) },
+    { id: "ntf_flag_resolved", userId: U.techSupport, type: T.ARRANGEMENT_FLAG_RESOLVED, title: "A flagged reservation still stands", message: `The Coordinator kept Laptop × 2 for "Planning: Ready to Confirm — Alumni Networking Night": it no longer needs reconsideration.`, link: "/equipment", eventId: W.readyToConfirm, createdAt: at(-5, 3), readAt: at(-5, 4) },
+    { id: "ntf_flag_resolved_booking", userId: U.venueStaff, type: T.ARRANGEMENT_FLAG_RESOLVED, title: "A flagged booking still stands", message: `The Coordinator kept Seminar Room 2.1 (Approved) for "Planning: Ready to Confirm — Alumni Networking Night": it no longer needs reconsideration.`, link: "/bookings", eventId: W.readyToConfirm, createdAt: at(-5, 3), readAt: at(-5, 4) },
+    { id: "ntf_flag_cancelled_replanning", userId: U.venueStaff, type: T.ARRANGEMENT_FLAG_RESOLVED, title: "A flagged booking was cancelled", message: `The Coordinator cancelled Exhibition Hall (Approved) for "Planning: Back From Confirmed — Jazz Night", so its period is free again.`, link: "/bookings", eventId: W.replanning, createdAt: at(-3, 4), readAt: at(-3, 5) },
+    { id: "ntf_flag_cancelled_reconfirmed", userId: U.venueStaff, type: T.ARRANGEMENT_FLAG_RESOLVED, title: "A flagged booking was cancelled", message: `The Coordinator cancelled Exhibition Hall (Approved) for "Confirmed: Re-confirmed With New Details — Spring Recital", so its period is free again.`, link: "/bookings", eventId: "evt_reconfirmed", createdAt: at(-5, 4), readAt: at(-5, 5) },
     { id: "ntf_awaiting_lead", userId: U.coordinatorLead, type: T.REQUEST_AWAITING_ASSIGNMENT, title: "A request is waiting to be assigned", message: `"Submitted: Awaiting Lead — Alumni Homecoming" was submitted and is waiting in the Unassigned queue.`, link: `/queue/${E.submitted}`, eventId: E.submitted, createdAt: at(-2, 3) },
     { id: "ntf_awaiting_lead_2", userId: U.coordinatorLead2, type: T.REQUEST_AWAITING_ASSIGNMENT, title: "A request is waiting to be assigned", message: `"Submitted: Overdue — Orientation Volunteers Briefing" was submitted and is waiting in the Unassigned queue.`, link: `/queue/${W.submittedOverdue}`, eventId: W.submittedOverdue, createdAt: at(-20, 3) },
     { id: "ntf_safety_requested", userId: U.safetyOfficer, type: T.SAFETY_CHECK_REQUESTED, title: "Safety check requested", message: `"Planning: Safety Check Awaiting — Engineering Open Day" is waiting for an operational safety check.`, link: "/safety-checks/sfc_awaiting", eventId: W.safetyAwaiting, createdAt: at(-2, 3) },
     { id: "ntf_safety_requested_2", userId: U.safetyOfficer2, type: T.SAFETY_CHECK_REQUESTED, title: "Safety check requested", message: `"Planning: Safety Check Awaiting — Engineering Open Day" is waiting for an operational safety check.`, link: "/safety-checks/sfc_awaiting", eventId: W.safetyAwaiting, createdAt: at(-2, 3) },
     { id: "ntf_safety_outcome", userId: U.coordinator2, type: T.SAFETY_CHECK_OUTCOME, title: "Safety check changes requested", message: `"Planning: Safety Changes Requested — Robotics Showcase": Changes requested. ${SAFETY_CHANGES_NOTE}`, link: "/events", eventId: W.safetyChanges, createdAt: at(-1, 3) },
-    // SCRUM-163 AC5: a notice withdrawn when the hold it was about went away.
-    { id: "ntf_withdrawn_reminder", userId: U.coordinator, type: T.HOLD_EXPIRY_REMINDER, title: "A venue hold expires soon", message: `The hold on ${fallback} expires at ${formatDateTime(at(-2, 3))}. Once Venue Staff approve it, confirm it before then to secure the venue.`, eventId: W.hold, bookingId: "bkg_expired", createdAt: at(-9, 3), showFromAt: at(-3, 3), withdrawnAt: at(-3, 2) },
+    // SCRUM-163 AC5: releasing a hold withdraws both notices still to come.
+    { id: "ntf_withdrawn_reminder", userId: U.coordinator, type: T.HOLD_EXPIRY_REMINDER, title: "A venue hold expires soon", message: `The hold on ${released} expires at ${releasedUntil}. Once Venue Staff approve it, confirm it before then to secure the venue.`, eventId: W.hold, bookingId: "bkg_released", createdAt: at(-6, 3), showFromAt: at(1, 4), withdrawnAt: at(-3, 3) },
+    { id: "ntf_withdrawn_expiry", userId: U.coordinator, type: T.HOLD_EXPIRED, title: "A venue hold expired", message: `The hold on ${released} expired at ${releasedUntil}, so the venue is free for other requests. Make a new request if you still need it.`, eventId: W.hold, bookingId: "bkg_released", createdAt: at(-6, 3), showFromAt: at(2, 4), withdrawnAt: at(-3, 3) },
   ];
   for (const n of rows) {
     const { id, ...data } = n;
@@ -2189,11 +2206,15 @@ async function seedRowDates() {
  * booking_no_duplicate_pending_request, booking_overlaps_unavailability). So
  * bookings are released, and unavailability, which has no status to release, is
  * removed. Requests take a closed status, as only one can be open per event.
+ * A database seeded before the seed stopped writing them still holds expiry
+ * changes and safety check arrangements the app never wrote, so those go too.
  *
  * Fixed ids only, so nothing made through the app is touched. If such a row
  * holds what a seeded row needs, the run stops on the constraint.
  */
 async function resetSeededRows() {
+  await prisma.holdExpiryChange.deleteMany({ where: { id: { startsWith: "hxc_" } } });
+  await prisma.safetyCheckArrangement.deleteMany({ where: { id: { startsWith: "sfa_" } } });
   await prisma.booking.updateMany({
     where: { id: { startsWith: "bkg_" } },
     data: {

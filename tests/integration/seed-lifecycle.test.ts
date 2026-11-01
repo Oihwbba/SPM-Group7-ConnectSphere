@@ -827,4 +827,204 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
     expect(10 - away.quantity).toBe(4);
     expect(short.quantity).toBe(5);
   });
+
+  it("SCRUM-233 [AC14] TC-233-29: no hold expiry change is seeded, and only a check that asked for changes names arrangements", async () => {
+    // Nothing in the app changes a hold's expiry (SCRUM-172 AC14 is only the table).
+    expect(await prisma.holdExpiryChange.count({ where: { id: { startsWith: "hxc_" } } })).toBe(0);
+
+    // SCRUM-166 AC10: recording Changes requested is the only write.
+    const arrangements = await prisma.safetyCheckArrangement.findMany({
+      where: { id: { startsWith: "sfa_" } },
+      select: { id: true, bookingId: true, check: { select: { status: true } } },
+    });
+    expect(arrangements).toEqual([
+      { id: "sfa_changes_booking", bookingId: "bkg_safety_changes", check: { status: "CHANGES_REQUESTED" } },
+    ]);
+  });
+
+  it("SCRUM-233 [AC14] TC-233-30: an Approved booking cancelled while its event goes on was flagged by the change, and cancelled by resolving that flag", async () => {
+    // Withdrawing refuses an Approved booking (SCRUM-142 AC6), and closing the
+    // event isn't what happened here, so resolving a flag is the only way.
+    const bookings = await prisma.booking.findMany({
+      where: {
+        id: { startsWith: "bkg_" },
+        status: "CANCELLED",
+        decidedAt: { not: null },
+        event: { status: { notIn: ["CANCELLED", "REJECTED"] } },
+      },
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        eventId: true,
+        needsReconsideration: true,
+        reconsiderationReason: true,
+        reconsiderationFlaggedAt: true,
+        reconsiderationResolvedAt: true,
+        reconsiderationResolvedById: true,
+        event: { select: { coordinatorId: true } },
+      },
+    });
+    expect(bookings.map((b) => b.id)).toEqual(["bkg_reconfirmed_original", "bkg_replanning_original"]);
+
+    for (const booking of bookings) {
+      expect(booking.needsReconsideration, booking.id).toBe(false);
+      expect(booking.reconsiderationReason, booking.id).toBe("Change approved: Date and time.");
+      expect(booking.reconsiderationResolvedById, booking.id).toBe(booking.event.coordinatorId);
+      const change = await prisma.eventChangeRequest.findFirstOrThrow({
+        where: { eventId: booking.eventId, id: { startsWith: "chg_" }, status: "APPROVED" },
+        select: { decidedAt: true },
+      });
+      expect(booking.reconsiderationFlaggedAt, booking.id).toEqual(change.decidedAt);
+      expect(booking.reconsiderationResolvedAt!.getTime(), booking.id).toBeGreaterThan(change.decidedAt!.getTime());
+
+      expect(await history(booking.id), booking.id).toEqual([
+        {
+          action: "STATUS_CHANGED",
+          actorId: booking.event.coordinatorId,
+          oldValue: "APPROVED",
+          newValue: "CANCELLED",
+          summary: "Cancelled by the assigned coordinator after it was flagged for reconsideration (SCRUM-26)",
+        },
+      ]);
+      // SCRUM-124 AC9: Venue Staff are told.
+      const notices = await prisma.notification.findMany({
+        where: { id: { startsWith: "ntf_" }, eventId: booking.eventId, type: "ARRANGEMENT_FLAG_RESOLVED" },
+        select: { title: true, user: { select: { role: true } } },
+      });
+      expect(notices, booking.id).toEqual([{ title: "A flagged booking was cancelled", user: { role: "VENUE_STAFF" } }]);
+    }
+  });
+
+  it("SCRUM-233 [AC14] TC-233-31: a confirmed hold records its Coordinator as deciding it, and a Rejected check flagged the event's arrangements", async () => {
+    // SCRUM-163 AC3: the Coordinator confirms, after Venue Staff approved and
+    // before the hold expired.
+    const confirmedHolds = await prisma.booking.findMany({
+      where: { id: { startsWith: "bkg_" }, status: "APPROVED", heldAt: { not: null } },
+      select: { id: true, decidedById: true, decidedAt: true, holdApprovedAt: true, holdExpiresAt: true, event: { select: { coordinatorId: true } } },
+    });
+    expect(confirmedHolds.map((b) => b.id)).toEqual(["bkg_ready_to_confirm"]);
+    const [hold] = confirmedHolds;
+    expect(hold.decidedById).toBe(hold.event.coordinatorId);
+    expect(hold.decidedAt!.getTime()).toBeGreaterThan(hold.holdApprovedAt!.getTime());
+    expect(hold.decidedAt!.getTime()).toBeLessThan(hold.holdExpiresAt!.getTime());
+
+    // SCRUM-166 AC11: Rejected flags all of the event's arrangements, with its note.
+    const rejected = await prisma.safetyCheck.findMany({
+      where: { id: { startsWith: "sfc_" }, status: "REJECTED" },
+      select: { id: true, note: true, decidedAt: true, event: { select: { id: true, coordinatorId: true } } },
+    });
+    expect(rejected.map((c) => c.id).sort()).toEqual(["sfc_rejected", "sfc_safety_rejected"]);
+    for (const check of rejected) {
+      const event = await prisma.event.findUniqueOrThrow({
+        where: { id: check.event.id },
+        select: {
+          bookings: { where: { status: "APPROVED" }, select: { id: true, reconsiderationReason: true, reconsiderationFlaggedAt: true } },
+          reservations: { where: { status: "CONFIRMED" }, select: { id: true, reconsiderationReason: true, reconsiderationFlaggedAt: true } },
+        },
+      });
+      const arrangements = [...event.bookings, ...event.reservations];
+      expect(arrangements.length, check.id).toBeGreaterThan(0);
+      for (const arrangement of arrangements) {
+        expect(arrangement.reconsiderationReason, arrangement.id).toBe(`Safety check rejected: ${check.note}`);
+        expect(arrangement.reconsiderationFlaggedAt, arrangement.id).toEqual(check.decidedAt);
+      }
+    }
+
+    // Still stands on both, before the new check that was then approved.
+    const { createdAt: newCheckAt } = await prisma.safetyCheck.findUniqueOrThrow({ where: { id: "sfc_approved" }, select: { createdAt: true } });
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: "bkg_ready_to_confirm" } });
+    const reservation = await prisma.reservation.findUniqueOrThrow({ where: { id: "res_ready_laptop" } });
+    for (const resolved of [booking, reservation]) {
+      expect(resolved.needsReconsideration, resolved.id).toBe(false);
+      expect(resolved.reconsiderationResolvedById, resolved.id).toBe("usr_coordinator");
+      expect(resolved.reconsiderationResolvedAt!.getTime(), resolved.id).toBeLessThan(newCheckAt.getTime());
+      const entries = await prisma.auditLog.findMany({
+        where: { id: { startsWith: "aud_" }, entityId: resolved.id, action: "RECONSIDERATION_RESOLVED" },
+        select: { actorId: true, summary: true, createdAt: true },
+      });
+      expect(entries, resolved.id).toEqual([{ actorId: "usr_coordinator", summary: "Still stands (SCRUM-26)", createdAt: resolved.reconsiderationResolvedAt }]);
+    }
+
+    // SCRUM-124 AC9: each resolution tells the role that holds the arrangement.
+    const notices = await prisma.notification.findMany({
+      where: { id: { startsWith: "ntf_" }, eventId: "evt_ready_to_confirm", type: "ARRANGEMENT_FLAG_RESOLVED" },
+      orderBy: { title: "asc" },
+      select: { title: true, createdAt: true, user: { select: { role: true } } },
+    });
+    expect(notices).toEqual([
+      { title: "A flagged booking still stands", createdAt: booking.reconsiderationResolvedAt, user: { role: "VENUE_STAFF" } },
+      { title: "A flagged reservation still stands", createdAt: reservation.reconsiderationResolvedAt, user: { role: "TECH_SUPPORT" } },
+    ]);
+  });
+
+  it("SCRUM-233 [AC14] TC-233-32: only settling a hold withdraws its notices, the reminder and the expiry notice together, before either shows", async () => {
+    const withdrawn = await prisma.notification.findMany({
+      where: { id: { startsWith: "ntf_" }, withdrawnAt: { not: null } },
+      orderBy: { showFromAt: "asc" },
+      select: { type: true, showFromAt: true, withdrawnAt: true, booking: { select: { id: true, status: true, holdExpiresAt: true } } },
+    });
+
+    // SCRUM-163 AC5: the booking released, not one left to expire.
+    expect(withdrawn.map((n) => [n.type, n.booking?.id, n.booking?.status])).toEqual([
+      ["HOLD_EXPIRY_REMINDER", "bkg_released", "CANCELLED"],
+      ["HOLD_EXPIRED", "bkg_released", "CANCELLED"],
+    ]);
+    const expiresAt = withdrawn[0].booking!.holdExpiresAt!;
+    expect(withdrawn.map((n) => n.showFromAt)).toEqual([new Date(expiresAt.getTime() - 24 * HOUR_MS), expiresAt]);
+    for (const notice of withdrawn) {
+      expect(notice.withdrawnAt!.getTime(), notice.type).toBeLessThan(notice.showFromAt.getTime());
+    }
+    // Withdrawn when it was released, which told Venue Staff.
+    const released = await prisma.notification.findUniqueOrThrow({ where: { id: "ntf_hold_released" }, select: { createdAt: true } });
+    expect(withdrawn[0].withdrawnAt).toEqual(released.createdAt);
+  });
+
+  it("SCRUM-233 [AC14] TC-233-33: every closed equipment request has its decision time, and every Outdated check has what outdated it", async () => {
+    // SCRUM-28, SCRUM-142 AC3: approving, rejecting and withdrawing each set it.
+    const undated = await prisma.equipmentRequest.findMany({
+      where: { id: { startsWith: "eqr_" }, status: { in: ["APPROVED", "REJECTED", "CANCELLED"] }, decidedAt: null },
+      select: { id: true },
+    });
+    expect(undated).toEqual([]);
+
+    // SCRUM-166 AC13: a check goes Outdated at the moment its arrangements change.
+    const outdated = await prisma.safetyCheck.findMany({
+      where: { id: { startsWith: "sfc_" }, status: "OUTDATED" },
+      select: { id: true, eventId: true, outdatedAt: true },
+    });
+    expect(outdated.length).toBeGreaterThan(0);
+    for (const check of outdated) {
+      const approvedChanges = await prisma.eventChangeRequest.count({
+        where: { eventId: check.eventId, id: { startsWith: "chg_" }, status: "APPROVED", decidedAt: check.outdatedAt },
+      });
+      const bookings = await prisma.booking.findMany({ where: { eventId: check.eventId }, select: { id: true } });
+      const withdrawals = await prisma.auditLog.count({
+        where: { id: { startsWith: "aud_" }, entityId: { in: bookings.map((b) => b.id) }, action: "WITHDRAWN", createdAt: check.outdatedAt! },
+      });
+      expect(approvedChanges + withdrawals, check.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("SCRUM-233 [AC14] TC-233-34: a pending venue request is dated after its event's approval and no later than the notice about it, oldest first", async () => {
+    const pending = await prisma.booking.findMany({
+      where: { id: { startsWith: "bkg_" }, status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, createdAt: true, eventId: true, event: { select: { decidedAt: true } } },
+    });
+    // SCRUM-134: the order the Venue Staff queue shows them in.
+    expect(pending.map((b) => b.id)).toEqual(["bkg_pending", "bkg_pending_2", "bkg_multirole_pending"]);
+
+    for (const booking of pending) {
+      // SCRUM-50: a venue is requested only for an approved event.
+      expect(booking.createdAt.getTime(), booking.id).toBeGreaterThan(booking.event.decidedAt!.getTime());
+      expect(booking.createdAt.getTime(), booking.id).toBeLessThan(Date.now());
+      const notices = await prisma.notification.findMany({
+        where: { id: { startsWith: "ntf_" }, eventId: booking.eventId, type: "BOOKING_REQUESTED" },
+        select: { createdAt: true },
+      });
+      for (const notice of notices) {
+        expect(booking.createdAt.getTime(), booking.id).toBeLessThanOrEqual(notice.createdAt.getTime());
+      }
+    }
+  });
 });

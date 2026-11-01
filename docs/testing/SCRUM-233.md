@@ -42,6 +42,12 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | [TC-233-26](#tc-233-26) | Positive | AC 14 | Integration |
 | [TC-233-27](#tc-233-27) | Positive | AC 14 | Integration |
 | [TC-233-28](#tc-233-28) | Boundary | AC 14 | Integration |
+| [TC-233-29](#tc-233-29) | Negative | AC 14 | Integration |
+| [TC-233-30](#tc-233-30) | Positive | AC 14 | Integration |
+| [TC-233-31](#tc-233-31) | Positive | AC 14 | Integration |
+| [TC-233-32](#tc-233-32) | Positive | AC 14 | Integration |
+| [TC-233-33](#tc-233-33) | Positive | AC 14 | Integration |
+| [TC-233-34](#tc-233-34) | Boundary | AC 14 | Integration |
 
 ---
 
@@ -184,7 +190,7 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Pre-conditions | Merged. |
 | Test Steps | 1. Run `npm run db:seed` on the shared database. <br> 2. Run read-only queries for every Approved event, seeded or not, events spanning two Singapore days, and each Confirmed event's readiness. |
 | Test Data | — |
-| Expected Result | No seeded event is Approved, none spans two days, and every seeded Confirmed event passes readiness, apart from `evt_reservation_reported`'s flagged reservation. The seed no longer has `ntf_reservation_cancelled`, so delete that one row by hand; it removes no other. Rows created through the app are reported, not changed: in particular, any event left Approved from before approval saved Planning (#120) is counted and listed for the PO, since it can no longer take an equipment request or reservation or be found by a status filter; it can still be cancelled (SCRUM-135 AC 9). |
+| Expected Result | No seeded event is Approved, none spans two days, and every seeded Confirmed event passes readiness, apart from `evt_reservation_reported`'s flagged reservation. The seed no longer has `ntf_reservation_cancelled`, so delete that one row by hand. The run itself removes the seeded `hxc_` and `sfa_` rows older seeds wrote, and writes `sfa_changes_booking` again; no other row needs deleting. Rows created through the app are reported, not changed: in particular, any event left Approved from before approval saved Planning (#120) is counted and listed for the PO, since it can no longer take an equipment request or reservation or be found by a status filter; it can still be cancelled (SCRUM-135 AC 9). |
 
 **Automated by:** Manual (the shared database, after the merge).
 
@@ -338,9 +344,9 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Test Case ID | TC-233-23 |
 | Test Scenario | [Positive] AC 11: `npm run db:seed` runs over a database seeded days ago, restores what has passed, and leaves rows made through the app |
 | Pre-conditions | An empty, migrated throwaway local database. `SEED_TODAY` stands in for today. |
-| Test Steps | 1. Seed as of 28, 26 and 21 days ago. <br> 2. Complete the events that had finished 11 days ago. <br> 3. Seed as of 12 days ago. <br> 4. Add a booking and an unavailability period through no seeded id, 200 days out. <br> 5. Seed as of today. |
+| Test Steps | 1. Seed as of 28, 26 and 21 days ago. <br> 2. Complete the events that had finished 11 days ago. <br> 3. Seed as of 12 days ago. <br> 4. Add a booking and an unavailability period through no seeded id, 200 days out, and the `hxc_held_1` and `sfa_confirmed_booking` rows older seeds wrote. <br> 5. Seed as of today. |
 | Test Data | Gaps of 2, 5, 9 and 12 days, each of which clashed before the fix |
-| Expected Result | Every run succeeds. `bkg_confirmed` is Approved 10 days from today, `bkg_pending` is Pending and `bkg_held` is Held. `evt_reg_closed` is Confirmed again, with no completion time. `evt_completed` stays Completed. `res_confirmed_projector` was created after its request's decision, as moved by this run. The five seeded unavailability periods exist once each, at today's dates. The two added rows are unchanged. |
+| Expected Result | Every run succeeds. `bkg_confirmed` is Approved 10 days from today, `bkg_pending` is Pending and `bkg_held` is Held. `evt_reg_closed` is Confirmed again, with no completion time. `evt_completed` stays Completed. `res_confirmed_projector` was created after its request's decision, as moved by this run, and `bkg_pending` is dated 8 days ago by this run, after its event's approval. No expiry change remains, and `sfa_changes_booking` is the only arrangement. The five seeded unavailability periods exist once each, at today's dates. The two added rows are unchanged. |
 
 **Automated by:** `tests/integration/seed-reseed.test.ts` › "SCRUM-233 [AC11] TC-233-23: the seed runs over itself after a gap of days, restores what passed, and leaves rows made through the app"
 
@@ -408,3 +414,81 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Expected Result | 1. No line asks for more than its type's total. 2. The 6 are away for the whole event, leaving 4 free, so the 5 requested are one short. |
 
 **Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC14] TC-233-28: no open equipment request asks for more than the pool owns, and the line short of stock is short only of what's free"
+
+### TC-233-29
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-29 |
+| Test Scenario | [Negative] AC 14: no seeded row is one the app never writes: no hold expiry change, and arrangements only on a check that asked for changes (SCRUM-172 AC 14, SCRUM-166 AC 10) |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. Count the seeded hold expiry changes (`hxc_`). <br> 2. List the seeded safety check arrangements (`sfa_`) with their check's status. |
+| Test Data | `sfa_changes_booking`, `sfc_changes`, `bkg_safety_changes` |
+| Expected Result | 1. None, since nothing in the app changes a hold's expiry. 2. Only `sfa_changes_booking`, on Changes requested. |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC14] TC-233-29: no hold expiry change is seeded, and only a check that asked for changes names arrangements"
+
+### TC-233-30
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-30 |
+| Test Scenario | [Positive] AC 14: an Approved booking cancelled while its event goes on was flagged by the change and cancelled by resolving that flag (SCRUM-26, SCRUM-128 AC 4, SCRUM-142 AC 6) |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. List seeded Cancelled bookings that were decided, on events neither Cancelled nor Rejected. <br> 2. Read each one's flag, its event's approved change, its status history and its event's flag-resolved notices. |
+| Test Data | `bkg_replanning_original`, `bkg_reconfirmed_original`, `chg_replanning`, `chg_reconfirmed` |
+| Expected Result | 1. Exactly those two. 2. Each reads "Change approved: Date and time.", flagged when the change was decided and resolved after it by the event's Coordinator. Its history is one entry, Approved → Cancelled by that Coordinator. Venue Staff have one notice, "A flagged booking was cancelled". |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC14] TC-233-30: an Approved booking cancelled while its event goes on was flagged by the change, and cancelled by resolving that flag"
+
+### TC-233-31
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-31 |
+| Test Scenario | [Positive] AC 14: a confirmed hold records its Coordinator as deciding it, and a Rejected check flagged the event's arrangements (SCRUM-163 AC 3, SCRUM-166 AC 11, SCRUM-26, SCRUM-124 AC 9) |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. Read each seeded Approved booking that was held. <br> 2. For each Rejected check, read its event's approved bookings and confirmed reservations. <br> 3. Read `bkg_ready_to_confirm` and `res_ready_laptop`'s resolution, their history entries and the event's flag-resolved notices. |
+| Test Data | `bkg_ready_to_confirm`, `res_ready_laptop`, `sfc_rejected`, `sfc_safety_rejected`, `sfc_approved` |
+| Expected Result | 1. Only `bkg_ready_to_confirm`, decided by its Coordinator after Venue Staff approved the hold and before it expired. 2. Each is flagged "Safety check rejected: " and the check's note, when it was decided. 3. Both resolved by `usr_coordinator` before `sfc_approved` was requested, with one "Still stands (SCRUM-26)" entry each. Venue Staff are told the booking still stands and Technical Support the reservation, when it was resolved. |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC14] TC-233-31: a confirmed hold records its Coordinator as deciding it, and a Rejected check flagged the event's arrangements"
+
+### TC-233-32
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-32 |
+| Test Scenario | [Positive] AC 14: only settling a hold withdraws its notices, the reminder and the expiry notice together, before either shows (SCRUM-163 AC 5, SCRUM-48 AC 8) |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. List every seeded withdrawn notice with its booking. <br> 2. Compare when each shows and when it was withdrawn with the hold's expiry and `ntf_hold_released`. |
+| Test Data | `ntf_withdrawn_reminder`, `ntf_withdrawn_expiry`, `bkg_released`, `ntf_hold_released` |
+| Expected Result | 1. Exactly the reminder and the expiry notice of `bkg_released`, a Cancelled hold. `bkg_expired`, left to expire, has none. 2. They show 24 hours before the expiry and at it, and were withdrawn before that, when the hold was released. |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC14] TC-233-32: only settling a hold withdraws its notices, the reminder and the expiry notice together, before either shows"
+
+### TC-233-33
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-33 |
+| Test Scenario | [Positive] AC 14: every closed equipment request has its decision time, and every Outdated check has what outdated it (SCRUM-28, SCRUM-142 AC 3, AC 9, SCRUM-166 AC 13) |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. List seeded Approved, Rejected and Cancelled equipment requests with no decision time. <br> 2. For each Outdated check, look for a change approved on its event, or a venue request withdrawn, at the moment it went Outdated. |
+| Test Data | `eqr_cancelled`, `sfc_outdated`, `bkg_safety_fallback`, `sfc_replanning`, `sfc_reconfirmed_first` |
+| Expected Result | 1. None. 2. Each has one: `sfc_outdated` the withdrawal of `bkg_safety_fallback`, the others their approved change. |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC14] TC-233-33: every closed equipment request has its decision time, and every Outdated check has what outdated it"
+
+### TC-233-34
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-34 |
+| Test Scenario | [Boundary] AC 14: a pending venue request is dated after its event's approval and no later than the notice about it, oldest first (SCRUM-50, SCRUM-124 AC 1, SCRUM-134) |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. List the seeded Pending bookings, oldest first. <br> 2. Compare each with its event's approval, now, and any "A venue was requested" notice on its event. |
+| Test Data | `bkg_pending`, `bkg_pending_2`, `bkg_multirole_pending`, `ntf_booking_requested` |
+| Expected Result | 1. In that order. 2. Each is after the approval and before now, and at or before the notice: `bkg_pending_2` is dated exactly when `ntf_booking_requested` was sent. |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC14] TC-233-34: a pending venue request is dated after its event's approval and no later than the notice about it, oldest first"

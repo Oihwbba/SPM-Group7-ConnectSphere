@@ -68,8 +68,22 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — re-seeding on a later day", (
     const appUnavailability = await db.venueUnavailability.create({
       data: { venueId: "ven_seminar", startAt: at(201), endAt: at(202), reason: "OTHER", note: "Recorded through the app.", recordedById: "usr_venuestaff" },
     });
+    // What the seed used to write and the app never does; a re-seed removes them.
+    await db.holdExpiryChange.create({
+      data: { id: "hxc_held_1", bookingId: "bkg_held", oldExpiresAt: at(3, 4), newExpiresAt: at(5, 4), changedById: "usr_venuestaff" },
+    });
+    await db.safetyCheckArrangement.create({
+      data: { id: "sfa_confirmed_booking", checkId: "sfc_confirmed", bookingId: "bkg_confirmed" },
+    });
 
     await seedOn(0);
+
+    expect(await db.holdExpiryChange.count()).toBe(0);
+    expect((await db.safetyCheckArrangement.findMany({ select: { id: true } })).map((row) => row.id)).toEqual(["sfa_changes_booking"]);
+    // Dated by this run, so it isn't left before its event's approval.
+    expect(
+      await db.booking.findUniqueOrThrow({ where: { id: "bkg_pending" }, select: { createdAt: true } }),
+    ).toEqual({ createdAt: at(-8, 3) });
 
     expect(
       await db.booking.findUniqueOrThrow({ where: { id: "bkg_confirmed" }, select: { status: true, startAt: true, endAt: true } }),
