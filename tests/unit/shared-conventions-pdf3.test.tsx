@@ -36,7 +36,7 @@ describe("AuditTrail — shared page conventions", () => {
 });
 
 describe("notification cards — shared page conventions", () => {
-  it("SCRUM-207 TC-207-19: are white with a violet left edge, read or unread", () => {
+  it("SCRUM-207 TC-207-19: are white with a violet left edge from the brand token, read or unread", () => {
     const notification = (id: string, readAt: Date | null) =>
       ({
         id,
@@ -52,7 +52,7 @@ describe("notification cards — shared page conventions", () => {
         notifications={[notification("ntf_1", null), notification("ntf_2", AT)]}
       />,
     );
-    expect(html.match(/border-l-violet-500 bg-card/g)).toHaveLength(2);
+    expect(html.match(/border-l-primary bg-card/g)).toHaveLength(2);
     expect(html).not.toContain("bg-primary/5");
   });
 });

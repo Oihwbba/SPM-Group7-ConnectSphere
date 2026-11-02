@@ -313,7 +313,7 @@ Not in the dialog, deliberately: Record unavailability, which already asks again
 | Pre-conditions | Signed in with a read and an unread notification. |
 | Test Steps | 1. Open the notifications. |
 | Test Data | `organiser@test.local` |
-| Expected Result | Every card is white with a thick violet left edge; an unread one also has its dot. |
+| Expected Result | Every card is white with a thick left edge in the brand's violet, taken from the `primary` token rather than Tailwind's palette; an unread one also has its dot. |
 
 **Automated by:** `tests/unit/shared-conventions-pdf3.test.tsx` › "SCRUM-207 TC-207-19: …"
 

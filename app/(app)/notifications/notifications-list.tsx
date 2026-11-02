@@ -75,8 +75,9 @@ export function NotificationsList({
                 data-testid="notification"
                 data-read={unread ? "false" : "true"}
                 className={cn(
-                  // Shared page conventions: white cards with a violet edge.
-                  "flex w-full items-start gap-3 rounded-lg border border-l-4 border-l-violet-500 bg-card p-4 text-left transition-colors hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+                  // Shared page conventions: white cards with a violet edge,
+                  // taken from the brand token rather than Tailwind's palette.
+                  "flex w-full items-start gap-3 rounded-lg border border-l-4 border-l-primary bg-card p-4 text-left transition-colors hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
                 )}
               >
                 <span
