@@ -90,6 +90,10 @@ field the organiser emptied, while `undefined` would keep the old value.
 - (2026-09-28, #90) `app/(app)/events/[id]/` has no `loading.tsx` on purpose:
 a loading boundary would stream a 200 shell and `notFound()` would stop
 returning a real 404, which the e2e pins.
+- (2026-11-02, #347) The seven 2,000-character text boxes (SCRUM-264) have no
+`maxLength` on purpose: it would silently cut a pasted text, so the server
+refuses and the form keeps the text and shows the field's message beside
+the box.
 
 ## Equipment
 
@@ -120,9 +124,6 @@ the earlier request, not a defect.
   Playwright journeys exercise them. Measuring components needs new tooling
   (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
   so a "100% coverage" claim refers to the measured files only.
-- (2026-10-09, #146) `docs/testing/*.md` cite test titles verbatim in
-  'Automated by' lines (not shown to this review), so a rename must update
-  the citing spec too; titles still in the old inline form match their specs.
 - (2026-10-19, #222; #251) Vitest runs the integration files in parallel,
   so every suite owns its data: no reading rows a sibling suite may delete
   (#251) and no mid-run role-account churn (#222) — SCRUM-165/166 use the
@@ -133,9 +134,6 @@ the earlier request, not a defect.
 Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
-
-- (2026-09-29, #99) Recorded unavailability can't be removed or shortened
-in the app. Known when a pull request touches unavailability.
 
 - (2026-10-04, #120; 2026-10-19, #226) Events approved before #120 sit in
 APPROVED with no way out: approval now writes PLANNING directly,
@@ -181,14 +179,6 @@ AC1 warning screen is still SCRUM-25's and the other AC3 sources
 (SCRUM-160/161/166) raise none. Known when a pull request touches
 reconsideration or claims those stories.
 
-- (2026-10-18, #216) SCRUM-190 (an event takes place within one day) is
-deferred past Release 1 with no customer answer, so a multi-day event
-stays requestable but can never be booked or confirmed — search covers
-one day and a date without times excludes only venues Closed that day
-(both PO-approved, SCRUM-38's change log), and a booking must fit one
-day's opening hours (SCRUM-34 AC7). Known when a pull request touches
-event periods, venue search or booking hours, or claims SCRUM-190.
-
 - (2026-10-18, #181; SCRUM-128's notice half closed by #227 and its
 Registration-needed half by #221, 2026-10-19) An event completing with a
 change request still Submitted leaves it Submitted (SCRUM-82 AC11 will
@@ -203,6 +193,6 @@ pull request touches the re-planned view.
 
 - (2026-10-19, #214) The Equipment schedule's "Reported as not
 providable" label shows for every Needs Reconsideration flag: the flag is SCRUM-26's and shared — #181's
-change request already raises it on reservations — so one flagged another
-way reads as a Technical Support report that never happened. Known when a
-pull request touches the equipment schedule panel or the flag sources.
+  change request already raises it on reservations — so one flagged another
+  way reads as a Technical Support report that never happened. Known when a
+  pull request touches the equipment schedule panel or the flag sources.
