@@ -28,7 +28,7 @@ organised by `organiser@test.local`. Every account's password is
 | [TC-82-01](#tc-82-01) | Positive | AC 1 | Unit |
 | [TC-82-02](#tc-82-02) | Negative | AC 1 | Unit, e2e |
 | [TC-82-03](#tc-82-03) | Negative | AC 1 | Unit |
-| [TC-82-04](#tc-82-04) | Positive | AC 3, AC 6 | Unit, integration |
+| [TC-82-04](#tc-82-04) | Positive | AC 3 | Unit, integration |
 | [TC-82-05](#tc-82-05) | Negative | AC 4 | Unit, e2e |
 | [TC-82-06](#tc-82-06) | Positive | AC 6 | Unit, integration |
 | [TC-82-07](#tc-82-07) | Concurrency | AC 4 | Integration |

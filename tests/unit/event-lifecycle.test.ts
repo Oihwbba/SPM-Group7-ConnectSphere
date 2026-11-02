@@ -31,7 +31,7 @@ const ALLOWED: [EventStatus, EventStatus, string][] = [
 
 describe("canTransition — SCRUM-135", () => {
   it.each(ALLOWED)(
-    "SCRUM-135 TC-135-01: %s → %s is allowed (%s)",
+    "SCRUM-135 [AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10] TC-135-01: %s → %s is allowed (%s)",
     (from, to) => {
       expect(canTransition(from, to)).toBe(true);
     },

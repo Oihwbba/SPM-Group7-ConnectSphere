@@ -183,7 +183,7 @@ describe("confirmed details — SCRUM-85", () => {
     expect(isBeingReplanned({ status: "CONFIRMED", confirmedStartAt: CONFIRMED_AT })).toBe(false);
   });
 
-  it("lists a venue as its name and location", () => {
+  it("SCRUM-85: lists a venue as its name and location", () => {
     expect(venueLabel({ name: "Main Hall", location: "Level 1" })).toBe(
       "Main Hall — Level 1",
     );

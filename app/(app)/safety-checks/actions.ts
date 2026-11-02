@@ -10,6 +10,7 @@ import { ok, err, type ActionResult } from "@/lib/action-result";
 import { formatDateTime } from "@/lib/datetime";
 import { flagArrangements, liveBookingWhere } from "@/lib/reconsideration";
 import { SAFETY_CHECK_LABEL } from "@/lib/safety-checks";
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
 
 const NOTE_REQUIRED = "A note is required for Changes requested or Rejected.";
 const PICK_REQUIRED = "Pick at least one venue booking or equipment reservation the changes affect.";
@@ -18,9 +19,9 @@ const outcomeSchema = z
   .object({
     checkId: z.string().min(1),
     outcome: z.enum(["APPROVED", "CHANGES_REQUESTED", "REJECTED"]),
-    note: z.string().trim().max(2000).optional(),
-    bookingIds: z.array(z.string().min(1)).default([]),
-    reservationIds: z.array(z.string().min(1)).default([]),
+    note: z.string().trim().max(2000, "Keep the note under 2000 characters.").optional(),
+    bookingIds: z.array(z.string().min(1)).max(MAX_LIST_ITEMS).default([]),
+    reservationIds: z.array(z.string().min(1)).max(MAX_LIST_ITEMS).default([]),
   })
   .superRefine((value, ctx) => {
     if (value.outcome !== "APPROVED" && !value.note) {

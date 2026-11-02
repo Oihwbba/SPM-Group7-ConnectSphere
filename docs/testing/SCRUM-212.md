@@ -47,7 +47,7 @@ event as SCRUM-72 AC3 requires.
 | [TC-212-06](#tc-212-06) | Positive | AC 1 | e2e |
 | [TC-212-07](#tc-212-07) | Positive | AC 1 | e2e |
 | [TC-212-08](#tc-212-08) | Positive | AC 2 | Unit, e2e |
-| [TC-212-09](#tc-212-09) | Positive | AC 1, AC 2 | e2e |
+| [TC-212-09](#tc-212-09) | Positive | AC 1, AC 2 | Unit, e2e |
 | [TC-212-10](#tc-212-10) | Positive, Negative, Boundary | AC 2 | Unit |
 | [TC-212-11](#tc-212-11) | Positive | AC 2 | Unit, e2e |
 | [TC-212-12](#tc-212-12) | Positive | AC 3 | e2e |

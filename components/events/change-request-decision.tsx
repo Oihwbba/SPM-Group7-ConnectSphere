@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import {
   decideChangeRequest,
@@ -38,6 +39,7 @@ export function ChangeRequestDecision({
   const [attempt, setAttempt] = useState(0);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [saving, startSave] = useTransition();
   const router = useRouter();
 
@@ -81,7 +83,8 @@ export function ChangeRequestDecision({
         result = await decideChangeRequest({
           changeRequestId: view!.changeRequestId,
           decision,
-          reason,
+          // Text left behind by Back isn't part of an approval.
+          reason: decision === "REJECTED" ? reason : undefined,
         });
       } catch {
         // A lost connection or an unexpected server error: the decision may
@@ -92,8 +95,9 @@ export function ChangeRequestDecision({
         return;
       }
       if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
         toast.error(result.error);
-        // A blank reason changed nothing on the server. Anything else (decided
+        // A refused reason changed nothing on the server. Anything else (decided
         // in another tab, the event reassigned or closed) may mean the list is
         // out of date, so it is read again.
         if (!result.fieldErrors) onDecided();
@@ -155,10 +159,16 @@ export function ChangeRequestDecision({
         <div className="space-y-2">
           <Textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setErrors({});
+            }}
             placeholder="Why can't this change be made?"
             aria-label="Reason for rejecting the change request"
+            aria-invalid={Boolean(errors.reason)}
+            aria-describedby={errors.reason ? "change-rejection-reason-error" : undefined}
           />
+          <FieldError id="change-rejection-reason-error" messages={errors.reason} />
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => setRejecting(false)}>
               Back
@@ -192,6 +202,7 @@ export function ChangeRequestDecision({
             disabled={saving}
             onClick={() => {
               setReason("");
+              setErrors({});
               setRejecting(true);
             }}
           >

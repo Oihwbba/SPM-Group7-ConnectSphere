@@ -3,6 +3,7 @@ import type { EventStatus } from "@prisma/client";
 
 import { formatDateTime } from "@/lib/datetime";
 import { isValidPeriod } from "@/lib/period";
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
 
 /** A venue is requested only for an event that has already been approved. */
 export const BOOKABLE_EVENT_STATUSES: EventStatus[] = ["APPROVED", "PLANNING"];
@@ -83,13 +84,14 @@ export const bookingRequestSchema = z
     startAt: z.string().min(1, "Choose a start time."),
     endAt: z.string().min(1, "Choose an end time."),
     requestedAttendance: z.coerce
-      .number({ invalid_type_error: "Enter the expected attendance." })
+      .number({ error: "Enter the expected attendance." })
       .int("Attendance must be a whole number.")
       .positive("Attendance must be greater than zero."),
-    requiredFacilities: z.array(z.string().trim().min(1)).default([]),
+    requiredFacilities: z.array(z.string().trim().min(1)).max(MAX_LIST_ITEMS).default([]),
     // SCRUM-40 AC3 — compared with the venue's features for suitability.
     requiredAccessibilityFeatures: z
       .array(z.string().trim().min(1))
+      .max(MAX_LIST_ITEMS)
       .default([]),
     requestedLayout: z.string().trim().max(100).optional(),
     requestNotes: z.string().trim().max(2000).optional(),
@@ -147,7 +149,11 @@ export const bookingDecisionSchema = z
   .object({
     bookingId: z.string().min(1),
     decision: z.enum(["APPROVED", "REJECTED"]),
-    reason: z.string().trim().max(2000).optional(),
+    reason: z
+      .string()
+      .trim()
+      .max(2000, "Keep the rejection reason under 2000 characters.")
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.decision === "REJECTED" && !data.reason) {
@@ -168,13 +174,13 @@ export const bookingDecisionSchema = z
 export const bookingHoldSchema = z.object({
   bookingId: z.string().min(1),
   holdExpiresAt: z
-    .string({ required_error: "Choose when the hold expires." })
+    .string({ error: "Choose when the hold expires." })
     .min(1, "Choose when the hold expires.")
     .refine((value) => !Number.isNaN(new Date(value).getTime()), {
       message: "Choose when the hold expires.",
     }),
   holdNote: z
-    .string({ required_error: "Say what the Coordinator must finalise." })
+    .string({ error: "Say what the Coordinator must finalise." })
     .trim()
     .min(1, "Say what the Coordinator must finalise.")
     .max(500),

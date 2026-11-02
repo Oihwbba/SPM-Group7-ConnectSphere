@@ -5,7 +5,7 @@ import type { EventStatus, Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { cancelInTransaction } from "@/lib/event-closing";
+import { cancelInTransaction, completeIfTakenPlace, EVENT_TOOK_PLACE } from "@/lib/event-closing";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import {
@@ -49,6 +49,7 @@ vi.mock("@/lib/safety-checks", async (importOriginal) => ({
 vi.mock("@/lib/event-closing", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/event-closing")>()),
   cancelInTransaction: vi.fn(),
+  completeIfTakenPlace: vi.fn().mockResolvedValue(false),
 }));
 
 const mockAuth = auth as unknown as Mock;
@@ -425,7 +426,7 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     });
   });
 
-  it("SCRUM-128 [AC11], SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't", async () => {
+  it("SCRUM-128 [AC11] TC-128-16, SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
     tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(
       pendingRequest([
@@ -624,7 +625,7 @@ describe("decideChangeRequest — who and when (SCRUM-128 AC9)", () => {
     expectNothingWritten();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-128 [AC9]: does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(
       decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
@@ -725,5 +726,22 @@ describe("getChangeDecision — SCRUM-128 AC1", () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEvent.mockResolvedValue(null);
     expect(await getChangeDecision("evt_x")).toMatchObject({ ok: false });
+  });
+});
+
+// SCRUM-262 — completing an event that has taken place rejects its submitted
+// change requests (SCRUM-82 AC11), so none is decided after its end.
+describe("decideChangeRequest — SCRUM-262", () => {
+  it("SCRUM-262 [AC2, AC3] TC-262-03: a change request for an event that has taken place is not decided", async () => {
+    (completeIfTakenPlace as Mock).mockResolvedValueOnce(true);
+
+    expect(
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
+    ).toEqual({ ok: false, error: EVENT_TOOK_PLACE });
+    expect(completeIfTakenPlace).toHaveBeenCalledWith(tx, expect.any(String));
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      (completeIfTakenPlace as Mock).mock.invocationCallOrder[0],
+    );
+    expectNothingWritten();
   });
 });

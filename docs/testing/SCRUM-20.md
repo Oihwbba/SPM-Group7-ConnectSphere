@@ -36,7 +36,7 @@ The seed has two active Coordinators.
 
 **Superseded** on 20 Oct 2026 by SCRUM-165 AC 1 and AC 5 ([TC-165-01](SCRUM-165.md#tc-165-01), [TC-165-07](SCRUM-165.md#tc-165-07)). A submitted request was assigned one Coordinator, moved Under Review, and both people were told. It now stays Submitted with no Coordinator until the Lead assigns one; that assignment moves it Under Review in one write, is recorded with the Lead, and tells the Coordinator and the Organiser. `tests/unit/event-auto-assignment.test.ts` and `e2e/coordinator-assignment.spec.ts` were removed.
 
-**Automated by** (SCRUM-165's tests): `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: [Positive] a new request stays Submitted with no Coordinator"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: [Positive] the event gets the Coordinator, moves to Under Review and records the supervising Lead in one write", "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" and "SCRUM-165 [AC5] TC-165-07: [Positive] the assignment is recorded with the Lead who made it"; `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-20 [AC1, AC2, AC3, AC7, AC8] TC-20-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it"
+**Automated by** (SCRUM-165's tests): `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: [Positive] a new request stays Submitted with no Coordinator"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: [Positive] the event gets the Coordinator, moves to Under Review and records the supervising Lead in one write", "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" and "SCRUM-165 [AC5] TC-165-07: [Positive] the assignment is recorded with the Lead who made it"; `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it"
 
 ### TC-20-02
 
@@ -67,4 +67,4 @@ The seed has two active Coordinators.
 | Test Data | The Submitted request's id |
 | Expected Result | The change is refused and the request is unchanged; only assignment moves it to Under Review. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-20: a coordinator cannot claim a request into review — that transition is automatic"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-20 [AC1] TC-20-05, SCRUM-24 [AC4, AC6] TC-24-03: a coordinator cannot claim a request into review — that transition is automatic"

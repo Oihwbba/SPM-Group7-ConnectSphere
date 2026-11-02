@@ -13,7 +13,15 @@ and the app is running. Unless the case says otherwise, the event is owned by
 `organiser@test.local` and assigned to `coordinator@test.local` (both
 `Password123!`), and runs 09:00–17:00 on one day in 2031. "Ready" means its
 SCRUM-110 checklist is complete: an approved venue booking covering the event
-and, if equipment was requested, every line reserved in full.
+(SCRUM-162 AC8); Equipment decided, either No equipment needed or a request
+with every line reserved in full (SCRUM-170 AC4); and an Approved safety check
+(SCRUM-166 AC9).
+
+Later stories superseded parts of the story (its "Superseded in part" note):
+AC 2 by SCRUM-165 and SCRUM-135 AC 3, since a Submitted request with no
+Coordinator can't be approved (TC-135-03); AC 3 and AC 4 by SCRUM-166 AC 9,
+which adds the safety check to "Ready"; and AC 6 by SCRUM-162 AC 7, so the
+Organiser sees every Approved venue.
 
 | ID                    | Type        | Criterion                                  | Automated              |
 | --------------------- | ----------- | ------------------------------------------ | ---------------------- |
@@ -109,6 +117,8 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | —                                                                                                              |
 | Expected Result | A "Confirmed arrangements" section: Venue "Exhibition Hall", the event's date and time, and "Projector × 2".   |
 
+**Superseded in part** by SCRUM-162 AC 7 ([TC-162-11](SCRUM-162.md#tc-162-11)): with several Approved venues, the Organiser sees every one, oldest first. This case keeps one venue.
+
 **Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-81 [AC6] TC-81-06: …"; `tests/unit/readiness-actions.test.ts` › "SCRUM-81 [AC6] TC-81-06: …"; `e2e/confirm.spec.ts` › "SCRUM-81 [AC3, AC5, AC6, AC7] …"
 
 ### TC-81-07
@@ -122,7 +132,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | The Organiser; another Coordinator; any Coordinator when the event has no assigned Coordinator; Venue Staff; Technical Support; an Attendee; signed out |
 | Expected Result | Refused every time. The event stays Planning and no history entry is written.                                                                           |
 
-**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC7] TC-81-07: …"; `tests/unit/auth.test.ts` › "SCRUM-81 [AC7] TC-81-07: only the event's assigned Coordinator may confirm it"
+**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC7] TC-81-07: …"; `tests/unit/auth.test.ts` › "SCRUM-81 [AC7] TC-81-07: only the event's assigned Coordinator may confirm it" and "SCRUM-81 [AC7] TC-81-07, SCRUM-165 [AC8] TC-165-11: no Coordinator may confirm or open an event nobody is assigned to"
 
 ### TC-81-08
 
@@ -187,7 +197,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | —                                                                                                                                                                                           |
 | Expected Result | The reservation is created.                                                                                                                                                                 |
 
-**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-31 TC-31-10, SCRUM-81 TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"
 
 ### TC-81-13
 

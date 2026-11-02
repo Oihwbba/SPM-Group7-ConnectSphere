@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-26. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-207 - Shared page conventions on every page
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | High |
 | **Story points** | 2 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-207 |
 
