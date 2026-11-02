@@ -90,6 +90,10 @@ field the organiser emptied, while `undefined` would keep the old value.
 - (2026-09-28, #90) `app/(app)/events/[id]/` has no `loading.tsx` on purpose:
 a loading boundary would stream a 200 shell and `notFound()` would stop
 returning a real 404, which the e2e pins.
+- (2026-11-02, #335) The Needs Reconsideration badge markup is deliberately
+duplicated: `FlagBadge` is local to `confirmed-arrangements.tsx`, and the
+readiness checklist, reconsideration and equipment schedule panels carry
+the same markup — extracting it was kept out of the bug fix.
 
 ## Equipment
 
@@ -120,9 +124,6 @@ the earlier request, not a defect.
   Playwright journeys exercise them. Measuring components needs new tooling
   (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
   so a "100% coverage" claim refers to the measured files only.
-- (2026-10-09, #146) `docs/testing/*.md` cite test titles verbatim in
-  'Automated by' lines (not shown to this review), so a rename must update
-  the citing spec too; titles still in the old inline form match their specs.
 - (2026-10-19, #222; #251) Vitest runs the integration files in parallel,
   so every suite owns its data: no reading rows a sibling suite may delete
   (#251) and no mid-run role-account churn (#222) — SCRUM-165/166 use the
@@ -133,9 +134,6 @@ the earlier request, not a defect.
 Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
-
-- (2026-09-29, #99) Recorded unavailability can't be removed or shortened
-in the app. Known when a pull request touches unavailability.
 
 - (2026-10-04, #120; 2026-10-19, #226) Events approved before #120 sit in
 APPROVED with no way out: approval now writes PLANNING directly,
@@ -166,13 +164,6 @@ so a failed submission strands that form the same way. And the review's one
 low merged open: nothing pins the catch's `reload()` (the e2e aborts before
 the server, so the "saved but the answer was lost" half is untested). Known
 when a pull request touches either panel or claims SCRUM-108.
-
-- (2026-10-14, #190) SCRUM-124 AC4 is half-delivered: approving a hold
-notifies the Coordinator (or venue requester) with the deadline, but a
-booking Venue Staff approve or reject still writes no notice — that half
-is SCRUM-53's — and confirming or releasing a hold still tells Venue
-Staff nothing (AC6). Known when a pull request touches booking decisions
-or hold settlement, or claims SCRUM-53/SCRUM-124.
 
 - (2026-10-15, #172; callers 2026-10-18 #181, 2026-10-19 #214; SCRUM-34's
 venue-edit flags since #203, accessibility added 2026-10-19, #230)
@@ -206,3 +197,9 @@ providable" label shows for every Needs Reconsideration flag: the flag is SCRUM-
 change request already raises it on reservations — so one flagged another
 way reads as a Technical Support report that never happened. Known when a
 pull request touches the equipment schedule panel or the flag sources.
+
+- (2026-11-02, #335) The Confirmed-arrangements panel refetches only when
+the flag count changes, so a flag resolved while another is raised between
+refreshes leaves stale badges until the count next changes — the review's
+disclosed low. Known when a pull request touches that panel or the event
+page's refresh key.
