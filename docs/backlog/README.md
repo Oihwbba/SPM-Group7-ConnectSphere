@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **94** |
+| Tasks | **96** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -289,4 +289,6 @@ _5 stories, 9 points_
 | [SCRUM-260](SCRUM-260.md) | Chore: Sync docs/backlog for the stories open pull requests need | SCRUM Sprint 4 | Done |
 | [SCRUM-261](SCRUM-261.md) | Bug: Reserving equipment is refused when the earlier requests it waits for never run at the same time | SCRUM Sprint 4 | Done |
 | [SCRUM-262](SCRUM-262.md) | Bug: An event that already took place can still be cancelled or sent back to Planning, and All Events shows it as Confirmed | SCRUM Sprint 4 | In Review |
-| [SCRUM-263](SCRUM-263.md) | Bug: The event request form says to fix the highlighted fields but highlights none | SCRUM Sprint 4 | In Progress |
+| [SCRUM-263](SCRUM-263.md) | Bug: The event request form says to fix the highlighted fields but highlights none | SCRUM Sprint 4 | In Review |
+| [SCRUM-264](SCRUM-264.md) | Bug: Seven text boxes over 2,000 characters are refused with no error at the field | SCRUM Sprint 4 | In Progress |
+| [SCRUM-265](SCRUM-265.md) | Chore: Record the Sprint 4 response times for SCRUM-132 AC2 | SCRUM Sprint 4 | In Progress |

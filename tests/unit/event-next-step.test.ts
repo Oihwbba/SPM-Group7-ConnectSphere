@@ -16,6 +16,7 @@ const facts = (over: Partial<NextStepFacts> = {}): NextStepFacts => ({
   openClarification: false,
   pendingChangeRequests: 0,
   flaggedArrangements: 0,
+  unresolvedFlags: 0,
   checklist: null,
   decisionReason: null,
   rejectionOutcome: null,
@@ -319,6 +320,47 @@ describe("SCRUM-208 — the Next step banner", () => {
     expect(isEventTab("notes")).toBe(true);
     expect(isEventTab("details")).toBe(false);
     expect(isEventTab(undefined)).toBe(false);
+  });
+});
+
+describe("SCRUM-258 — a Confirmed event's flagged arrangements aren't secured", () => {
+  const confirmed = (over: Partial<NextStepFacts> = {}) =>
+    facts({ status: "CONFIRMED", unresolvedFlags: 1, ...over });
+
+  it("SCRUM-258 [AC1] TC-258-01: the Organiser waits on the Coordinator by name, or as the Coordinator, and the page opens on Changes", () => {
+    const step = nextStep(confirmed());
+    expect(step).toEqual({
+      kind: "waiting",
+      text: "Waiting for Cody Coordinator to decide what happens to the flagged arrangements",
+      tab: "changes",
+    });
+    expect(defaultTab(step)).toBe("changes");
+    expect(nextStep(confirmed({ coordinatorName: null }))).toMatchObject({
+      text: "Waiting for the Coordinator to decide what happens to the flagged arrangements",
+    });
+  });
+
+  it("SCRUM-258 [AC1] TC-258-02: the Coordinator is still asked to decide", () => {
+    expect(
+      nextStep(confirmed({ viewer: "coordinator", flaggedArrangements: 1 })),
+    ).toMatchObject({
+      kind: "yours",
+      text: "Your turn: decide what happens to the flagged arrangements",
+      tab: "changes",
+    });
+  });
+
+  it("SCRUM-258 [AC1] TC-258-03: the flag comes before the Organiser's pending change request", () => {
+    expect(nextStep(confirmed({ pendingChangeRequests: 1 }))).toMatchObject({
+      text: "Waiting for Cody Coordinator to decide what happens to the flagged arrangements",
+    });
+  });
+
+  it("SCRUM-258 [AC1] TC-258-04: with no flag left, the event reads as secured again", () => {
+    expect(nextStep(confirmed({ unresolvedFlags: 0 }))).toMatchObject({
+      text: "Confirmed: the arrangements are secured. Nothing is waiting before the event.",
+      tab: "arrangements",
+    });
   });
 });
 
