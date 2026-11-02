@@ -230,8 +230,9 @@ export function EventsClient({
             ? "A new draft was started from this request."
             : "A new request was already started from this one. Find it in your events list.",
         );
-        // As the Drafts tab button does, so a leftover status filter can't hide it.
-        setActiveTab("DRAFT");
+        // Show the whole list, so a leftover filter can't hide the new draft.
+        // It used to narrow to Drafts, which now has no control to leave by.
+        setActiveTab("ALL");
         setStatusFilter("ALL");
         setDraftToOpen(result.data.id);
         router.refresh();
