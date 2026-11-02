@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { recordSafetyCheckOutcome } from "../actions";
 
@@ -40,6 +41,7 @@ export function OutcomeForm({
 }) {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [note, setNote] = useState("");
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [picked, setPicked] = useState<string[]>([]);
   const [saving, startSave] = useTransition();
   const router = useRouter();
@@ -70,6 +72,7 @@ export function OutcomeForm({
           .map((a) => a.id),
       });
       if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
         toast.error(result.error);
         router.refresh();
         return;
@@ -129,9 +132,15 @@ export function OutcomeForm({
           <Textarea
             id="safety-note"
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => {
+              setNote(e.target.value);
+              setErrors({});
+            }}
             placeholder="What needs to change, or anything the Coordinator should know"
+            aria-invalid={Boolean(errors.note)}
+            aria-describedby={errors.note ? "safety-note-error" : undefined}
           />
+          <FieldError id="safety-note-error" messages={errors.note} />
         </div>
 
         <Button onClick={save} disabled={!ready || saving}>

@@ -149,7 +149,11 @@ export const bookingDecisionSchema = z
   .object({
     bookingId: z.string().min(1),
     decision: z.enum(["APPROVED", "REJECTED"]),
-    reason: z.string().trim().max(2000).optional(),
+    reason: z
+      .string()
+      .trim()
+      .max(2000, "Keep the rejection reason under 2000 characters.")
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.decision === "REJECTED" && !data.reason) {

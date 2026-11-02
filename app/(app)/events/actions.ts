@@ -40,10 +40,12 @@ class SubmitEventError extends Error {}
 
 // Coordinators decide; they do not claim. `submitted → under review` happens
 // when the Lead assigns a Coordinator (SCRUM-165), so it is not accepted here.
+const REASON_TOO_LONG = "Keep the rejection reason under 2000 characters.";
+
 const statusTransitionSchema = z.object({
   eventId: z.string().min(1),
   nextStatus: z.enum(["APPROVED", "REJECTED"]),
-  decisionReason: z.string().trim().max(2000).optional(),
+  decisionReason: z.string().trim().max(2000, REASON_TOO_LONG).optional(),
   rejectionOutcome: rejectionOutcomeSchema.optional(),
 });
 
@@ -51,7 +53,7 @@ const confirmEventSchema = z.object({ eventId: z.string().min(1) });
 
 const rejectPlanningEventSchema = z.object({
   eventId: z.string().min(1),
-  decisionReason: z.string().trim().max(2000).optional(),
+  decisionReason: z.string().trim().max(2000, REASON_TOO_LONG).optional(),
   rejectionOutcome: rejectionOutcomeSchema.optional(),
 });
 
@@ -554,7 +556,10 @@ export async function transitionEventStatus(
 
     const parsed = statusTransitionSchema.safeParse(input);
     if (!parsed.success) {
-      return err("Please provide a valid event status action.");
+      const tooLong = parsed.error.flatten().fieldErrors.decisionReason;
+      return tooLong
+        ? err(tooLong[0], { decisionReason: tooLong })
+        : err("Please provide a valid event status action.");
     }
 
     const { eventId, nextStatus, decisionReason, rejectionOutcome } =
@@ -1113,7 +1118,12 @@ export async function rejectPlanningEvent(
     requirePermission(user, "event:reject");
 
     const parsed = rejectPlanningEventSchema.safeParse(input);
-    if (!parsed.success) return err("Please provide a valid event to reject.");
+    if (!parsed.success) {
+      const tooLong = parsed.error.flatten().fieldErrors.decisionReason;
+      return tooLong
+        ? err(tooLong[0], { decisionReason: tooLong })
+        : err("Please provide a valid event to reject.");
+    }
     const { eventId, decisionReason, rejectionOutcome } = parsed.data;
     // AC2: a reason and an outcome, as for any rejection.
     if (!decisionReason) {
