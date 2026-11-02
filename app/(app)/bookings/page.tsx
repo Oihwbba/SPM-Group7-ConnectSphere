@@ -141,6 +141,7 @@ export default async function BookingsPage({
             canDecide={canDecide}
             canHold={canHold}
             nextHref={state.nextHref}
+            hasNext={state.hasNext}
             listHref={state.listHref}
           />
         ) : done && doneNote ? (
@@ -153,6 +154,7 @@ export default async function BookingsPage({
               canHold={canHold}
               decided={doneNote}
               nextHref={state.nextHref}
+            hasNext={state.hasNext}
               listHref={state.listHref}
             />
           ) : (

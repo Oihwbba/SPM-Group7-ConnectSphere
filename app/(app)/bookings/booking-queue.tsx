@@ -93,6 +93,7 @@ export function BookingDecision({
   canHold = false,
   decided,
   nextHref,
+  hasNext = false,
   listHref,
 }: {
   booking: DecisionBooking;
@@ -101,6 +102,8 @@ export function BookingDecision({
   /** How the request was decided, once it has been; its buttons are then disabled. */
   decided?: React.ReactNode;
   nextHref: string;
+  /** AC4: whether anything is still waiting, so Next request is worth offering. */
+  hasNext?: boolean;
   listHref: string;
 }) {
   // The pop-up after an approval or a rejection. It outlives the refresh that
@@ -294,6 +297,16 @@ export function BookingDecision({
           onClick: () => router.push(listHref),
           prominent: true,
         }}
+        // AC4: the next request is one choice away, while there is one.
+        secondaryAction={
+          hasNext
+            ? {
+                label: "Next request",
+                onClick: () => router.push(nextHref),
+                testId: "next-request",
+              }
+            : undefined
+        }
         testId="decision-done"
       >
         {outcome?.message}

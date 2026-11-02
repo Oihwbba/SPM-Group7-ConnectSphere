@@ -175,15 +175,21 @@ TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned Queue, Safety Checks),
 **Expected:** a short success message, and the next waiting item in the
 current filter, search and sort opens; after the last in the list, the first
 still waiting. Starting an equipment review, or suggesting an alternative, is
-not a decision: the request stays open. In Bookings and Equipment Requests, an
-approval or a rejection ends in a pop-up instead (TC-211-18), and a hold still
-opens the next request; this changes AC4 for those two queues and is awaiting
-the Product Owner.
+not a decision: the request stays open.
+
+In the Unassigned Queue and Safety Checks the next item opens by itself. In
+Bookings and Equipment Requests an approval or a rejection ends in a pop-up
+(TC-211-18), so the same step is offered there as a **Next request** button
+inside it, shown only while something is still waiting; a hold still opens the
+next request. The Product Owner settled this on 2 Nov 2026: the pop-up stays,
+and the button carries AC4 in those two queues.
 
 *Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC4] TC-211-07: …" and
 "SCRUM-211 [AC2, AC4] TC-211-07, TC-211-08: …"; `e2e/work-queues.spec.ts` › the
 two "SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned
-Queue, Safety Checks).
+Queue, Safety Checks), and the Next request button in the two
+"SCRUM-211 [AC3] TC-211-06, TC-211-17/16, TC-211-18: …" tests (Bookings,
+Equipment Requests).
 
 ## TC-211-08
 
@@ -389,9 +395,10 @@ rejected", "Rejected the request for …". 4: the list, as filtered and
 searched, without the decided requests. A refused decision shows no pop-up
 (TC-211-09). Equipment Requests does the same, with **Back to equipment
 requests** and **View this request**, after "Request approved. The
-coordinator has been notified." or "Request rejected. …". This replaces AC4's
-next request for an approval or a rejection in these two queues, awaiting the
-Product Owner.
+coordinator has been notified." or "Request rejected. …". The pop-up also
+offers **Next request**, which opens the next waiting one, so AC4 is kept in
+these two queues without opening it unasked (TC-211-07); it is left out once
+nothing is waiting. The Product Owner settled this on 2 Nov 2026.
 
 *Automated:* `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-06, TC-211-17,
 TC-211-18: Approve, Hold, Reject side by side; approving or rejecting ends in

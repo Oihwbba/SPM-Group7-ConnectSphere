@@ -23,6 +23,7 @@ export function SubmittedDialog({
   onClose,
   closeLabel = "Done",
   action,
+  secondaryAction,
   testId,
 }: {
   open: boolean;
@@ -35,6 +36,11 @@ export function SubmittedDialog({
    * main way on, where it is what most people will choose next.
    */
   action?: { label: string; onClick: () => void; prominent?: boolean };
+  /**
+   * SCRUM-211 AC4 — a further way on, beneath the main one, such as the
+   * queue's "Next request". Shown only where there is one to go to.
+   */
+  secondaryAction?: { label: string; onClick: () => void; testId?: string };
   testId?: string;
 }) {
   return (
@@ -61,6 +67,17 @@ export function SubmittedDialog({
             <Button onClick={action.onClick} size="lg" className="w-full">
               {action.label}
             </Button>
+            {secondaryAction && (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={secondaryAction.onClick}
+                data-testid={secondaryAction.testId}
+                className="w-full"
+              >
+                {secondaryAction.label}
+              </Button>
+            )}
             <Button
               variant="link"
               onClick={onClose}
