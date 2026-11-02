@@ -370,12 +370,12 @@ describe("updateEventDetails — SCRUM-25", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-25 [AC1] TC-25-17: a long answer the request form accepted still saves, and a capped field over its limit is refused", async () => {
+  it("SCRUM-25 [AC1] TC-25-17: a long answer within its limit still saves, and a field over its limit is refused", async () => {
     const long = "x".repeat(3000);
     const saved = await updateEventDetails({
       ...unchanged,
       accessibilityNeeds: long,
-      preferredLayout: long,
+      preferredLayout: "x".repeat(200),
       registrationNotes: long,
       venueRequirements: long,
       equipmentRequirements: long,
@@ -392,6 +392,32 @@ describe("updateEventDetails — SCRUM-25", () => {
       fieldErrors: { programme: [expect.any(String)] },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  describe.each([
+    ["venueRequirements", 5000, "Keep venue requirements under 5000 characters."],
+    ["accessibilityNeeds", 5000, "Keep accessibility needs under 5000 characters."],
+    ["equipmentRequirements", 5000, "Keep equipment requirements under 5000 characters."],
+    ["registrationNotes", 5000, "Keep registration notes under 5000 characters."],
+    ["preferredLayout", 200, "Keep room layout under 200 characters."],
+  ] as const)("%s at its limit — SCRUM-263 AC3", (field, limit, message) => {
+    it(`SCRUM-263 [AC3] TC-263-09: the Coordinator's edit accepts exactly ${limit} characters of ${field}`, async () => {
+      expect(
+        await updateEventDetails({ ...unchanged, [field]: "x".repeat(limit) }),
+      ).toMatchObject({ ok: true });
+      expect(db.$transaction).toHaveBeenCalled();
+    });
+
+    it(`SCRUM-263 [AC3] TC-263-09: the Coordinator's edit refuses ${limit + 1} characters of ${field}, names the field, and writes nothing`, async () => {
+      expect(
+        await updateEventDetails({ ...unchanged, [field]: "x".repeat(limit + 1) }),
+      ).toEqual({
+        ok: false,
+        error: "Please fix the highlighted fields.",
+        fieldErrors: { [field]: [message] },
+      });
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
   });
 
   it("SCRUM-25 [AC1] TC-25-01: clearing an optional field stores it as empty", async () => {

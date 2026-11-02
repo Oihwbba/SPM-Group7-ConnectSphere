@@ -149,7 +149,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
       page.getByText("Please fix the highlighted fields before submitting."),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "1 - Basics" }).click();
+    // SCRUM-263 AC2: the form opens the first step with an error by itself.
     await expect(page.getByLabel("Event Name *")).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByText("Event name is required.")).toBeVisible();
   });
