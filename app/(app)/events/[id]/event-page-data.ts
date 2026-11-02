@@ -109,6 +109,7 @@ export async function getEventPageData(
     openClarification: openClarifications > 0,
     pendingChangeRequests,
     flaggedArrangements,
+    unresolvedFlags,
     // The Organiser isn't shown Venue Staff's internal reasons (SCRUM-110 AC6).
     checklist:
       checklist && (viewer === "coordinator" ? checklist : withoutInternalReasons(checklist)),

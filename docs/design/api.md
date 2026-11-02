@@ -127,8 +127,8 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170), whose Venue item lists each live booking (SCRUM-162 AC8). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
-| `getEventArrangements` | A Confirmed event's secured venues, time and equipment (SCRUM-81 AC6, SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
-| `getEventBookings` | Every venue booking of the event, with its venue, attendance and status (SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
+| `getEventArrangements` | A Confirmed event's secured venues, time and equipment, and its flagged equipment (SCRUM-81 AC6, SCRUM-162 AC7, SCRUM-258 AC2). | `event:read` | an event id | nothing (read only) | — |
+| `getEventBookings` | Every venue booking of the event, with its venue, attendance, status and whether it is flagged (SCRUM-162 AC7, SCRUM-258 AC2). | `event:read` | an event id | nothing (read only) | — |
 | `getEventCoordinator` | The name of the event's current Coordinator, or none (SCRUM-21 AC8). | `event:read` | an event id | nothing (read only) | — |
 | `isEventStillVisible` | Whether the signed-in user can still see the event, asked before the open event page refreshes, so a reassignment or removal shows a notice instead of "not found" (SCRUM-24, SCRUM-208). | `event:read`; any other user gets `false`, the same as a missing event | an event id | nothing (read only) | — |
 

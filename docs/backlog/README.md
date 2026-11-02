@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-02. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # Product backlog - acceptance criteria for every story
@@ -26,7 +26,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 ## Staleness - read this
 
-**Jira is the source of truth. These files are a snapshot, last synced on 2026-11-01.**
+**Jira is the source of truth. These files are a snapshot, last synced on 2026-11-02.**
 
 - Never edit these files by hand. Edit the story in Jira, then re-sync.
 - Re-sync after every backlog refinement, and before each sprint review.
@@ -37,17 +37,14 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **93** |
-| Tasks | **78** |
-| Tasks | **90** |
-| Tasks | **79** |
+| Tasks | **96** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
 | Points committed to Sprint 2 | **56** |
 | Points committed to Sprint 3 | **126** |
 | Points committed to Sprint 4 | **15** |
-| Last synced from Jira | **2026-11-01** |
+| Last synced from Jira | **2026-11-02** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
@@ -186,7 +183,6 @@ _11 stories, 22 points_
 ## Stories with no epic
 
 _5 stories, 9 points_
-_6 stories, 10 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -278,18 +274,21 @@ _6 stories, 10 points_
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | In Review |
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Review |
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Review |
-| [SCRUM-239](SCRUM-239.md) | Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes | SCRUM Sprint 4 | In Review |
+| [SCRUM-239](SCRUM-239.md) | Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes | SCRUM Sprint 4 | Done |
 | [SCRUM-240](SCRUM-240.md) | Bug: The live app hits Supabase's connection limit because the database pool has no maximum | SCRUM Sprint 4 | In Review |
-| [SCRUM-241](SCRUM-241.md) | Bug: The venue availability calendar shows closed hours as available | SCRUM Sprint 4 | In Review |
-| [SCRUM-243](SCRUM-243.md) | Chore: Fix what the SCRUM-6 epic check found in the docs and Jira notes | SCRUM Sprint 4 | In Review |
-| [SCRUM-244](SCRUM-244.md) | Chore: Re-sync docs/backlog for the SCRUM-7 to SCRUM-10 stories whose Customer basis was edited on 29 Oct | SCRUM Sprint 4 | In Review |
-| [SCRUM-245](SCRUM-245.md) | Chore: Stop three integration tests failing when another test file runs at the same time | SCRUM Sprint 4 | In Review |
-| [SCRUM-246](SCRUM-246.md) | Bug: The event request form shows equipment stock as "available" and doesn't show venues' opening hours | SCRUM Sprint 4 | In Review |
-| [SCRUM-247](SCRUM-247.md) | Bug: A Coordinator's edit during re-planning can set expected attendance below the people already registered, overbooking the event | SCRUM Sprint 4 | In Review |
-| [SCRUM-249](SCRUM-249.md) | Bug: An overdue event can still be approved or confirmed, so an event that never happened can end up Completed | SCRUM Sprint 4 | In Review |
+| [SCRUM-241](SCRUM-241.md) | Bug: The venue availability calendar shows closed hours as available | SCRUM Sprint 4 | Done |
+| [SCRUM-243](SCRUM-243.md) | Chore: Fix what the SCRUM-6 epic check found in the docs and Jira notes | SCRUM Sprint 4 | Done |
+| [SCRUM-244](SCRUM-244.md) | Chore: Re-sync docs/backlog for the SCRUM-7 to SCRUM-10 stories whose Customer basis was edited on 29 Oct | SCRUM Sprint 4 | Done |
+| [SCRUM-245](SCRUM-245.md) | Chore: Stop three integration tests failing when another test file runs at the same time | SCRUM Sprint 4 | Done |
+| [SCRUM-246](SCRUM-246.md) | Bug: The event request form shows equipment stock as "available" and doesn't show venues' opening hours | SCRUM Sprint 4 | Done |
+| [SCRUM-247](SCRUM-247.md) | Bug: A Coordinator's edit during re-planning can set expected attendance below the people already registered, overbooking the event | SCRUM Sprint 4 | Done |
+| [SCRUM-249](SCRUM-249.md) | Bug: An overdue event can still be approved or confirmed, so an event that never happened can end up Completed | SCRUM Sprint 4 | Done |
 | [SCRUM-255](SCRUM-255.md) | Bug: Sign-in answers faster for an unknown email, which can reveal which accounts exist | SCRUM Sprint 4 | In Review |
 | [SCRUM-258](SCRUM-258.md) | Bug: A Confirmed event's flagged arrangements read as secured | SCRUM Sprint 4 | In Review |
 | [SCRUM-259](SCRUM-259.md) | Chore: Patch the dependencies GitHub reports as vulnerable | SCRUM Sprint 4 | In Review |
-| [SCRUM-260](SCRUM-260.md) | Chore: Sync docs/backlog for the stories open pull requests need | SCRUM Sprint 4 | In Review |
-| [SCRUM-261](SCRUM-261.md) | Bug: Reserving equipment is refused when the earlier requests it waits for never run at the same time | SCRUM Sprint 4 | In Progress |
-| [SCRUM-262](SCRUM-262.md) | Bug: An event that already took place can still be cancelled or sent back to Planning, and All Events shows it as Confirmed | SCRUM Sprint 4 | In Progress |
+| [SCRUM-260](SCRUM-260.md) | Chore: Sync docs/backlog for the stories open pull requests need | SCRUM Sprint 4 | Done |
+| [SCRUM-261](SCRUM-261.md) | Bug: Reserving equipment is refused when the earlier requests it waits for never run at the same time | SCRUM Sprint 4 | Done |
+| [SCRUM-262](SCRUM-262.md) | Bug: An event that already took place can still be cancelled or sent back to Planning, and All Events shows it as Confirmed | SCRUM Sprint 4 | In Review |
+| [SCRUM-263](SCRUM-263.md) | Bug: The event request form says to fix the highlighted fields but highlights none | SCRUM Sprint 4 | In Review |
+| [SCRUM-264](SCRUM-264.md) | Bug: Seven text boxes over 2,000 characters are refused with no error at the field | SCRUM Sprint 4 | In Progress |
+| [SCRUM-265](SCRUM-265.md) | Chore: Record the Sprint 4 response times for SCRUM-132 AC2 | SCRUM Sprint 4 | In Progress |
