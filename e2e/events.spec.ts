@@ -1,6 +1,6 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
-import { pickDateTime, selectFrom, fillOther, fillEventSchedule, saveDraft, submitRequest } from "./helpers";
+import { choose, pickDateTime, selectFrom, fillOther, fillEventSchedule, saveDraft, submitRequest } from "./helpers";
 
 /**
  * End-to-End (E2E) Test Suite for User Story 13: Create an Event Request.
@@ -355,17 +355,16 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await expect(submittedRow.getByTestId("resume-draft-button")).toHaveCount(0);
     await expect(submittedRow.getByTestId("amend-rejected-button")).toHaveCount(0);
 
-    // 7. Verify Filter Tabs (Filter by Drafts and Submitted)
-    await page.getByRole("button", { name: /Drafts/i }).click();
+    // 7. AC7: the status picker separates drafts from what has been sent.
+    await choose(page, "Filter by status", "Draft");
     await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: submittedTitle })).not.toBeVisible();
 
-    // SCRUM-131 AC1: the tab of every non-draft request is named Sent.
-    await page.getByRole("button", { name: /^Sent \(/ }).click();
+    await choose(page, "Filter by status", "Submitted");
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
 
-    await page.getByRole("button", { name: /^All \(/i }).click();
+    await choose(page, "Filter by status", "All Statuses");
     await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
   });

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { choose, usesLocalDatabase } from "./helpers";
 
 /**
  * SCRUM-16 AC8 — showing, filtering and resuming a draft change nothing: the
@@ -11,7 +11,7 @@ import { usesLocalDatabase } from "./helpers";
 test.describe("SCRUM-16 — looking at a draft changes nothing", () => {
   test.skip(!usesLocalDatabase, "writes its own event; local database only");
 
-  test("SCRUM-16 [AC8] TC-16-05: switching tabs, opening a draft and closing Resume Draft leave it a Draft with no new history", async ({
+  test("SCRUM-16 [AC8] TC-16-05: filtering the list, opening a draft and closing Resume Draft leave it a Draft with no new history", async ({
     page,
   }) => {
     const name = `SCRUM-16 e2e ${Date.now()}`;
@@ -26,8 +26,9 @@ test.describe("SCRUM-16 — looking at a draft changes nothing", () => {
       await page.getByRole("button", { name: "Sign in" }).click();
       await page.waitForURL("**/events");
 
-      for (const tab of [/^Drafts \(/, /^Sent \(/, /^All \(/]) {
-        await page.getByRole("button", { name: tab }).click();
+      // Filtering the list and putting it back changes nothing about a draft.
+      for (const status of ["Draft", "Submitted", "All Statuses"]) {
+        await choose(page, "Filter by status", status);
       }
       const row = page.getByRole("row", { name: new RegExp(name) });
       // SCRUM-208: the draft opens on its own page; reading it changes nothing.
