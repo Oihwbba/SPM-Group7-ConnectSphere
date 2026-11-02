@@ -302,6 +302,9 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
     const confirmations = await prisma.auditLog.findMany({
       where: { id: { startsWith: "aud_" }, newValue: "CONFIRMED" },
       select: { entityId: true, createdAt: true },
+      // An event confirmed again has two rows, and find() below must take the
+      // first: a re-seed changes the order the database returns them in.
+      orderBy: { createdAt: "asc" },
     });
     // SCRUM-73 AC5, SCRUM-75 AC2, AC4, AC7, AC8: after confirmation and any
     // opening time, before any closing time and before the start.
