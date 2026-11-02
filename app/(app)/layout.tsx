@@ -40,10 +40,12 @@ export default async function AppLayout({
       {/* Scrolls away with the page, so the sticky top bar keeps its height. */}
       <DevelopmentNotice variant="strip" />
       {/* Top section — spans the full width, above everything else. */}
-      <header className="sticky top-0 z-50 flex h-16 items-center gap-2 bg-background/70 px-4 backdrop-blur-glass sm:gap-4 sm:px-6">
+      {/* Tight on a phone so the hamburger doesn't push the brand out of the
+          left of the bar (SCRUM-168 AC3); the usual spacing from sm up. */}
+      <header className="sticky top-0 z-50 flex h-16 items-center gap-1 bg-background/70 px-3 backdrop-blur-glass sm:gap-4 sm:px-6">
         <MobileNav roles={roles} />
-        <div className="flex min-w-0 items-center gap-2">
-          <SphereLogo className="h-9 w-9" />
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+          <SphereLogo className="h-7 w-7 sm:h-9 sm:w-9" />
           <span className="text-lg tracking-tight">
             <span className="font-bold">Connect</span>
             <span className="font-light">Sphere</span>

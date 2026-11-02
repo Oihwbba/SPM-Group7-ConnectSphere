@@ -334,7 +334,9 @@ export function MobileNav({ roles }: { roles: Role[] }) {
         onClick={() => setOpen(true)}
         aria-label="Open menu"
         aria-expanded={open}
-        className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        // Narrow but still 44px tall, so it stays easy to hit while leaving
+        // the brand its place at the left of the bar.
+        className="flex h-11 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Menu className="h-6 w-6" />
       </button>
