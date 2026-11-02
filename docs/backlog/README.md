@@ -275,7 +275,7 @@ _5 stories, 9 points_
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Review |
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Review |
 | [SCRUM-239](SCRUM-239.md) | Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes | SCRUM Sprint 4 | Done |
-| [SCRUM-240](SCRUM-240.md) | Bug: The live app hits Supabase's connection limit because the database pool has no maximum | SCRUM Sprint 4 | In Progress |
+| [SCRUM-240](SCRUM-240.md) | Bug: The live app hits Supabase's connection limit because the database pool has no maximum | SCRUM Sprint 4 | In Review |
 | [SCRUM-241](SCRUM-241.md) | Bug: The venue availability calendar shows closed hours as available | SCRUM Sprint 4 | Done |
 | [SCRUM-243](SCRUM-243.md) | Chore: Fix what the SCRUM-6 epic check found in the docs and Jira notes | SCRUM Sprint 4 | Done |
 | [SCRUM-244](SCRUM-244.md) | Chore: Re-sync docs/backlog for the SCRUM-7 to SCRUM-10 stories whose Customer basis was edited on 29 Oct | SCRUM Sprint 4 | Done |
