@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-02. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-239 - Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-11 - Attendee Registration |
 | **Priority** | Medium |
 | **Story points** | - |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-239 |
 
