@@ -55,6 +55,52 @@ can't deadlock on itself. A transaction waits for a free connection instead.
   replaces, and it shows up in the logs as a transaction timeout, not as
   `EMAXCONNSESSION`.
 - If the app later runs on more than five instances at once, 15 is still the
-  ceiling. Revisit this number then.
+  ceiling. Revisit this number then. (Since raised to 43: see the addendum.)
 - Tests: `tests/unit/db.test.ts` (SCRUM-240), cases in
   [docs/testing/SCRUM-240.md](../testing/SCRUM-240.md).
+
+## Addendum (2026-11-02): a larger pooler, and idle connections closed on Vercel
+
+The cap alone didn't stop the errors. On 2 Nov, after it was deployed,
+Supabase logged more than 100 `EMAXCONNSESSION` errors, in bursts a few minutes
+after each of that evening's four deploys. Even with the site quiet, 7 of the 15
+connections were open and idle.
+
+**Why:** Vercel pauses an instance between requests, and pausing it also
+pauses pg's timer that closes idle connections. A paused instance keeps its 3
+connections open. After a deploy, the new deployment's instances start while
+the old ones are still holding theirs.
+
+**Two limits, often confused.** Postgres accepts 60 connections
+(`max_connections`). The session pooler takes fewer: its Pool Size setting
+caps the clients of each user and database, and that is the limit the error
+names. The pool size was the free tier's default of 15, not a hard limit.
+
+**Changes:**
+
+1. **Pool size 43.** Raised in Supabase → Database → Settings → Connection
+   pool size. Supabase's guidance is up to 80% of `max_connections` when the
+   Data API (PostgREST) is barely used, as here. That would be 48; 43 leaves
+   room for Supabase's own services. This is a dashboard setting, not code, so
+   a new Supabase project starts at 15 again.
+2. **Idle connections close even on Vercel.** `lib/db.ts` passes its Pool to
+   `attachDatabasePool` from `@vercel/functions`. It keeps the instance awake
+   after a connection is released, until pg's idle timer has closed it. Off
+   Vercel it does nothing. The idle timeout on Supabase is now 5 seconds, not
+   pg's 10, so a slot comes back sooner. The team agreed on 2 Nov to add this
+   dependency (CONTRIBUTING, "No new dependencies").
+3. **Still at most 3 per copy.** With 43 slots, 14 copies fit at their
+   busiest, against 5 before. More per copy would make a page's parallel
+   queries a little faster, but nothing measured needs that.
+
+**Measured on 2 Nov, after the change,** against the shared database with
+read-only queries. With 10 connections already in use, the pooler accepted 33
+more and refused the 34th, naming `pool_size: 43`. Ten copies of the app, each
+with this Pool, ran 30 one-second queries at once without a failure. At 12
+copies (36 queries), 3 were refused.
+
+The transaction pooler is still rejected, for the reason above. With 43 slots,
+the session pooler is no longer the bottleneck.
+
+Tests: `tests/unit/db.test.ts` and `tests/unit/db-idle-connections.test.ts`,
+cases TC-240-05 to TC-240-07.

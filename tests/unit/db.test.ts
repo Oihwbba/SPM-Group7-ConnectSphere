@@ -8,10 +8,12 @@ const PrismaClient = vi.fn(function (this: { options: unknown }, options: unknow
 });
 
 const Pool = vi.fn();
+const attachDatabasePool = vi.fn();
 
 vi.mock("@prisma/client", () => ({ PrismaClient }));
 vi.mock("@prisma/adapter-pg", () => ({ PrismaPg: vi.fn() }));
 vi.mock("pg", () => ({ Pool }));
+vi.mock("@vercel/functions", () => ({ attachDatabasePool }));
 
 const globalForPrisma = globalThis as unknown as { prisma?: unknown };
 
@@ -41,10 +43,11 @@ describe("database pool size — SCRUM-240", () => {
     delete globalForPrisma.prisma;
   });
 
-  it("SCRUM-240 [AC1, AC2] TC-240-01: a pool on Supabase opens at most 3 connections", async () => {
+  it("SCRUM-240 [AC1, AC2, AC4] TC-240-01: a pool on Supabase opens at most 3 connections and closes an idle one after 5 seconds", async () => {
     expect(await poolOptionsFor(SUPABASE_URL)).toEqual({
       connectionString: SUPABASE_URL,
       max: 3,
+      idleTimeoutMillis: 5000,
     });
   });
 
@@ -59,12 +62,43 @@ describe("database pool size — SCRUM-240", () => {
   it("SCRUM-240 [AC1] TC-240-03: a host that only starts with localhost is not local", async () => {
     const url = "postgresql://user:secret@localhost.example.com:5432/postgres";
 
-    expect(await poolOptionsFor(url)).toEqual({ connectionString: url, max: 3 });
+    expect(await poolOptionsFor(url)).toEqual({
+      connectionString: url,
+      max: 3,
+      idleTimeoutMillis: 5000,
+    });
   });
 
   it("SCRUM-240 [AC1] TC-240-03: with no DATABASE_URL, the database isn't known to be local, so the pool is capped", async () => {
-    expect(await poolOptionsFor(undefined)).toEqual({ connectionString: undefined, max: 3 });
+    expect(await poolOptionsFor(undefined)).toEqual({
+      connectionString: undefined,
+      max: 3,
+      idleTimeoutMillis: 5000,
+    });
   });
+});
+
+describe("idle connections on Vercel — SCRUM-240", () => {
+  beforeEach(() => {
+    delete globalForPrisma.prisma;
+    Pool.mockClear();
+    attachDatabasePool.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    delete globalForPrisma.prisma;
+  });
+
+  it.each([SUPABASE_URL, "postgresql://connectsphere:connectsphere@127.0.0.1:5432/connectsphere"])(
+    "SCRUM-240 [AC4] TC-240-05: the client's pool is handed to Vercel's idle-connection handling (%s)",
+    async (url) => {
+      await poolOptionsFor(url);
+
+      expect(attachDatabasePool).toHaveBeenCalledTimes(1);
+      expect(attachDatabasePool).toHaveBeenCalledWith(Pool.mock.instances[0]);
+    },
+  );
 });
 
 describe("shared Prisma client — SCRUM-125", () => {
