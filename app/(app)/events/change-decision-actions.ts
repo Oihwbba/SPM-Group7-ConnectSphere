@@ -41,7 +41,11 @@ const REASON_REQUIRED = "A reason is required to reject a change request.";
 const decisionSchema = z.object({
   changeRequestId: z.string().min(1),
   decision: z.enum(["APPROVED", "REJECTED"]),
-  reason: z.string().trim().max(2000).optional(),
+  reason: z
+    .string()
+    .trim()
+    .max(2000, "Keep the rejection reason under 2000 characters.")
+    .optional(),
 });
 
 /** The statuses a change request can be raised and applied in (SCRUM-41 AC1). */
@@ -165,7 +169,12 @@ export async function decideChangeRequest(
     requirePermission(user, "change-request:decide");
 
     const parsed = decisionSchema.safeParse(input);
-    if (!parsed.success) return err("Please choose Approve or Reject.");
+    if (!parsed.success) {
+      const tooLong = parsed.error.flatten().fieldErrors.reason;
+      return tooLong
+        ? err(tooLong[0], { reason: tooLong })
+        : err("Please choose Approve or Reject.");
+    }
     const { changeRequestId, decision, reason } = parsed.data;
     if (decision === "REJECTED" && !reason) {
       return err(REASON_REQUIRED, { reason: [REASON_REQUIRED] });
