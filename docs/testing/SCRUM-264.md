@@ -75,7 +75,7 @@ and each e2e case creates its own event.
 | Test Case ID | TC-264-04 |
 | Test Scenario | [Negative] AC 4: input the user can't fix keeps the action's own refusal |
 | Pre-conditions | Signed in as a Coordinator |
-| Test Steps | 1. Send each changed action an invalid event, or a decision that isn't one. |
+| Test Steps | 1. Call each action below directly with the input shown. This can't be done in the browser: the forms take the event from the page and the decision from the button clicked, so the unit test is how this case runs. |
 | Test Data | `transitionEventStatus`, `rejectPlanningEvent` and `cancelEvent` with no event; `decideChangeRequest` with `MAYBE` |
 | Expected Result | "Please provide a valid event status action.", "Please provide a valid event to reject.", "Please provide a valid event to cancel." and "Please choose Approve or Reject.", with no field error, and nothing is read. |
 
