@@ -87,7 +87,8 @@ names. The pool size was the free tier's default of 15, not a hard limit.
    `attachDatabasePool` from `@vercel/functions`. It keeps the instance awake
    after a connection is released, until pg's idle timer has closed it. Off
    Vercel it does nothing. The idle timeout on Supabase is now 5 seconds, not
-   pg's 10, so a slot comes back sooner.
+   pg's 10, so a slot comes back sooner. The team agreed on 2 Nov to add this
+   dependency (CONTRIBUTING, "No new dependencies").
 3. **Still at most 3 per copy.** With 43 slots, 14 copies fit at their
    busiest, against 5 before. More per copy would make a page's parallel
    queries a little faster, but nothing measured needs that.
