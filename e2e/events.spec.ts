@@ -519,7 +519,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
   // dialog. Two things broke on a real phone and are pinned here: the four
   // review buttons wrapped unevenly (Reject alone on a second line), and the
   // dialog's stacked footer buttons touched.
-  test("SCRUM-18 [AC1] TC-18-11: the four review buttons form an even two-column grid and stacked dialog buttons are separated", async ({
+  test("SCRUM-18 [AC1] TC-18-11: the four review buttons sit on one line and stacked dialog buttons are separated", async ({
     page,
   }) => {
     // Read at run time: the const is declared further down this file.
@@ -562,15 +562,16 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
       }
       const [viewBox, approveBox, askBox, rejectBox] = boxes;
 
-      // Two columns of equal width, two per row, in the order View, Ask,
-      // Approve, Reject (shared page conventions): Reject sits beside Approve
-      // instead of wrapping onto a line of its own.
+      // One line, in the order View, Ask, Approve, Reject (shared page
+      // conventions): Reject sits beside Approve instead of wrapping onto a
+      // line of its own, and the whole row is on screen.
       for (const box of boxes) {
-        expect(Math.abs(box.width - viewBox.width)).toBeLessThanOrEqual(1);
+        expect(Math.abs(box.y - viewBox.y)).toBeLessThanOrEqual(1);
       }
-      expect(Math.abs(viewBox.y - askBox.y)).toBeLessThanOrEqual(1);
-      expect(Math.abs(approveBox.y - rejectBox.y)).toBeLessThanOrEqual(1);
-      expect(approveBox.y).toBeGreaterThan(viewBox.y);
+      expect(viewBox.x).toBeLessThan(askBox.x);
+      expect(askBox.x).toBeLessThan(approveBox.x);
+      expect(approveBox.x).toBeLessThan(rejectBox.x);
+      expect(rejectBox.x + rejectBox.width).toBeLessThanOrEqual(375);
 
       // Nothing pushes the page wider than the phone.
       const overflowsX = await page.evaluate(
