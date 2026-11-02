@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
   BadgeCheck,
   Building2,
   Calendar,
@@ -11,19 +12,35 @@ import {
 } from "lucide-react";
 import { StatStrip } from "@/components/app/stat-strip";
 
+import { badgeVariants } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getEventArrangements,
   getEventBookings,
 } from "@/app/(app)/events/readiness-actions";
-import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
+import { BOOKING_STATUS_LABEL, NEEDS_RECONSIDERATION } from "@/lib/status-labels";
 import type { EventVenueBooking } from "@/lib/event-readiness";
 import { formatDate, formatTime } from "@/lib/datetime";
 import type { ConfirmedArrangements as Arrangements } from "@/lib/event-readiness";
+import { cn } from "@/lib/utils";
+
+/** SCRUM-258 AC2 — the warning beside a flagged arrangement (SCRUM-131 AC3). */
+function FlagBadge() {
+  return (
+    <span
+      data-testid="needs-reconsideration"
+      className={cn(badgeVariants({ variant: "warning" }), "gap-1 px-2 py-0 align-middle")}
+    >
+      <AlertTriangle aria-hidden="true" className="h-3 w-3" />
+      {NEEDS_RECONSIDERATION}
+    </span>
+  );
+}
 
 /**
  * SCRUM-81 AC 6 — on a Confirmed event, what has been secured: the venue,
- * the date and time, and the reserved equipment.
+ * the date and time, and the reserved equipment. What is flagged stays
+ * listed, with its badge (SCRUM-258 AC2).
  */
 export function ConfirmedArrangements({ eventId }: { eventId: string }) {
   const [arrangements, setArrangements] = useState<Arrangements | null>(null);
@@ -96,13 +113,23 @@ export function ConfirmedArrangements({ eventId }: { eventId: string }) {
                 // One type to a line, in normal text.
                 plain: true,
                 value:
-                  arrangements.equipment.length > 0
-                    ? arrangements.equipment.map((item) => (
+                  arrangements.equipment.length + arrangements.flaggedEquipment.length > 0 ? (
+                    <>
+                      {arrangements.equipment.map((item) => (
                         <span key={item} className="block">
                           {item}
                         </span>
-                      ))
-                    : "None reserved",
+                      ))}
+                      {arrangements.flaggedEquipment.map((item) => (
+                        <span key={item} className="flex flex-wrap items-center gap-x-1.5">
+                          {item}
+                          <FlagBadge />
+                        </span>
+                      ))}
+                    </>
+                  ) : (
+                    "None reserved"
+                  ),
                 testId: "confirmed-equipment",
               },
               {
@@ -131,6 +158,7 @@ export function ConfirmedArrangements({ eventId }: { eventId: string }) {
                             )}
                             {BOOKING_STATUS_LABEL[booking.status]}
                           </span>
+                          {booking.needsReconsideration && <FlagBadge />}
                         </span>
                       ))
                     : "None",

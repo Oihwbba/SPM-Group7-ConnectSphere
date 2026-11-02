@@ -446,13 +446,17 @@ export interface ConfirmedArrangements {
   timezone: string | null;
   /** e.g. "Projector × 2", one per item reserved for the whole event. */
   equipment: string[];
+  /** SCRUM-258 AC2: the flagged reservations, in the same form. */
+  flaggedEquipment: string[];
 }
 
 /**
  * SCRUM-81 AC 6 — what a Confirmed event has secured, for its Organiser: the
  * venues approved for the event's time (every one, SCRUM-162 AC7), the date
  * and time, and the equipment reserved for the whole event. The same
- * whole-event rule as the checklist.
+ * whole-event rule as the checklist. A flagged reservation stays listed apart
+ * (SCRUM-258 AC2), whether or not it still covers the event: it keeps its
+ * original period until its Coordinator decides (SCRUM-26 AC6). No flag reason.
  */
 export async function getConfirmedArrangements(
   db: Prisma.TransactionClient | PrismaClient,
@@ -479,6 +483,7 @@ export async function getConfirmedArrangements(
           quantity: true,
           startAt: true,
           endAt: true,
+          needsReconsideration: true,
           equipment: { select: { type: true } },
         },
       },
@@ -491,20 +496,23 @@ export async function getConfirmedArrangements(
     .filter((b) => b.status === "APPROVED" && coversEvent(b, event))
     .map((b) => b.venue);
   const reserved = new Map<string, number>();
+  const flagged = new Map<string, number>();
   for (const r of event.reservations) {
-    if (r.status !== "CONFIRMED" || !coversEvent(r, event)) continue;
-    reserved.set(
-      r.equipment.type,
-      (reserved.get(r.equipment.type) ?? 0) + r.quantity,
-    );
+    if (r.status !== "CONFIRMED") continue;
+    if (!r.needsReconsideration && !coversEvent(r, event)) continue;
+    const lines = r.needsReconsideration ? flagged : reserved;
+    lines.set(r.equipment.type, (lines.get(r.equipment.type) ?? 0) + r.quantity);
   }
+  const labels = (lines: Map<string, number>) =>
+    [...lines].map(([type, quantity]) => `${type} × ${quantity}`);
 
   return {
     venues,
     startAt: event.startAt,
     endAt: event.endAt,
     timezone: event.timezone,
-    equipment: [...reserved].map(([type, quantity]) => `${type} × ${quantity}`),
+    equipment: labels(reserved),
+    flaggedEquipment: labels(flagged),
   };
 }
 
@@ -515,12 +523,14 @@ export interface EventVenueBooking {
   status: BookingStatus;
   startAt: Date;
   endAt: Date;
+  needsReconsideration: boolean;
 }
 
 /**
  * SCRUM-162 AC7 — every booking of the event, oldest first, with its venue,
  * attendance and status. A hold past its expiry reads as Expired (SCRUM-163
- * AC4). No decision reasons, so the Organiser may see it too.
+ * AC4). No decision or flag reasons, so the Organiser may see it too. Only a
+ * live booking reads as flagged (SCRUM-26 AC2, SCRUM-258 AC3).
  */
 export async function getEventVenueBookings(
   db: Prisma.TransactionClient | PrismaClient,
@@ -537,15 +547,20 @@ export async function getEventVenueBookings(
       requestedAttendance: true,
       startAt: true,
       endAt: true,
+      needsReconsideration: true,
       venue: { select: { name: true } },
     },
   });
-  return bookings.map((b) => ({
-    id: b.id,
-    venueName: b.venue.name,
-    attendance: b.requestedAttendance,
-    status: bookingStatusAt(b, now),
-    startAt: b.startAt,
-    endAt: b.endAt,
-  }));
+  return bookings.map((b) => {
+    const status = bookingStatusAt(b, now);
+    return {
+      id: b.id,
+      venueName: b.venue.name,
+      attendance: b.requestedAttendance,
+      status,
+      startAt: b.startAt,
+      endAt: b.endAt,
+      needsReconsideration: b.needsReconsideration && FLAGGABLE_BOOKING.includes(status),
+    };
+  });
 }
