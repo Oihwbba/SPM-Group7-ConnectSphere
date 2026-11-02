@@ -10,19 +10,19 @@ function firstError(input: unknown) {
 }
 
 describe("sign-in input — SCRUM-65", () => {
-  it("accepts an email and a password", () => {
+  it("SCRUM-65 [AC1, AC3] TC-65-01: accepts an email and a password", () => {
     expect(
       loginSchema.safeParse({ email: "organiser@test.local", password: "x" }).success,
     ).toBe(true);
   });
 
-  it("asks for a valid email address", () => {
+  it("SCRUM-65 [AC2] TC-65-03: asks for a valid email address", () => {
     expect(firstError({ email: "organiser", password: "x" })).toBe(
       "Enter a valid email address.",
     );
   });
 
-  it("asks for a password when it is left empty", () => {
+  it("SCRUM-65 [AC2] TC-65-03: asks for a password when it is left empty", () => {
     expect(firstError({ email: "organiser@test.local", password: "" })).toBe(
       "Enter your password.",
     );

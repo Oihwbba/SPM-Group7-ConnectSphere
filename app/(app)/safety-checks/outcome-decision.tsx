@@ -6,6 +6,7 @@ import { CheckCircle2, ListChecks, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import {
@@ -43,6 +44,9 @@ export function OutcomeDecision({
     null,
   );
   const [note, setNote] = useState("");
+  // SCRUM-264: a note the server refuses by length is said at the box. The
+  // fix was on the page this panel replaced, so it is carried over here.
+  const [noteErrors, setNoteErrors] = useState<string[]>();
   const [picked, setPicked] = useState<string[]>([]);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
@@ -71,6 +75,11 @@ export function OutcomeDecision({
     });
     setAsking(null);
     if (!result.ok) {
+      // SCRUM-264: a refused note is said at the box, keeping what was typed.
+      if (result.fieldErrors?.note) {
+        setNoteErrors(result.fieldErrors.note);
+        return;
+      }
       setRefusal(result.error);
       toast.error(result.error);
       router.refresh();
@@ -92,9 +101,15 @@ export function OutcomeDecision({
       <Textarea
         id={id}
         value={note}
-        onChange={(e) => setNote(e.target.value)}
+        onChange={(e) => {
+          setNote(e.target.value);
+          setNoteErrors(undefined);
+        }}
         placeholder="What needs to change, or anything the Coordinator should know"
+        aria-invalid={Boolean(noteErrors)}
+        aria-describedby={noteErrors ? `${id}-error` : undefined}
       />
+      <FieldError id={`${id}-error`} messages={noteErrors} />
     </div>
   );
 

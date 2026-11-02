@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { sgDate } from "@/lib/datetime";
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
 
 /** Room layouts offered as presets on the request and edit forms. */
 export const LAYOUT_OPTIONS = [
@@ -16,7 +17,7 @@ export const LAYOUT_OPTIONS = [
  * Helper to validate attendance: must be a positive whole number (> 0).
  */
 const positiveAttendance = z
-  .number({ invalid_type_error: "Attendance must be a positive whole number." })
+  .number({ error: "Attendance must be a positive whole number." })
   .int("Attendance must be a positive whole number.")
   .positive("Attendance must be a positive whole number.");
 
@@ -71,6 +72,32 @@ export function eventPeriodError(startAt: Date, endAt: Date): string | null {
 }
 
 /**
+ * SCRUM-263 AC3 — the open-text answers' limits, shared by the draft, the
+ * submission and the Coordinator's edit. They match requestFieldValues, so
+ * nothing accepted here is refused on a clarification answer or change request.
+ */
+export const venueRequirementsText = z
+  .string()
+  .trim()
+  .max(5000, "Keep venue requirements under 5000 characters.");
+export const accessibilityNeedsText = z
+  .string()
+  .trim()
+  .max(5000, "Keep accessibility needs under 5000 characters.");
+export const preferredLayoutText = z
+  .string()
+  .trim()
+  .max(200, "Keep room layout under 200 characters.");
+export const equipmentRequirementsText = z
+  .string()
+  .trim()
+  .max(5000, "Keep equipment requirements under 5000 characters.");
+export const registrationNotesText = z
+  .string()
+  .trim()
+  .max(5000, "Keep registration notes under 5000 characters.");
+
+/**
  * Zod schema for saving a draft event.
  * Draft events can be partially filled, but if dates or attendance are provided,
  * they must still conform to validity constraints.
@@ -97,17 +124,17 @@ export const createDraftEventSchema = z
         (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
         positiveAttendance.optional(),
       ),
-    venueRequirements: z.string().trim().optional(),
-    requiredFacilities: z.array(z.string()).optional().default([]),
-    accessibilityNeeds: z.string().trim().optional(),
-    preferredLayout: z.string().trim().optional(),
-    equipmentRequirements: z.string().trim().optional(),
+    venueRequirements: venueRequirementsText.optional(),
+    requiredFacilities: z.array(z.string()).max(MAX_LIST_ITEMS).optional().default([]),
+    accessibilityNeeds: accessibilityNeedsText.optional(),
+    preferredLayout: preferredLayoutText.optional(),
+    equipmentRequirements: equipmentRequirementsText.optional(),
     // SCRUM-171 AC2: a draft can be saved without choosing.
     registrationRequired: z.preprocess(
       registrationNeeded,
       z.boolean().optional(),
     ),
-    registrationNotes: z.string().trim().optional(),
+    registrationNotes: registrationNotesText.optional(),
     programme: z
       .string()
       .trim()
@@ -195,43 +222,37 @@ export const submitEventRequestSchema = z
       .max(5000, "Keep description under 5000 characters."),
     // SCRUM-190 AC1: one date with a start and an end time, joined in the browser.
     startAt: z
-      .string({ required_error: EVENT_START_REQUIRED_MESSAGE })
+      .string({ error: EVENT_START_REQUIRED_MESSAGE })
       .min(1, EVENT_START_REQUIRED_MESSAGE),
     endAt: z
-      .string({ required_error: EVENT_END_REQUIRED_MESSAGE })
+      .string({ error: EVENT_END_REQUIRED_MESSAGE })
       .min(1, EVENT_END_REQUIRED_MESSAGE),
     expectedAttendance: z
       .preprocess(
         (val) => (val === "" || val === null || val === undefined ? NaN : Number(val)),
         positiveAttendance,
       ),
-    venueRequirements: z
-      .string()
-      .trim()
-      .min(1, "Venue requirements are required."),
-    requiredFacilities: z.array(z.string()).optional().default([]),
-    accessibilityNeeds: z
-      .string()
-      .trim()
-      .min(1, "Accessibility needs are required (state wheelchair access, physical seating, or facility arrangements)."),
-    preferredLayout: z
-      .string()
-      .trim()
-      .min(1, "Room layout is required."),
-    equipmentRequirements: z
-      .string()
-      .trim()
-      .min(1, "Equipment requirements are required."),
+    venueRequirements: venueRequirementsText.min(
+      1,
+      "Venue requirements are required.",
+    ),
+    requiredFacilities: z.array(z.string()).max(MAX_LIST_ITEMS).optional().default([]),
+    accessibilityNeeds: accessibilityNeedsText.min(
+      1,
+      "Accessibility needs are required (state wheelchair access, physical seating, or facility arrangements).",
+    ),
+    preferredLayout: preferredLayoutText.min(1, "Room layout is required."),
+    equipmentRequirements: equipmentRequirementsText.min(
+      1,
+      "Equipment requirements are required.",
+    ),
     // SCRUM-171 AC1, AC2: whether the event needs registration is required to
     // submit; a note about registration is optional.
     registrationRequired: z.preprocess(
       registrationNeeded,
-      z.boolean({
-        required_error: REGISTRATION_NEEDED_REQUIRED_MESSAGE,
-        invalid_type_error: REGISTRATION_NEEDED_REQUIRED_MESSAGE,
-      }),
+      z.boolean({ error: REGISTRATION_NEEDED_REQUIRED_MESSAGE }),
     ),
-    registrationNotes: z.string().trim().max(5000).optional(),
+    registrationNotes: registrationNotesText.optional(),
     programme: z
       .string()
       .trim()

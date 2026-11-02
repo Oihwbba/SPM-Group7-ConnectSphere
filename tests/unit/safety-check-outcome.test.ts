@@ -301,7 +301,7 @@ describe("recordSafetyCheckOutcome — refusals (SCRUM-166 AC3, AC6–AC8, AC13)
     });
   });
 
-  it("SCRUM-166 [AC15] TC-166-11: an event no longer in Planning can't have its check recorded", async () => {
+  it("SCRUM-166 [AC7, AC15] TC-166-11: an event no longer in Planning can't have its check recorded", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue({ status: "CANCELLED" });
 
     expect(
@@ -313,10 +313,31 @@ describe("recordSafetyCheckOutcome — refusals (SCRUM-166 AC3, AC6–AC8, AC13)
     expectNothingWritten();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-166 [AC3]: does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(
       recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" }),
     ).rejects.toThrow("connection lost");
   });
+});
+
+describe("recordSafetyCheckOutcome — list limits (SCRUM-259 AC7)", () => {
+  it.each(["bookingIds", "reservationIds"])(
+    "SCRUM-259 [AC7] TC-259-03: 500 %s reach the check, and 501 are refused before anything is read",
+    async (field) => {
+      const outcome = (count: number) => ({
+        checkId: "chk_1",
+        outcome: "APPROVED",
+        [field]: Array(count).fill("id_1"),
+      });
+
+      await recordSafetyCheckOutcome(outcome(500));
+      expect(mockCheck).toHaveBeenCalledTimes(1);
+
+      vi.clearAllMocks();
+      expect(await recordSafetyCheckOutcome(outcome(501))).toMatchObject({ ok: false });
+      expect(mockCheck).not.toHaveBeenCalled();
+      expectNothingWritten();
+    },
+  );
 });

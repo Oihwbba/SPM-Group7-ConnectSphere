@@ -15,7 +15,11 @@ import {
   isImpactful,
   outdatesSafetyCheck,
 } from "@/lib/change-application";
-import { cancelInTransaction } from "@/lib/event-closing";
+import {
+  cancelInTransaction,
+  completeIfTakenPlace,
+  EVENT_TOOK_PLACE,
+} from "@/lib/event-closing";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
 import { formatDateTime } from "@/lib/datetime";
@@ -37,7 +41,11 @@ const REASON_REQUIRED = "A reason is required to reject a change request.";
 const decisionSchema = z.object({
   changeRequestId: z.string().min(1),
   decision: z.enum(["APPROVED", "REJECTED"]),
-  reason: z.string().trim().max(2000).optional(),
+  reason: z
+    .string()
+    .trim()
+    .max(2000, "Keep the rejection reason under 2000 characters.")
+    .optional(),
 });
 
 /** The statuses a change request can be raised and applied in (SCRUM-41 AC1). */
@@ -130,7 +138,7 @@ type Outcome =
   | { refused: "reassigned" | "not-changeable" }
   | { refused: "decided"; status: ChangeRequestStatus }
   | { refused: "attendance" | "registration"; registered: number }
-  | { refused: "past-start" | "period" };
+  | { refused: "past-start" | "period" | "taken-place" };
 
 /**
  * SCRUM-128 — the assigned Coordinator decides a Submitted change request.
@@ -161,7 +169,12 @@ export async function decideChangeRequest(
     requirePermission(user, "change-request:decide");
 
     const parsed = decisionSchema.safeParse(input);
-    if (!parsed.success) return err("Please choose Approve or Reject.");
+    if (!parsed.success) {
+      const tooLong = parsed.error.flatten().fieldErrors.reason;
+      return tooLong
+        ? err(tooLong[0], { reason: tooLong })
+        : err("Please choose Approve or Reject.");
+    }
     const { changeRequestId, decision, reason } = parsed.data;
     if (decision === "REJECTED" && !reason) {
       return err(REASON_REQUIRED, { reason: [REASON_REQUIRED] });
@@ -184,6 +197,9 @@ export async function decideChangeRequest(
 
     const outcome = await prisma.$transaction(async (tx): Promise<Outcome> => {
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+      // SCRUM-262: completing an event that has taken place rejects its
+      // submitted change requests (SCRUM-82 AC11), so none is decided here.
+      if (await completeIfTakenPlace(tx, eventId)) return { refused: "taken-place" };
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: {
@@ -461,6 +477,8 @@ export async function decideChangeRequest(
           );
         case "period":
           return err(PERIOD_INVERTED);
+        case "taken-place":
+          return err(EVENT_TOOK_PLACE);
       }
     }
 

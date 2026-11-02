@@ -46,9 +46,7 @@ const optionalText = (label: string, max: number) =>
  * (SCRUM-171 AC5, SCRUM-128).
  */
 const changeRequestValues = requestFieldValues.extend({
-  registrationRequired: z.boolean({
-    invalid_type_error: "Choose whether the event needs registration.",
-  }),
+  registrationRequired: z.boolean({ error: "Choose whether the event needs registration." }),
   programme: optionalText("the programme", 5000),
   specialRequests: optionalText("special requests", 5000),
 });

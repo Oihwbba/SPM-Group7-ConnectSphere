@@ -509,7 +509,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
     expect(equipment(result)?.complete).toBe(false);
   });
 
-  it("SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: a cancelled request leaves Equipment Not decided, so it blocks confirmation until the Coordinator decides", async () => {
+  it("SCRUM-110 [AC3, AC4] TC-110-09, SCRUM-170 [AC4] TC-170-07: a cancelled request leaves Equipment Not decided, so it blocks confirmation until the Coordinator decides", async () => {
     const result = await checklistOf(
       planningEvent({
         ...undecided,
@@ -680,7 +680,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
     },
   );
 
-  it("SCRUM-110 TC-110-13: an id that matches no event has no checklist", async () => {
+  it("SCRUM-110 [AC6] TC-110-13: an id that matches no event has no checklist", async () => {
     expect(await checklistOf(null)).toBeNull();
   });
 
@@ -951,7 +951,7 @@ describe("getReadinessChecklist — several venues (SCRUM-162 AC8)", () => {
     expect(venue(result)?.complete).toBe(false);
   });
 
-  it("SCRUM-162 [AC8], SCRUM-110 [AC6] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason", () => {
+  it("SCRUM-110 [AC6] TC-110-12, SCRUM-162 [AC8] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason", () => {
     const flaggedLine = listed(hall("APPROVED", 1), {
       complete: false,
       needsReconsideration: true,
@@ -1026,6 +1026,40 @@ describe("getEventVenueBookings — SCRUM-162 AC7", () => {
       }),
     );
   });
+
+  const NOW = new Date("2031-05-20T00:00:00Z");
+  const flaggedBooking = (status: string, holdExpiresAt: Date | null = null) => ({
+    id: "b1",
+    status,
+    holdExpiresAt,
+    requestedAttendance: 30,
+    startAt: START,
+    endAt: END,
+    needsReconsideration: true,
+    reconsiderationReason: "The venue's capacity was lowered.",
+    venue: { name: "Main Hall" },
+  });
+
+  it.each([
+    { status: "PENDING", holdExpiresAt: null, flagged: true },
+    { status: "APPROVED", holdExpiresAt: null, flagged: true },
+    { status: "HELD", holdExpiresAt: new Date(NOW.getTime() + 1), flagged: true },
+    { status: "HELD", holdExpiresAt: NOW, flagged: false },
+    { status: "REJECTED", holdExpiresAt: null, flagged: false },
+    { status: "CANCELLED", holdExpiresAt: null, flagged: false },
+    { status: "EXPIRED", holdExpiresAt: null, flagged: false },
+  ])(
+    "SCRUM-258 [AC2, AC3] TC-258-07: a flagged $status booking with hold expiry $holdExpiresAt reads as flagged: $flagged, with no reason",
+    async ({ status, holdExpiresAt, flagged }) => {
+      const findMany = vi.fn().mockResolvedValue([flaggedBooking(status, holdExpiresAt)]);
+      const db = { booking: { findMany } } as unknown as Prisma.TransactionClient;
+
+      const [booking] = await getEventVenueBookings(db, "evt_test", NOW);
+
+      expect(booking.needsReconsideration).toBe(flagged);
+      expect(booking).not.toHaveProperty("reconsiderationReason");
+    },
+  );
 });
 
 describe("withoutInternalReasons — SCRUM-110 AC6", () => {
@@ -1078,12 +1112,19 @@ describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
   const reservationRow = (
     type: string,
     quantity: number,
-    overrides: Partial<{ status: string; startAt: Date; endAt: Date }> = {},
+    overrides: Partial<{
+      status: string;
+      startAt: Date;
+      endAt: Date;
+      needsReconsideration: boolean;
+      reconsiderationReason: string;
+    }> = {},
   ) => ({
     status: "CONFIRMED",
     quantity,
     startAt: START,
     endAt: END,
+    needsReconsideration: false,
     equipment: { type },
     ...overrides,
   });
@@ -1122,8 +1163,45 @@ describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
       endAt: END,
       timezone: "Asia/Singapore",
       equipment: ["Projector × 2", "Wireless Microphone × 4"],
+      flaggedEquipment: [],
     });
     expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_test" });
+  });
+
+  it("SCRUM-258 [AC2] TC-258-05: a flagged reservation stays listed apart, even once it no longer covers the event; an unflagged one that doesn't cover it is still left out", async () => {
+    const flagged = { needsReconsideration: true };
+    const elsewhere = { startAt: day(5), endAt: day(6) };
+    const { db } = eventWith(
+      [],
+      [
+        reservationRow("Projector", 1),
+        reservationRow("Projector", 2, flagged),
+        reservationRow("Projector", 1, flagged),
+        reservationRow("Lectern", 1, { ...flagged, ...elsewhere }),
+        reservationRow("Laptop", 1, elsewhere),
+      ],
+    );
+
+    expect(await getConfirmedArrangements(db, "evt_test")).toMatchObject({
+      equipment: ["Projector × 1"],
+      flaggedEquipment: ["Projector × 3", "Lectern × 1"],
+    });
+  });
+
+  it("SCRUM-258 [AC3] TC-258-06: a cancelled reservation is neither listed nor flagged, and no flag reason is returned", async () => {
+    const reason = "One projector is damaged.";
+    const { db } = eventWith(
+      [],
+      [
+        reservationRow("Projector", 1, { status: "CANCELLED", needsReconsideration: true }),
+        reservationRow("Lectern", 1, { needsReconsideration: true, reconsiderationReason: reason }),
+      ],
+    );
+
+    const arrangements = await getConfirmedArrangements(db, "evt_test");
+
+    expect(arrangements).toMatchObject({ equipment: [], flaggedEquipment: ["Lectern × 1"] });
+    expect(JSON.stringify(arrangements)).not.toContain(reason);
   });
 
   it("SCRUM-81 [AC6] TC-81-06, SCRUM-162 [AC7] TC-162-11: when two approved bookings cover the event, the Organiser sees both venues, oldest first", async () => {

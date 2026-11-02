@@ -1,7 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
-import type { EventStatus, PrismaClient } from "@prisma/client";
+import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
 
-import { completeFinishedEvents, EVENT_TOOK_PLACE, isOverdue } from "@/lib/event-closing";
+import {
+  completeFinishedEvents,
+  completeIfTakenPlace,
+  EVENT_TOOK_PLACE,
+  isOverdue,
+} from "@/lib/event-closing";
 
 // SCRUM-82 — which events can be cancelled, which are overdue, and completing
 // finished events without a job. Test cases: docs/testing/SCRUM-82.md.
@@ -56,8 +61,28 @@ describe("completeFinishedEvents — SCRUM-82 AC7–AC9, AC11", () => {
     };
     const $transaction = vi.fn((work: (t: typeof tx) => unknown) => work(tx));
     const db = { $transaction } as unknown as PrismaClient;
-    return { db, $queryRaw, createMany, notify, $transaction, changeRequests };
+    return { db, tx: tx as unknown as Prisma.TransactionClient, $queryRaw, createMany, notify, $transaction, changeRequests };
   }
+
+  // SCRUM-262 — an action that has locked one event completes it, and only it.
+  it("SCRUM-262 [AC1, AC4] TC-262-02: completeIfTakenPlace completes only that event, strictly after its end, and says it had taken place", async () => {
+    const { tx, $queryRaw, createMany } = client([finished("evt_1")]);
+
+    expect(await completeIfTakenPlace(tx, "evt_1", NOW)).toBe(true);
+    const [sql, ...values] = $queryRaw.mock.calls[0];
+    expect(sql.join("?")).toContain(`"endAt" < ?::timestamp`);
+    expect(values[3].strings.join("?")).toContain(`AND "id" = ?`);
+    expect(values[3].values).toEqual(["evt_1"]);
+    expect(createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("SCRUM-262 [AC4] TC-262-02: completeIfTakenPlace leaves an event that hasn't taken place as it is", async () => {
+    const { tx, createMany, notify } = client([]);
+
+    expect(await completeIfTakenPlace(tx, "evt_1", NOW)).toBe(false);
+    expect(createMany).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  });
 
   it("SCRUM-82 [AC7] TC-82-09: the completion and its history entries are written in one transaction", async () => {
     const { db, $queryRaw, createMany, $transaction } = client([finished("evt_1")]);
@@ -137,7 +162,9 @@ describe("completeFinishedEvents — SCRUM-82 AC7–AC9, AC11", () => {
     expect(text).toContain(`"endAt" < ?::timestamp`);
     expect(text).toContain(`SET "status" = 'COMPLETED'`);
     expect(text).toContain(`RETURNING "id", "name", "organiserId", "coordinatorId"`);
-    expect(values).toEqual([NOW.toISOString(), NOW.toISOString(), NOW.toISOString()]);
+    expect(values.slice(0, 3)).toEqual([NOW.toISOString(), NOW.toISOString(), NOW.toISOString()]);
+    // No event filter: every finished event (SCRUM-262 adds one for a single event).
+    expect(values[3]).toMatchObject({ strings: [""], values: [] });
     expect(createMany).toHaveBeenCalledWith({
       data: ["evt_1", "evt_2"].map((entityId) => ({
         entityType: "Event",

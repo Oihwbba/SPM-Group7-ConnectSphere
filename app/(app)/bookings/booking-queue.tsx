@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimeField } from "@/components/app/date-time-field";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
@@ -110,6 +111,9 @@ export function BookingDecision({
   } | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  // SCRUM-264: a reason the server refuses by length is said at the box, not
+  // only in a toast, so the typing isn't lost with the dialog.
+  const [reasonErrors, setReasonErrors] = useState<string[]>();
   // SCRUM-163 AC1: the hold's expiry and note.
   const [holding, setHolding] = useState(false);
   const [holdExpiry, setHoldExpiry] = useState("");
@@ -155,6 +159,12 @@ export function BookingDecision({
       reason: decisionReason,
     });
     if (!result.ok) {
+      // SCRUM-264: a refused reason keeps the dialog open, with the message
+      // at the box. Anything else is the request itself being refused.
+      if (result.fieldErrors?.reason) {
+        setReasonErrors(result.fieldErrors.reason);
+        return;
+      }
       setRejecting(false);
       setRefusal(result.error);
       toast.error(result.error);
@@ -258,10 +268,16 @@ export function BookingDecision({
       >
         <Textarea
           value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setReasonErrors(undefined);
+          }}
           placeholder="Reason for rejection"
           aria-label="Rejection reason"
+          aria-invalid={Boolean(reasonErrors)}
+          aria-describedby={reasonErrors ? "booking-reason-error" : undefined}
         />
+        <FieldError id="booking-reason-error" messages={reasonErrors} />
       </ConfirmDialog>
 
       <SubmittedDialog

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { parseSingaporeDateTime } from "@/lib/datetime";
 import { isValidPeriod, type Period } from "@/lib/period";
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
 
 /**
  * SCRUM-38 — what a venue search asks for. Search is a GET form, so its
@@ -45,7 +46,7 @@ const manyValues = z.preprocess(
     (value === undefined ? [] : Array.isArray(value) ? value : [value]).filter(
       (v) => typeof v === "string" && v.trim() !== "",
     ),
-  z.array(z.string().trim().max(100)),
+  z.array(z.string().trim().max(100)).max(MAX_LIST_ITEMS),
 );
 
 export const venueSearchSchema = z.object({
@@ -76,7 +77,7 @@ export const venueSearchSchema = z.object({
   attendance: z.preprocess(
     single,
     z.coerce
-      .number({ invalid_type_error: "Attendance must be a whole number." })
+      .number({ error: "Attendance must be a whole number." })
       .int("Attendance must be a whole number.")
       .positive("Attendance must be greater than zero.")
       .optional(),

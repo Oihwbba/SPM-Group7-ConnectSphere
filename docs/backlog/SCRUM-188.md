@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-28. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-188 - Request a venue for exactly the event's period
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-7 - Venue Management |
-| **Priority** | Medium |
+| **Priority** | High |
 | **Story points** | 2 |
 | **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |

@@ -16,11 +16,13 @@ const facts = (over: Partial<NextStepFacts> = {}): NextStepFacts => ({
   openClarification: false,
   pendingChangeRequests: 0,
   flaggedArrangements: 0,
+  unresolvedFlags: 0,
   checklist: null,
   decisionReason: null,
   rejectionOutcome: null,
   cancellationReason: null,
   cancelledAt: null,
+  overdue: false,
   ...over,
 });
 
@@ -321,6 +323,47 @@ describe("SCRUM-208 — the Next step banner", () => {
   });
 });
 
+describe("SCRUM-258 — a Confirmed event's flagged arrangements aren't secured", () => {
+  const confirmed = (over: Partial<NextStepFacts> = {}) =>
+    facts({ status: "CONFIRMED", unresolvedFlags: 1, ...over });
+
+  it("SCRUM-258 [AC1] TC-258-01: the Organiser waits on the Coordinator by name, or as the Coordinator, and the page opens on Changes", () => {
+    const step = nextStep(confirmed());
+    expect(step).toEqual({
+      kind: "waiting",
+      text: "Waiting for Cody Coordinator to decide what happens to the flagged arrangements",
+      tab: "changes",
+    });
+    expect(defaultTab(step)).toBe("changes");
+    expect(nextStep(confirmed({ coordinatorName: null }))).toMatchObject({
+      text: "Waiting for the Coordinator to decide what happens to the flagged arrangements",
+    });
+  });
+
+  it("SCRUM-258 [AC1] TC-258-02: the Coordinator is still asked to decide", () => {
+    expect(
+      nextStep(confirmed({ viewer: "coordinator", flaggedArrangements: 1 })),
+    ).toMatchObject({
+      kind: "yours",
+      text: "Your turn: decide what happens to the flagged arrangements",
+      tab: "changes",
+    });
+  });
+
+  it("SCRUM-258 [AC1] TC-258-03: the flag comes before the Organiser's pending change request", () => {
+    expect(nextStep(confirmed({ pendingChangeRequests: 1 }))).toMatchObject({
+      text: "Waiting for Cody Coordinator to decide what happens to the flagged arrangements",
+    });
+  });
+
+  it("SCRUM-258 [AC1] TC-258-04: with no flag left, the event reads as secured again", () => {
+    expect(nextStep(confirmed({ unresolvedFlags: 0 }))).toMatchObject({
+      text: "Confirmed: the arrangements are secured. Nothing is waiting before the event.",
+      tab: "arrangements",
+    });
+  });
+});
+
 describe("SCRUM-209 — the Next step opens Arrangements at its section", () => {
   type Item = Partial<ReadinessChecklist["items"][number]>;
   const actionFor = (items: Item[]) => {
@@ -363,5 +406,69 @@ describe("SCRUM-209 — the Next step opens Arrangements at its section", () => 
       tab: "arrangements",
       section: undefined,
     });
+  });
+});
+
+// SCRUM-249 AC4 — test cases: docs/testing/SCRUM-249.md.
+describe("nextStep — an overdue event, SCRUM-249", () => {
+  const CLOSE_IT = "Your turn: this event is overdue, so reject it or cancel it";
+  const ready = checklist([{ name: "Venue booking", complete: true, state: "Approved" }]);
+
+  it("SCRUM-249 [AC4] TC-249-07: Under Review, its Coordinator is told to close it, with Reject at hand", () => {
+    expect(nextStep(facts({ viewer: "coordinator", overdue: true }))).toEqual({
+      kind: "yours",
+      text: CLOSE_IT,
+      tab: "request",
+      action: { kind: "review" },
+    });
+  });
+
+  it("SCRUM-249 [AC4] TC-249-07: in Planning, even when ready to confirm, its Coordinator is told to close it, and goes to where Reject is", () => {
+    expect(
+      nextStep(facts({ status: "PLANNING", viewer: "coordinator", overdue: true, checklist: ready })),
+    ).toEqual({
+      kind: "yours",
+      text: CLOSE_IT,
+      tab: "arrangements",
+      action: { kind: "tab", label: "Go to Arrangements", tab: "arrangements" },
+    });
+  });
+
+  it("SCRUM-249 [AC4] TC-249-07: it comes before flagged arrangements and change requests, which can't save an overdue event", () => {
+    expect(
+      nextStep(
+        facts({
+          status: "PLANNING",
+          viewer: "coordinator",
+          overdue: true,
+          flaggedArrangements: 1,
+          pendingChangeRequests: 1,
+          checklist: ready,
+        }),
+      ),
+    ).toMatchObject({ text: CLOSE_IT });
+  });
+
+  it("SCRUM-249 [AC4] TC-249-08: the Organiser can't close it, so their banner is unchanged", () => {
+    expect(nextStep(facts({ overdue: true }))).toEqual({
+      kind: "waiting",
+      text: "Waiting for Cody Coordinator to review the request",
+      tab: null,
+    });
+  });
+
+  it("SCRUM-249 [AC4] TC-249-08: an event that isn't overdue still asks its Coordinator to approve or confirm it", () => {
+    expect(nextStep(facts({ viewer: "coordinator" }))).toMatchObject({
+      text: "Your turn: review the request, then approve it, reject it or ask a question",
+    });
+    expect(
+      nextStep(
+        facts({
+          status: "PLANNING",
+          viewer: "coordinator",
+          checklist: { ...ready, ready: true },
+        }),
+      ),
+    ).toMatchObject({ text: "Your turn: confirm the event" });
   });
 });

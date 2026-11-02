@@ -1,4 +1,4 @@
-import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, type EventStatus, type PrismaClient } from "@prisma/client";
 
 import { liveBookingWhere, withdrawPendingHoldNotices } from "@/lib/booking-holds";
 import {
@@ -174,6 +174,10 @@ export function isOverdue(
   );
 }
 
+/** SCRUM-249 AC1, AC2: why an overdue event can't be approved or confirmed. */
+export const OVERDUE_REFUSAL =
+  "This event is overdue: its start time has passed. It can be rejected or cancelled.";
+
 /** AC11: why a change request still Submitted when its event completes is rejected. */
 export const EVENT_TOOK_PLACE = "The event has already taken place.";
 
@@ -199,74 +203,98 @@ export async function completeFinishedEvents(
   db: PrismaClient,
   now: Date = new Date(),
 ): Promise<string[]> {
+  return db.$transaction((tx) => completeInTransaction(tx, now));
+}
+
+/**
+ * SCRUM-262 — for an action that has locked one event's row and is about to
+ * change it: if the event is Confirmed and its end has passed, it has taken
+ * place, so it is completed here, as AC7 saves it the first time it is
+ * changed after its end, and the caller refuses with EVENT_TOOK_PLACE. Only
+ * this event's row is written, so actions on different events never wait on
+ * each other. At exactly its end it is still Confirmed.
+ */
+export async function completeIfTakenPlace(
+  tx: Prisma.TransactionClient,
+  eventId: string,
+  now: Date = new Date(),
+): Promise<boolean> {
+  return (await completeInTransaction(tx, now, eventId)).length > 0;
+}
+
+/** Completes every finished Confirmed event, or only `eventId`, in the caller's transaction. */
+async function completeInTransaction(
+  tx: Prisma.TransactionClient,
+  now: Date,
+  eventId?: string,
+): Promise<string[]> {
   const at = now.toISOString();
-  return db.$transaction(async (tx) => {
-    const completed = await tx.$queryRaw<
-      { id: string; name: string; organiserId: string; coordinatorId: string | null }[]
-    >`
-    UPDATE "Event"
-       SET "status" = 'COMPLETED',
-           "completedAt" = ${at}::timestamp,
-           "updatedAt" = ${at}::timestamp
-     WHERE "status" = 'CONFIRMED'
-       AND "endAt" < ${at}::timestamp
-    RETURNING "id", "name", "organiserId", "coordinatorId"`;
-    if (completed.length > 0) {
+  const completed = await tx.$queryRaw<
+    { id: string; name: string; organiserId: string; coordinatorId: string | null }[]
+  >`
+  UPDATE "Event"
+     SET "status" = 'COMPLETED',
+         "completedAt" = ${at}::timestamp,
+         "updatedAt" = ${at}::timestamp
+   WHERE "status" = 'CONFIRMED'
+     AND "endAt" < ${at}::timestamp
+     ${eventId ? Prisma.sql`AND "id" = ${eventId}` : Prisma.empty}
+  RETURNING "id", "name", "organiserId", "coordinatorId"`;
+  if (completed.length > 0) {
+    await tx.auditLog.createMany({
+      data: completed.map(({ id }) => ({
+        entityType: "Event",
+        entityId: id,
+        action: "STATUS_CHANGED",
+        actorId: null,
+        fieldName: "status",
+        oldValue: "CONFIRMED",
+        newValue: "COMPLETED",
+        summary: "Completed after its end time (SCRUM-82)",
+      })),
+    });
+    // SCRUM-45 AC7: its Organiser and Coordinator are told, once, since
+    // only this UPDATE's own rows are notified.
+    for (const event of completed) {
+      await notifyAboutEvent(tx, [event.organiserId, event.coordinatorId], event, {
+        title: "Event completed",
+        message: `"${event.name}" has ended and is now Completed.`,
+      });
+    }
+
+    const pending = await tx.eventChangeRequest.findMany({
+      where: { eventId: { in: completed.map(({ id }) => id) }, status: "PENDING_REVIEW" },
+      select: { id: true, event: { select: { id: true, name: true, organiserId: true } } },
+    });
+    if (pending.length > 0) {
+      await tx.eventChangeRequest.updateMany({
+        where: { id: { in: pending.map((r) => r.id) }, status: "PENDING_REVIEW" },
+        data: { status: "REJECTED", decidedAt: now, decisionReason: EVENT_TOOK_PLACE },
+      });
       await tx.auditLog.createMany({
-        data: completed.map(({ id }) => ({
-          entityType: "Event",
-          entityId: id,
-          action: "STATUS_CHANGED",
+        data: pending.map((r) => ({
+          entityType: "EventChangeRequest",
+          entityId: r.id,
+          action: "REJECTED",
           actorId: null,
           fieldName: "status",
-          oldValue: "CONFIRMED",
-          newValue: "COMPLETED",
-          summary: "Completed after its end time (SCRUM-82)",
+          oldValue: "PENDING_REVIEW",
+          newValue: "REJECTED",
+          summary: EVENT_TOOK_PLACE,
         })),
       });
-      // SCRUM-45 AC7: its Organiser and Coordinator are told, once, since
-      // only this UPDATE's own rows are notified.
-      for (const event of completed) {
-        await notifyAboutEvent(tx, [event.organiserId, event.coordinatorId], event, {
-          title: "Event completed",
-          message: `"${event.name}" has ended and is now Completed.`,
-        });
-      }
-
-      const pending = await tx.eventChangeRequest.findMany({
-        where: { eventId: { in: completed.map(({ id }) => id) }, status: "PENDING_REVIEW" },
-        select: { id: true, event: { select: { id: true, name: true, organiserId: true } } },
+      // The same notice a Coordinator's rejection sends (SCRUM-128 AC10).
+      await tx.notification.createMany({
+        data: pending.map(({ event }) => ({
+          userId: event.organiserId,
+          type: "CHANGE_REQUEST_OUTCOME" as const,
+          title: "Change request rejected",
+          message: `Your change request for "${event.name}" was rejected: ${EVENT_TOOK_PLACE}`,
+          link: "/events",
+          eventId: event.id,
+        })),
       });
-      if (pending.length > 0) {
-        await tx.eventChangeRequest.updateMany({
-          where: { id: { in: pending.map((r) => r.id) }, status: "PENDING_REVIEW" },
-          data: { status: "REJECTED", decidedAt: now, decisionReason: EVENT_TOOK_PLACE },
-        });
-        await tx.auditLog.createMany({
-          data: pending.map((r) => ({
-            entityType: "EventChangeRequest",
-            entityId: r.id,
-            action: "REJECTED",
-            actorId: null,
-            fieldName: "status",
-            oldValue: "PENDING_REVIEW",
-            newValue: "REJECTED",
-            summary: EVENT_TOOK_PLACE,
-          })),
-        });
-        // The same notice a Coordinator's rejection sends (SCRUM-128 AC10).
-        await tx.notification.createMany({
-          data: pending.map(({ event }) => ({
-            userId: event.organiserId,
-            type: "CHANGE_REQUEST_OUTCOME" as const,
-            title: "Change request rejected",
-            message: `Your change request for "${event.name}" was rejected: ${EVENT_TOOK_PLACE}`,
-            link: "/events",
-            eventId: event.id,
-          })),
-        });
-      }
     }
-    return completed.map(({ id }) => id);
-  });
+  }
+  return completed.map(({ id }) => id);
 }

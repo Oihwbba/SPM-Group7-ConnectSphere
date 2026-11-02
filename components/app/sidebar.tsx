@@ -28,6 +28,7 @@ import type { Role } from "@prisma/client";
 
 import { navGroupsForRoles, type GroupId, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { PendingNavIcon } from "@/components/app/pending-nav-icon";
 
 // Icons are a presentation detail attached here on the client, keyed by route.
 // (lib/nav.ts stays string-only so it's safe to import from server components.)
@@ -355,7 +356,7 @@ function NavLink({
             : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
         )}
       >
-        <Icon className={nested ? "h-4 w-4" : "h-5 w-5"} />
+        <PendingNavIcon icon={Icon} className={nested ? "h-4 w-4" : "h-5 w-5"} />
       </span>
       {(inPanel || !collapsed) && (
         <span

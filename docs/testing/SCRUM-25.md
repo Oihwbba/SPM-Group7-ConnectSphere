@@ -221,11 +221,11 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Item | Content |
 |---|---|
 | Test Case ID | TC-25-17 |
-| Test Scenario | [Boundary] AC 1: long answers the request form accepted still save |
+| Test Scenario | [Boundary] AC 1: long answers within the request form's limits still save |
 | Pre-conditions | As TC-25-01. |
-| Test Steps | 1. Save the event with 3,000-character accessibility needs, layout, registration needs, venue requirements and equipment requirements. <br> 2. Save a programme of 5,001 characters. |
+| Test Steps | 1. Save the event with 3,000-character accessibility needs, registration needs, venue requirements and equipment requirements, and a 200-character layout. <br> 2. Save a programme of 5,001 characters. |
 | Test Data | — |
-| Expected Result | 1 saves: the request form caps none of these fields, so a value it accepted never blocks an edit. 2 is refused against the programme, as the request form also caps it at 5,000, and nothing is written. |
+| Expected Result | 1 saves: each is within the limit the request form applies (SCRUM-263 AC 3; [TC-263-09](SCRUM-263.md#tc-263-09) tests each limit), so a value it accepted never blocks an edit. 2 is refused against the programme, as the request form also caps it at 5,000, and nothing is written. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC1] TC-25-17: …"
 
@@ -279,7 +279,7 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Test Data | `coordinator@test.local` |
 | Expected Result | The edit dialog closes. The event's details now show "Exhibition Hall (Pending)" under Needs Reconsideration with the reason "The event's expected attendance changed.", and the readiness checklist shows the venue booking as "Pending" with the Needs Reconsideration badge beside it (SCRUM-131 AC3) and the same reason (SCRUM-26 AC7, AC12). A warning that saved nothing, or a refused save, leaves both as they were; a save whose reply was lost reads both again, as it may have landed. |
 
-**Automated by:** `tests/unit/edit-details-dialog.test.ts` › "SCRUM-25 [AC3] TC-25-21: …", "SCRUM-25 [AC1] TC-25-21: …", "SCRUM-25 [AC1, AC3] TC-25-20, TC-25-21: …"; `e2e/event-edit.spec.ts` › "SCRUM-25 [AC1, AC2, AC3, AC6] …"
+**Automated by:** `tests/unit/edit-details-dialog.test.ts` › "SCRUM-25 [AC3] TC-25-21: …", "SCRUM-25 [AC1, AC3] TC-25-21: …", "SCRUM-25 [AC1, AC3] TC-25-20, TC-25-21: …"; `e2e/event-edit.spec.ts` › "SCRUM-25 [AC1, AC2, AC3, AC6] …"
 
 ### TC-25-22
 
