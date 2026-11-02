@@ -1,6 +1,6 @@
 # SCRUM-264 — Seven text boxes over 2,000 characters are refused with no error at the field: test cases
 
-SCRUM-264 is a Chore task in Jira, raised on 2 Nov from the TC-132-09 audit
+SCRUM-264 is a Bug task in Jira, raised on 2 Nov from the TC-132-09 audit
 (SCRUM-132 AC 4). Its Done when items, numbered as AC 1 to AC 5 here, are in
 [docs/backlog/SCRUM-264.md](../backlog/SCRUM-264.md).
 
