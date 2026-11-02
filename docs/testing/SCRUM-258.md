@@ -38,7 +38,7 @@ database.
 | Test Data | Coordinator "Cody Coordinator" |
 | Expected Result | 1. "Waiting for Cody Coordinator to decide what happens to the flagged arrangements", as a waiting step. 2. Changes. 3. "Waiting for the Coordinator to decide what happens to the flagged arrangements". |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-258 [AC1] TC-258-01: the Organiser waits on the Coordinator by name, or as \"the Coordinator\", and the page opens on Changes"
+**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-258 [AC1] TC-258-01: the Organiser waits on the Coordinator by name, or as the Coordinator, and the page opens on Changes"
 
 ### TC-258-02
 

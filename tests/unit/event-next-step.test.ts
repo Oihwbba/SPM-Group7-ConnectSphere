@@ -327,7 +327,7 @@ describe("SCRUM-258 — a Confirmed event's flagged arrangements aren't secured"
   const confirmed = (over: Partial<NextStepFacts> = {}) =>
     facts({ status: "CONFIRMED", unresolvedFlags: 1, ...over });
 
-  it("SCRUM-258 [AC1] TC-258-01: the Organiser waits on the Coordinator by name, or as \"the Coordinator\", and the page opens on Changes", () => {
+  it("SCRUM-258 [AC1] TC-258-01: the Organiser waits on the Coordinator by name, or as the Coordinator, and the page opens on Changes", () => {
     const step = nextStep(confirmed());
     expect(step).toEqual({
       kind: "waiting",
