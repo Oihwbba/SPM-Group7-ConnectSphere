@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { isOverdue } from "@/lib/event-closing";
 import { EVENT_STATUS_LABEL } from "@/lib/status-labels";
@@ -48,6 +49,8 @@ export function ReviewDecision({
   const [asking, setAsking] = useState(false);
   const [message, setMessage] = useState("");
   const [fields, setFields] = useState<ClarifiableField[]>([]);
+  // The server's validation errors, keyed by field; one dialog is open at a time.
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -68,6 +71,7 @@ export function ReviewDecision({
         rejectionOutcome,
       });
       if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
         toast.error(result.error);
         return;
       }
@@ -91,6 +95,7 @@ export function ReviewDecision({
         editableFields: fields,
       });
       if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
         toast.error(result.error);
         return;
       }
@@ -113,6 +118,7 @@ export function ReviewDecision({
           setAsking(true);
           setMessage("");
           setFields([]);
+          setErrors({});
         }}
       >
         <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
@@ -145,6 +151,7 @@ export function ReviewDecision({
             setRejecting(true);
             setReason("");
             setOutcome(null);
+            setErrors({});
           }}
         >
           <XCircle className="h-3.5 w-3.5" /> Reject
@@ -162,9 +169,20 @@ export function ReviewDecision({
           </DialogHeader>
           <Textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setErrors({});
+            }}
             placeholder="Reason for rejection"
             aria-label="Rejection reason"
+            aria-invalid={Boolean(errors.decisionReason)}
+            aria-describedby={
+              errors.decisionReason ? `rejection-reason-error-${event.id}` : undefined
+            }
+          />
+          <FieldError
+            id={`rejection-reason-error-${event.id}`}
+            messages={errors.decisionReason}
           />
           {/* SCRUM-126 AC1: one outcome must be chosen with the reason. */}
           <fieldset className="space-y-2 text-sm">
@@ -213,9 +231,20 @@ export function ReviewDecision({
           </DialogHeader>
           <Textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              setErrors({});
+            }}
             placeholder="What do you need clarified?"
             aria-label="Clarification message"
+            aria-invalid={Boolean(errors.message)}
+            aria-describedby={
+              errors.message ? `clarification-message-error-${event.id}` : undefined
+            }
+          />
+          <FieldError
+            id={`clarification-message-error-${event.id}`}
+            messages={errors.message}
           />
           {/* SCRUM-108 AC1: the fields the organiser may change in the
               answer; none ticked means a text answer only. */}

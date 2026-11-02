@@ -19,7 +19,7 @@ const outcomeSchema = z
   .object({
     checkId: z.string().min(1),
     outcome: z.enum(["APPROVED", "CHANGES_REQUESTED", "REJECTED"]),
-    note: z.string().trim().max(2000).optional(),
+    note: z.string().trim().max(2000, "Keep the note under 2000 characters.").optional(),
     bookingIds: z.array(z.string().min(1)).max(MAX_LIST_ITEMS).default([]),
     reservationIds: z.array(z.string().min(1)).max(MAX_LIST_ITEMS).default([]),
   })
