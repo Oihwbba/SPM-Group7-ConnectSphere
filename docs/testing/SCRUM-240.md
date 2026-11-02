@@ -37,6 +37,8 @@ and check the options the Pool is created with. TC-240-06 and TC-240-07 use
 the real `pg` Pool and the real `@vercel/functions` helper with fake timers,
 and emit a connection's release by hand, so nothing connects. TC-240-04 and
 TC-240-08 run against the live app and Supabase after the fix is deployed.
+TC-240-09 runs the app's own `lib/db.ts` client against the shared Supabase
+pooler, with read-only queries.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -48,6 +50,7 @@ TC-240-08 run against the live app and Supabase after the fix is deployed.
 | [TC-240-06](#tc-240-06) | Boundary | AC 4 | Unit |
 | [TC-240-07](#tc-240-07) | Negative | AC 4 | Unit |
 | [TC-240-08](#tc-240-08) | Positive | AC 5 | Manual |
+| [TC-240-09](#tc-240-09) | Positive | AC 1, AC 4, AC 5 | Manual |
 
 ---
 
@@ -154,3 +157,18 @@ TC-240-08 run against the live app and Supabase after the fix is deployed.
 | Expected Result | Connection pool size reads 43, and no error since the change mentions `pool_size: 15`. |
 
 **Automated by:** Manual. The pool size is a Supabase project setting, not code.
+
+### TC-240-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-240-09 |
+| Test Scenario | [Positive] AC 1, AC 4, AC 5: on the real Supabase pooler, the app's client uses at most 3 connections and closes each one 5 seconds after its last query |
+| Pre-conditions | `DATABASE_URL` is the shared Supabase session pooler. `NODE_ENV=production`, and `VERCEL_URL` and `VERCEL_REGION` are set, as in a Vercel function. A stand-in request context records what is passed to `waitUntil`. |
+| Test Steps | 1. Load the shared Prisma client from `lib/db.ts`. <br> 2. Run 10 read-only queries at once (`select 1 as n from pg_sleep(0.7)`), and count them in `pg_stat_activity` from a second connection while they run. <br> 3. Count the Pool's open connections 1 s, 4.5 s and 5.6 s after the last query. <br> 4. In the Supabase logs (`supavisor_logs`), find "Terminate received from client" for the test machine. <br> 5. Separately, open connections one at a time until the pooler refuses. |
+| Test Data | Read-only queries only; at most 4 of the pooler's connections, for about 6 s |
+| Expected Result | At most 3 connections open and at most 3 queries run at once on Supabase. Every connection is closed by 5.6 s after its last query, and `waitUntil` settles once they are. The pooler logs one close per connection, 5 s after its last use. The refusal names `pool_size: 43`. |
+
+**Result on 2 Nov 2026, 14:57 UTC:** 3 connections at most, and 3 queries at once on Supabase. Open connections: 3 at 1 s after the last query, 1 at 4.5 s (the other two had been idle longer), 0 at 5.6 s. `waitUntil` settled 5.1 s after the last release. The pooler logged the three closes at 14:57:33.2, 33.2 and 33.9, each 5 s after that connection's last query. In step 5, the pooler accepted 33 connections on top of the 10 already in use and refused the 34th, naming `pool_size: 43`.
+
+**Automated by:** Manual. It loads the shared database, which automated tests must not touch.
