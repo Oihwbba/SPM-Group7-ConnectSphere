@@ -48,7 +48,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | The schema's `EventStatus` |
 | Expected Result | One status field, holding one of Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled or Rejected. |
 
-**Automated by:** `tests/unit/status-badge.test.ts` › "covers every one of the nine statuses"
+**Automated by:** `tests/unit/status-badge.test.ts` › "SCRUM-16 [AC2, AC5] TC-16-02, SCRUM-23 [AC1] TC-23-01, SCRUM-24 [AC1, AC2] TC-24-01: covers every one of the nine statuses"
 
 ### TC-24-02
 
@@ -61,7 +61,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "What is the expected start time?" |
 | Expected Result | The status is still Under Review; the question is a clarification on the event, not a status. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 [AC1, AC6] TC-18-01, SCRUM-24 [AC3] TC-24-02: [Positive] coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
 
 ### TC-24-03
 
@@ -74,7 +74,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | The requests' ids |
 | Expected Result | Both are refused, for example "That status change is not allowed from the event's current status.", and the status is unchanged. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-20: a coordinator cannot claim a request into review — that transition is automatic" (step 1) and "SCRUM-135 [AC11] TC-135-11: refuses to decide an event that is %s, naming its status" (step 2, with the message "This event is Submitted, so it can't be approved.").
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-20 [AC1] TC-20-05, SCRUM-24 [AC4, AC6] TC-24-03: a coordinator cannot claim a request into review — that transition is automatic" (step 1) and "SCRUM-135 [AC11] TC-135-11: refuses to decide an event that is %s, naming its status" (step 2, with the message "This event is Submitted, so it can't be approved.").
 
 ### TC-24-04
 
@@ -87,7 +87,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | The Under Review request |
 | Expected Result | One decision is saved. The other is refused with "This event was updated by another user. Refresh and try again." and writes no history entry. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"; `tests/integration/concurrency.test.ts` › "SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-24 [AC7] TC-24-04, SCRUM-19 [AC6] TC-19-06: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"; `tests/integration/concurrency.test.ts` › "SCRUM-24 [AC7] TC-24-04, SCRUM-135 [AC14] TC-135-14, SCRUM-19 [AC6] TC-19-06: the loser of two simultaneous decisions is told to refresh, and no audit entry is written"
 
 ### TC-24-05
 

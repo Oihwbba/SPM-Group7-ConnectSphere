@@ -55,6 +55,19 @@ export function registrationStillNeededMessage(
   return `This event has ${people}, so Registration needed can't be changed to No.`;
 }
 
+/**
+ * SCRUM-247 AC1 — the expected attendance is the event's registration
+ * capacity (SCRUM-74), so an edit can't lower it below the people already
+ * registered; the message says how many, as SCRUM-128 AC7's refusal does.
+ * An attendance is at least 1 (SCRUM-13 AC7), so a refusal always means two
+ * or more registrations.
+ */
+export function attendanceBelowRegistrationsMessage(
+  activeRegistrations: number,
+): string {
+  return `This event has ${activeRegistrations} active registrations, so the expected attendance can't be lower than ${activeRegistrations}.`;
+}
+
 /** How each field is named in messages and the audit log. */
 export const FIELD_LABEL: Record<EditableField, string> = {
   name: "Event name",

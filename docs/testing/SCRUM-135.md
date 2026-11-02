@@ -15,10 +15,10 @@ every action asks it.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-135-01](#tc-135-01) | Positive | AC 1, AC 2, AC 3, AC 4, AC 5, AC 7, AC 8, AC 9, AC 10 | Unit |
+| [TC-135-01](#tc-135-01) | Positive | AC 1, AC 2, AC 3, AC 4, AC 5, AC 6, AC 7, AC 8, AC 9, AC 10 | Unit |
 | [TC-135-02](#tc-135-02) | Positive | AC 2, AC 6 | Unit, e2e |
 | [TC-135-03](#tc-135-03) | Negative | AC 3, AC 4, AC 11 | Unit, e2e |
-| [TC-135-04](#tc-135-04) | Negative | AC 4 | Unit, e2e |
+| [TC-135-04](#tc-135-04) | Negative | AC 4 | Unit |
 | [TC-135-06](#tc-135-06) | Positive, Negative | AC 6, AC 13 | Unit |
 | [TC-135-09](#tc-135-09) | Positive | AC 9 | Unit |
 | [TC-135-11](#tc-135-11) | Negative | AC 11 | Unit |
@@ -39,7 +39,7 @@ every action asks it.
 | Test Data | Draft → Submitted; Submitted → Under Review; Under Review → Planning, Rejected or Cancelled; Planning → Confirmed, Rejected or Cancelled; Confirmed → Planning, Cancelled or Completed. |
 | Expected Result | Each is allowed. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 TC-135-01: …" (11 tests). The actions themselves: SCRUM-14, SCRUM-20, SCRUM-81 (TC-81-01, TC-81-05), SCRUM-117, SCRUM-128, SCRUM-26 and SCRUM-82 (TC-82-01, TC-82-09).
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10] TC-135-01: …" (11 tests). The actions themselves: SCRUM-14, SCRUM-20, SCRUM-81 (TC-81-01, TC-81-05), SCRUM-117, SCRUM-128, SCRUM-26 and SCRUM-82 (TC-82-01, TC-82-09).
 
 ### TC-135-02
 
@@ -52,7 +52,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | 1. Under Review with that Coordinator. 2. Back Under Review with the same Coordinator; or, if they no longer hold the role, Submitted with no Coordinator in the Lead's queue. |
 
-**Automated by:** these moves are SCRUM-165's actions, so its tests are this case's: `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: …"; `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-20 [AC1, AC2, AC3, AC7, AC8] TC-20-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: …" and "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): …". The lifecycle table allowing Submitted → Under Review is TC-135-01.
+**Automated by:** these moves are SCRUM-165's actions, so its tests are this case's: `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: …"; `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: …" and "SCRUM-165 [AC9] TC-165-12, SCRUM-135 [AC2, AC6] TC-135-02: [supersedes SCRUM-108 AC11] …". The lifecycle table allowing Submitted → Under Review is TC-135-01.
 
 ### TC-135-03
 
@@ -65,7 +65,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | 1. The unassigned request isn't in the list at all: it waits in the Lead's queue (SCRUM-165 AC8). 2. The unassigned one: "Event not found." The assigned one: "This event is Submitted, so it can't be approved." (or "rejected."). Nothing changes and no Coordinator is assigned. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC3, AC4] TC-135-03: …"; `tests/unit/event-status.test.ts` › "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request can't be %s, even by its assigned Coordinator, …" (2 tests) and "SCRUM-165 [AC8] TC-165-11: …"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-05, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list" and "SCRUM-135 [AC3, AC4, AC11] TC-135-03: my Under Review event can be approved, and moves to Planning"; `e2e/events.spec.ts` (SCRUM-23 & SCRUM-24 journey)
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC3, AC4] TC-135-03: …"; `tests/unit/event-status.test.ts` › "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request can't be %s, even by its assigned Coordinator, …" (2 tests) and "SCRUM-165 [AC8] TC-165-11: …"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1] TC-69-01, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list" and "SCRUM-135 [AC3, AC4, AC11] TC-135-03: my Under Review event can be approved, and moves to Planning"; `e2e/events.spec.ts` (SCRUM-23 & SCRUM-24 journey)
 
 ### TC-135-04
 
@@ -78,7 +78,7 @@ every action asks it.
 | Test Data | Reason "Too large for any venue."; Amend and resubmit. |
 | Expected Result | Refused: since SCRUM-165 AC8 the request is "not found" for a Coordinator nobody assigned. No status change, no assignment, no history entry. |
 
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-165 [AC8] TC-165-11 (supersedes SCRUM-108 AC11): a Coordinator can't reject a request nobody was assigned to; it waits for the Lead"
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-165 [AC8] TC-165-11, SCRUM-135 [AC4] TC-135-04: [supersedes SCRUM-108 AC11] a Coordinator can't reject a request nobody was assigned to; it waits for the Lead"
 
 ### TC-135-06
 
@@ -156,7 +156,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | One wins; the other changes nothing. One history entry and one set of notifications. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-24: the loser of two simultaneous decisions …" and the SCRUM-81 confirm race; `tests/unit/event-confirm.test.ts` (TC-81-09); `tests/unit/cancel-event.test.ts` (TC-82-05); `tests/integration/close-event.test.ts` (TC-82-07, TC-82-10)
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-24 [AC7] TC-24-04, SCRUM-135 [AC14] TC-135-14, SCRUM-19 [AC6] TC-19-06: the loser of two simultaneous decisions …" and the SCRUM-81 confirm race; `tests/unit/event-confirm.test.ts` (TC-81-09); `tests/unit/cancel-event.test.ts` (TC-82-05); `tests/integration/close-event.test.ts` (TC-82-07, TC-82-10)
 
 ### TC-135-15
 

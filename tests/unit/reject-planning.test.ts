@@ -264,7 +264,7 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
     },
   );
 
-  it("SCRUM-117 [AC2]: an outcome that isn't one of the two choices, or no event id, is refused", async () => {
+  it("SCRUM-117 [AC2] TC-117-02: an outcome that isn't one of the two choices, or no event id, is refused", async () => {
     expect(
       await rejectPlanningEvent({ ...valid, rejectionOutcome: "CANCEL" }),
     ).toEqual({ ok: false, error: "Please provide a valid event to reject." });
@@ -312,7 +312,7 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
     },
   );
 
-  it("SCRUM-117 [AC5]: an event reassigned while the request waited for the lock is refused, and nothing changes", async () => {
+  it("SCRUM-117 [AC5] TC-117-07: an event reassigned while the request waited for the lock is refused, and nothing changes", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue(
       eventRow({ coordinatorId: "usr_other" }),
     );
@@ -367,7 +367,7 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
     },
   );
 
-  it("SCRUM-117 [Exit path]: an unexpected database failure propagates instead of being reported as a refusal", async () => {
+  it("SCRUM-117: [Exit path] an unexpected database failure propagates instead of being reported as a refusal", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(rejectPlanningEvent(valid)).rejects.toThrow("connection lost");

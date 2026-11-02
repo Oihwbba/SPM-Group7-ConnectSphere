@@ -722,7 +722,7 @@ describe("a deadlock with a booking decision — SCRUM-202 AC1", () => {
 });
 
 describe("an unexpected database error — SCRUM-34", () => {
-  it("is thrown, not reported as a refusal", async () => {
+  it("SCRUM-34: is thrown, not reported as a refusal", async () => {
     db.$transaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(createVenue(input)).rejects.toThrow("connection lost");

@@ -37,7 +37,6 @@ cleanup.
 | Pre-conditions | — |
 | Test Steps | 1. Run `npm run test:coverage` against the local database. |
 | Test Data | The suite's own `Staff notice equipment` pool |
-| Expected Results | TC-124-02 passes, and so do the suites that create and delete their own equipment (request-reservation, first-come, report-reservation, equipment-schedule, equipment-availability, concurrency). |
-| Status | Automated |
+| Expected Result | TC-124-02 passes, and so do the suites that create and delete their own equipment (request-reservation, first-come, report-reservation, equipment-schedule, equipment-availability, concurrency). |
 
 **Automated by:** `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC2, AC14] TC-124-02: the same equipment request sent twice at the same moment tells each Technical Support member once", run in the whole suite.
