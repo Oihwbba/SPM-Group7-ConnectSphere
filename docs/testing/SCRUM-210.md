@@ -22,8 +22,9 @@ The menu keeps its original look. A group of several links is one item, with
 its own icon and name (for example **Venues**); selecting it opens its links
 beneath it, with their icons and labels, indented. In the collapsed rail they
 show as smaller, indented icons. The group holding the page being viewed
-starts open. On a phone the bar shows the single links and the groups; a
-group opens its links in a panel just above the bar.
+starts open. On a phone the rail gives way to a hamburger beside the logo
+(SCRUM-207), which opens the same links in a panel from the left, each group
+of more than one under its heading.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -154,19 +155,18 @@ Availability, Venue Catalogue; All Events.
 1. As the Coordinator on Events, look at the rail; select **Expand
    navigation**, then **Venues**, then **Venues** again.
 2. Open Availability.
-3. At 360 px wide, select **Venues** in the bottom bar, then Venue Search.
-4. At 360 px wide, sign in as Technical Support, then select **My work**
-   twice.
+3. At 360 px wide, open the menu from the hamburger beside the logo, then
+   choose Venue Search.
+4. At 360 px wide, sign in as Technical Support, open the menu, then close it.
 
 **Expected:** 1: Venues starts closed; selected, it opens Venue Search,
 Request Venue, Availability and Venue Catalogue beneath it, indented; selected
 again, it closes. 2: on one of its pages, Venues starts open, with that page
-marked current. 3: the bar shows Events, Venues, Equipment Requests and All
-Events; Venues opens its four links in a panel above the bar, and its
-button reads as expanded while the panel is open; the panel closes once a
-link is chosen. The page doesn't scroll sideways. 4: on Equipment, My work
-reads as collapsed and shows as the current page's group; selected, its panel
-opens with Equipment marked current and it reads as expanded; selected again,
-it reads as collapsed.
+marked current. 3: none of the menu is on the page until the hamburger is chosen, and
+opened it lists every link the role holds, in the rail's order, with
+**Venues** as a heading over its four; choosing a link goes there and closes
+the menu. The page doesn't scroll sideways. 4: Equipment reads as the page
+being viewed, under **My work**; Close menu shuts the panel and the hamburger
+reads as collapsed.
 
 *Automated:* `e2e/menu-groups.spec.ts` the three "SCRUM-210 [AC1] TC-210-09" tests.

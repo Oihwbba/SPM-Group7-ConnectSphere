@@ -90,6 +90,9 @@ const MENUS: Record<string, Expected> = {
 
 const menu = (page: Page) => page.getByRole("complementary", { name: "Primary" });
 
+/** The phone's menu: the panel the hamburger opens, absent until it is. */
+const drawer = (page: Page) => page.getByRole("navigation", { name: "Primary" });
+
 /** The links' names, in order: collapsed, a link is an icon named by its label. */
 const names = (links: ReturnType<Page["getByRole"]>) =>
   links.evaluateAll((all) => all.map((link) => link.getAttribute("aria-label")));
@@ -162,7 +165,7 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     );
   });
 
-  test("SCRUM-210 [AC1] TC-210-09: on a phone (SCRUM-132) a group opens its links in a panel above the bar", async ({
+  test("SCRUM-210 [AC1] TC-210-09: on a phone (SCRUM-132) the hamburger opens every link, under its group's heading", async ({
     browser,
   }) => {
     const context = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -173,22 +176,26 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/events$/);
 
-    const nav = menu(page);
-    // The bar: Events, Venues, Equipment Requests, All Events.
-    for (const name of ["Events", "Equipment Requests", "All Events"]) {
-      await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
-    }
-    const venues = nav.getByRole("button", { name: "Venues", exact: true });
-    await expect(venues).toHaveAttribute("aria-expanded", "false");
-    await venues.click();
-    // The button says its panel is open.
-    await expect(venues).toHaveAttribute("aria-expanded", "true");
-    const panel = nav.getByRole("group", { name: "Venues" });
-    expect(await names(panel.getByRole("link"))).toEqual(MENUS.Coordinator.groups[1][1]);
-    for (const link of await panel.getByRole("link").all()) await expect(link).toBeVisible();
-    await panel.getByRole("link", { name: "Venue Search" }).click();
+    // Nothing of the menu is on the page until the hamburger is chosen.
+    const open = page.getByRole("button", { name: "Open menu" });
+    await expect(open).toHaveAttribute("aria-expanded", "false");
+    const nav = drawer(page);
+    await expect(nav).toHaveCount(0);
+
+    await open.click();
+    await expect(nav).toBeVisible();
+    // Every link the role holds, in the rail's order, and the heading of the
+    // group that has more than one.
+    expect(await names(nav.getByRole("link"))).toEqual(
+      MENUS.Coordinator.groups.flatMap(([, labels]) => labels),
+    );
+    await expect(nav.getByText("Venues", { exact: true })).toBeVisible();
+    for (const link of await nav.getByRole("link").all()) await expect(link).toBeVisible();
+
+    // Choosing a link goes there and closes the menu.
+    await nav.getByRole("link", { name: "Venue Search" }).click();
     await expect(page).toHaveURL(/\/venues\/search/);
-    await expect(panel).toHaveCount(0);
+    await expect(nav).toHaveCount(0);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -197,7 +204,7 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     await context.close();
   });
 
-  test("SCRUM-210 [AC1] TC-210-09: on a phone, the group holding the current page reads closed until it is opened", async ({
+  test("SCRUM-210 [AC1] TC-210-09: on a phone, the menu marks the page being viewed, and closes again", async ({
     browser,
   }) => {
     const context = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -208,20 +215,18 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/equipment$/);
 
-    // Equipment is in My work, whose panel is shut: the rail's "open while it
-    // holds the page" doesn't apply to the phone's bar.
-    const nav = menu(page);
-    const work = nav.getByRole("button", { name: "My work", exact: true });
-    await expect(work).toHaveAttribute("aria-expanded", "false");
-    await expect(nav.getByRole("group", { name: "My work" })).toHaveCount(0);
-
-    await work.click();
-    await expect(work).toHaveAttribute("aria-expanded", "true");
+    const open = page.getByRole("button", { name: "Open menu" });
+    await open.click();
+    const nav = drawer(page);
+    // Equipment is under My work, and reads as the page being viewed.
+    await expect(nav.getByText("My work", { exact: true })).toBeVisible();
     await expect(
-      nav.getByRole("group", { name: "My work" }).getByRole("link", { name: "Equipment", exact: true }),
+      nav.getByRole("link", { name: "Equipment", exact: true }),
     ).toHaveAttribute("aria-current", "page");
-    await work.click();
-    await expect(work).toHaveAttribute("aria-expanded", "false");
+
+    await nav.getByRole("button", { name: "Close menu" }).click();
+    await expect(nav).toHaveCount(0);
+    await expect(open).toHaveAttribute("aria-expanded", "false");
     await context.close();
   });
 });
