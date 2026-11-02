@@ -257,4 +257,59 @@ test.describe("SCRUM-263 — a refused event request shows what to fix", () => {
     ).toBeVisible();
     expect(await prisma.event.count({ where: { name } })).toBe(0);
   });
+
+  for (const [action, button] of [
+    ["a draft", /Save as Draft/i],
+    ["a submission", /Submit Request for Review/i],
+  ] as const) {
+    test(`SCRUM-263 TC-263-12: ${action} that never reaches the server says so, keeps what was typed, and can be sent again`, async ({
+      browser,
+    }) => {
+      const page = await signedIn(browser, "organiser@test.local");
+      const name = `Never sent ${Date.now()}`;
+      await openForm(page);
+      await fillRequiredFields(page, name);
+      const programme = page.getByLabel("Event Programme (Optional)");
+      await programme.fill("Opening talk at ten.");
+      await goToStep(page, "6 - Review");
+
+      // A server action is a POST with a Next-Action header. Drop this form's
+      // next one as a lost connection would; the one after it goes through.
+      let dropNext = true;
+      await page.route("**/*", (route) => {
+        const request = route.request();
+        if (
+          dropNext &&
+          request.method() === "POST" &&
+          request.headers()["next-action"] &&
+          request.postData()?.includes(name)
+        ) {
+          dropNext = false;
+          return route.abort("failed");
+        }
+        return route.continue();
+      });
+      const send = page.getByRole("button", { name: button });
+      await send.click();
+
+      await expect(
+        page.getByText(
+          "Your request couldn't be sent. Check your connection and try again.",
+        ),
+      ).toBeVisible();
+      await expect(send).toBeEnabled();
+      expect(await prisma.event.count({ where: { name } })).toBe(0);
+      await goToStep(page, "1 - Basics");
+      await expect(page.getByLabel("Event Name *")).toHaveValue(name);
+      await goToStep(page, "5 - Details");
+      await expect(programme).toHaveValue("Opening talk at ten.");
+
+      await goToStep(page, "6 - Review");
+      await send.click();
+
+      await expect
+        .poll(() => prisma.event.count({ where: { name } }))
+        .toBe(1);
+    });
+  }
 });

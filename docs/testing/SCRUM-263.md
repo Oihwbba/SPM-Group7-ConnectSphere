@@ -35,6 +35,7 @@ Coordinator's edit limits Registration Notes too.
 | [TC-263-09](#tc-263-09) | Boundary | AC 3 | Unit |
 | [TC-263-10](#tc-263-10) | Negative | AC 3 | E2E |
 | [TC-263-11](#tc-263-11) | Negative | AC 3 | E2E |
+| [TC-263-12](#tc-263-12) | Negative | None: keeps the form when a send fails | E2E |
 
 ---
 
@@ -154,3 +155,16 @@ Coordinator's edit limits Registration Notes too.
 | Expected Result | "Please fix the highlighted fields.", the field is marked invalid, "Keep venue requirements under 5000 characters." shows beside it, and the event keeps its venue requirements. |
 
 **Automated by:** `e2e/request-form-errors.spec.ts` › "SCRUM-263 [AC3] TC-263-11: the Coordinator's edit over a limit shows why beside the field and saves nothing"
+
+### TC-263-12
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-263-12 |
+| Test Scenario | [Negative] A draft or a submission that never reaches the server says so, keeps what was typed, and can be sent again |
+| Pre-conditions | Shared pre-conditions |
+| Test Steps | 1. Fill every required field and **Event Programme (Optional)**. <br> 2. Go to step 6 - Review. <br> 3. Lose the connection and click **Save as Draft** or **Submit Request for Review**. <br> 4. Check steps 1 and 5. <br> 5. Reconnect, return to Review and click the same button. |
+| Test Data | A date in the future, 09:00 to 18:00; attendance 150; programme "Opening talk at ten." |
+| Expected Result | 3: "Your request couldn't be sent. Check your connection and try again.", the form stays open with the button enabled, and nothing is created. 4: the name and the programme are as typed. 5: the event is created once. |
+
+**Automated by:** `e2e/request-form-errors.spec.ts` › "SCRUM-263 TC-263-12: ${action} that never reaches the server says so, keeps what was typed, and can be sent again"
