@@ -22,7 +22,7 @@ const optionalText = (max: number, message: string) =>
 export const equipmentRequestLineSchema = z.object({
   equipmentId: z.string().min(1, "Select an equipment type."),
   quantity: z.coerce
-    .number({ invalid_type_error: QUANTITY_MESSAGE })
+    .number({ error: QUANTITY_MESSAGE })
     .int(QUANTITY_MESSAGE)
     .positive(QUANTITY_MESSAGE)
     .max(1000, "Quantity can be at most 1,000."),

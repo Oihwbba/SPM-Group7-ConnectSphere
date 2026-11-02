@@ -55,7 +55,7 @@ describe("venueOptions — SCRUM-34 AC3, AC6", () => {
     expect(await readVenueOptions(db as never)).toEqual(options);
   });
 
-  it("SCRUM-34 [AC1] TC-34-18: a tag reads as words", () => {
+  it("SCRUM-34 [AC1, AC3] TC-34-18: a tag reads as words", () => {
     expect(tagLabel("sound-system")).toBe("Sound system");
     expect(tagLabel("wifi")).toBe("Wifi");
   });

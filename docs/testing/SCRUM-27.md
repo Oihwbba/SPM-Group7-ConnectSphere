@@ -272,4 +272,4 @@ SCRUM-186's own cases are in [SCRUM-186.md](SCRUM-186.md).
 | Test Data | — |
 | Expected Result | Neither Coordinator is offered the event, and neither sees its request. A Coordinator sees only the events assigned to them, the rule `can()` applies when they act. |
 
-**Automated by:** `tests/integration/equipment-request.test.ts` › "SCRUM-229 [AC3] SCRUM-165 [AC8] TC-27-18: an event with no Coordinator is neither offered nor listed to a Coordinator"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01, SCRUM-170 [AC3] TC-170-03: offers only this coordinator's events that are going ahead, soonest first, with the Organiser's equipment answer"
+**Automated by:** `tests/integration/equipment-request.test.ts` › "SCRUM-229 [AC3], SCRUM-165 [AC8], SCRUM-27 [AC1] TC-27-18: an event with no Coordinator is neither offered nor listed to a Coordinator"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01, SCRUM-170 [AC3] TC-170-03: offers only this coordinator's events that are going ahead, soonest first, with the Organiser's equipment answer"

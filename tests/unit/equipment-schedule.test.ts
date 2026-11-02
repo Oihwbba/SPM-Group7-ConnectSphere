@@ -58,7 +58,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     event: { name },
   });
 
-  it("SCRUM-30 [AC1]: lists current and future reservations with the event they serve", async () => {
+  it("SCRUM-30 [AC1] TC-30-01: lists current and future reservations with the event they serve", async () => {
     db.reservation.findMany.mockResolvedValue([
       reservation("r1", START, END, 2, "Orientation"),
     ]);
@@ -87,7 +87,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
   // requested, which the action does not know. It reports every commitment as
   // it stands, overlapping or not, and the view judges them against the
   // request with splitByPeriod and requestedPeriodTone.
-  it("SCRUM-30 [AC1]: reports overlapping reservations as they stand, without judging them", async () => {
+  it("SCRUM-30 [AC1] TC-30-01: reports overlapping reservations as they stand, without judging them", async () => {
     db.reservation.findMany.mockResolvedValue([
       reservation("r1", "2030-06-01T01:00:00.000Z", "2030-06-01T05:00:00.000Z", 2, "A"),
       reservation("r2", "2030-06-01T04:00:00.000Z", "2030-06-01T08:00:00.000Z", 2, "B"),
@@ -109,7 +109,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     }
   });
 
-  it("SCRUM-30 [AC5]: reports back-to-back reservations as two separate commitments", async () => {
+  it("SCRUM-30 [AC5] TC-30-04: reports back-to-back reservations as two separate commitments", async () => {
     db.reservation.findMany.mockResolvedValue([
       reservation("r1", "2030-06-01T01:00:00.000Z", "2030-06-01T05:00:00.000Z", 2, "A"),
       reservation("r2", "2030-06-01T05:00:00.000Z", "2030-06-01T09:00:00.000Z", 2, "B"),
@@ -124,7 +124,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     }
   });
 
-  it("SCRUM-30 [AC6]: shows the reason and duration of unavailability", async () => {
+  it("SCRUM-30 [AC6] TC-30-05: shows the reason and duration of unavailability", async () => {
     db.equipmentUnavailability.findMany.mockResolvedValue([
       {
         id: "u1",
@@ -150,7 +150,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     }
   });
 
-  it("SCRUM-30 [AC7]: an item with nothing committed reports fully available, not an empty list", async () => {
+  it("SCRUM-30 [AC7] TC-30-06: an item with nothing committed reports fully available, not an empty list", async () => {
     const result = await getEquipmentSchedule(input);
 
     expect(result.ok).toBe(true);
@@ -161,7 +161,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     }
   });
 
-  it("returns entries in chronological order, reservations and repairs together", async () => {
+  it("SCRUM-30 [AC1] TC-30-01: returns entries in chronological order, reservations and repairs together", async () => {
     db.reservation.findMany.mockResolvedValue([
       reservation("late", "2030-06-02T01:00:00.000Z", "2030-06-02T05:00:00.000Z", 1, "B"),
     ]);
@@ -183,7 +183,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     }
   });
 
-  it("refuses a role without equipment:read, and an unknown item", async () => {
+  it("SCRUM-30 [AC1] TC-30-07: refuses a role without equipment:read, and an unknown item", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     expect((await getEquipmentSchedule(input)).ok).toBe(false);
     expect(db.equipment.findFirst).not.toHaveBeenCalled();
@@ -193,7 +193,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     expect((await getEquipmentSchedule(input)).ok).toBe(false);
   });
 
-  it("rejects a malformed request with field errors and reads nothing", async () => {
+  it("SCRUM-30 [AC1] TC-30-07: rejects a malformed request with field errors and reads nothing", async () => {
     const result = await getEquipmentSchedule({ equipmentId: "", from: "" });
 
     expect(result.ok).toBe(false);
@@ -206,14 +206,14 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
 
   // The schema only checks `from` is non-empty, so a string that is not a date
   // has to be caught after parsing or `endAt > Invalid Date` would match nothing.
-  it("rejects a `from` that is not a date", async () => {
+  it("SCRUM-30 [AC1] TC-30-07: rejects a `from` that is not a date", async () => {
     const result = await getEquipmentSchedule({ ...input, from: "not-a-date" });
 
     expect(result.ok).toBe(false);
     expect(db.equipment.findFirst).not.toHaveBeenCalled();
   });
 
-  it("rethrows a non-permission failure instead of reporting it as a refusal", async () => {
+  it("SCRUM-30: rethrows a non-permission failure instead of reporting it as a refusal", async () => {
     db.equipment.findFirst.mockRejectedValue(new Error("connection lost"));
 
     await expect(getEquipmentSchedule(input)).rejects.toThrow("connection lost");

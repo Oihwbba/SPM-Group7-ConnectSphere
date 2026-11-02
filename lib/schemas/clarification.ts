@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
+
 import {
   EVENT_END_REQUIRED_MESSAGE,
   EVENT_START_REQUIRED_MESSAGE,
@@ -44,6 +46,7 @@ export const requestClarificationSchema = z.object({
     .max(2000, "Keep the message under 2000 characters."),
   editableFields: z
     .array(clarifiableField)
+    .max(MAX_LIST_ITEMS)
     .default([])
     .transform((fields) => [...new Set(fields)]),
 });
@@ -69,9 +72,7 @@ export const requestFieldValues = z.object({
   startAt: z.string().min(1, EVENT_START_REQUIRED_MESSAGE),
   endAt: z.string().min(1, EVENT_END_REQUIRED_MESSAGE),
   expectedAttendance: z
-    .number({
-      invalid_type_error: "Attendance must be a positive whole number.",
-    })
+    .number({ error: "Attendance must be a positive whole number." })
     .int("Attendance must be a positive whole number.")
     .positive("Attendance must be a positive whole number."),
   venueRequirements: requiredText("Venue requirements", 5000),

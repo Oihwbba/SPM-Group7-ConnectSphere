@@ -58,3 +58,24 @@ the same problem by acting when something next touches the data.
   should call the same cancellation.
 - The Lead's queue (SCRUM-165) can show overdue requests with the same
   `isOverdue` rule.
+
+## Addendum (2026-11-01) — Actions and All Events complete a finished event too (SCRUM-262)
+
+"Nothing reads it in between" stopped being true when the Lead's All Events
+list and event view (SCRUM-141) were built: they showed an event that had
+ended as Confirmed. And an event that had ended but was still saved as
+Confirmed could be cancelled (SCRUM-82), sent back to Planning by resolving a
+flagged arrangement (SCRUM-26), or changed by approving a change request
+(SCRUM-128), because none of those actions checked the end time.
+
+- **All Events** (`getAllEvents` and `getEventForPlanning`) runs
+  `completeFinishedEvents` before reading, as the Events, event and My
+  Registrations pages do.
+- **Every action that changes a Confirmed event's status** calls
+  `completeIfTakenPlace(tx, eventId)` right after locking the event row. If the
+  event has ended, it is completed in that transaction (its history entry,
+  notices and the rejection of submitted change requests, as above) and the
+  action is refused with "The event has already taken place." Completing only
+  that event keeps actions on different events from waiting on each other; at
+  exactly its end the event is still Confirmed.
+- A new action that changes a Confirmed event must do the same.
