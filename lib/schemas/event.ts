@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { sgDate } from "@/lib/datetime";
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
 
 /** Room layouts offered as presets on the request and edit forms. */
 export const LAYOUT_OPTIONS = [
@@ -16,7 +17,7 @@ export const LAYOUT_OPTIONS = [
  * Helper to validate attendance: must be a positive whole number (> 0).
  */
 const positiveAttendance = z
-  .number({ invalid_type_error: "Attendance must be a positive whole number." })
+  .number({ error: "Attendance must be a positive whole number." })
   .int("Attendance must be a positive whole number.")
   .positive("Attendance must be a positive whole number.");
 
@@ -98,7 +99,7 @@ export const createDraftEventSchema = z
         positiveAttendance.optional(),
       ),
     venueRequirements: z.string().trim().optional(),
-    requiredFacilities: z.array(z.string()).optional().default([]),
+    requiredFacilities: z.array(z.string()).max(MAX_LIST_ITEMS).optional().default([]),
     accessibilityNeeds: z.string().trim().optional(),
     preferredLayout: z.string().trim().optional(),
     equipmentRequirements: z.string().trim().optional(),
@@ -195,10 +196,10 @@ export const submitEventRequestSchema = z
       .max(5000, "Keep description under 5000 characters."),
     // SCRUM-190 AC1: one date with a start and an end time, joined in the browser.
     startAt: z
-      .string({ required_error: EVENT_START_REQUIRED_MESSAGE })
+      .string({ error: EVENT_START_REQUIRED_MESSAGE })
       .min(1, EVENT_START_REQUIRED_MESSAGE),
     endAt: z
-      .string({ required_error: EVENT_END_REQUIRED_MESSAGE })
+      .string({ error: EVENT_END_REQUIRED_MESSAGE })
       .min(1, EVENT_END_REQUIRED_MESSAGE),
     expectedAttendance: z
       .preprocess(
@@ -209,7 +210,7 @@ export const submitEventRequestSchema = z
       .string()
       .trim()
       .min(1, "Venue requirements are required."),
-    requiredFacilities: z.array(z.string()).optional().default([]),
+    requiredFacilities: z.array(z.string()).max(MAX_LIST_ITEMS).optional().default([]),
     accessibilityNeeds: z
       .string()
       .trim()
@@ -226,10 +227,7 @@ export const submitEventRequestSchema = z
     // submit; a note about registration is optional.
     registrationRequired: z.preprocess(
       registrationNeeded,
-      z.boolean({
-        required_error: REGISTRATION_NEEDED_REQUIRED_MESSAGE,
-        invalid_type_error: REGISTRATION_NEEDED_REQUIRED_MESSAGE,
-      }),
+      z.boolean({ error: REGISTRATION_NEEDED_REQUIRED_MESSAGE }),
     ),
     registrationNotes: z.string().trim().max(5000).optional(),
     programme: z

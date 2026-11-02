@@ -167,7 +167,7 @@ describe("reportUnprovidableEquipment — SCRUM-32", () => {
     expect(await reportUnprovidableEquipment({ reason: REASON })).toEqual({
       ok: false,
       error: "Reservation not found.",
-      fieldErrors: { reservationId: ["Required"] },
+      fieldErrors: { reservationId: [expect.any(String)] },
     });
     expect(db.reservation.findUnique).not.toHaveBeenCalled();
   });

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
+
 import type { EventStatus } from "@prisma/client";
 
 import {
@@ -155,14 +157,14 @@ export const eventDetailsEditSchema = z
     startAt: z.string().min(1, EVENT_START_REQUIRED_MESSAGE),
     endAt: z.string().min(1, EVENT_END_REQUIRED_MESSAGE),
     expectedAttendance: z.coerce
-      .number({ invalid_type_error: "Attendance must be a positive whole number." })
+      .number({ error: "Attendance must be a positive whole number." })
       .int("Attendance must be a positive whole number.")
       .positive("Attendance must be a positive whole number."),
     venueRequirements: uncapped,
     equipmentRequirements: uncapped,
     // SCRUM-26 AC1: the arrangements the Coordinator was warned about and
     // agreed to flag. Empty until they have seen the warning.
-    confirmedArrangements: z.array(z.string()).default([]),
+    confirmedArrangements: z.array(z.string()).max(MAX_LIST_ITEMS).default([]),
   })
   .superRefine((data, ctx) => {
     // SCRUM-190 AC3: the same one-day rule as the request form.
@@ -187,7 +189,7 @@ export const NOTE_REQUIRED_MESSAGE = "Write the note before adding it.";
 export const operationalNoteSchema = z.object({
   eventId: z.string().min(1),
   body: z
-    .string({ required_error: NOTE_REQUIRED_MESSAGE })
+    .string({ error: NOTE_REQUIRED_MESSAGE })
     .trim()
     .min(1, NOTE_REQUIRED_MESSAGE)
     .max(2000, "Keep the note under 2000 characters."),

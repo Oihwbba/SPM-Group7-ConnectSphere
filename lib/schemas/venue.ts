@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
 import { MAX_VENUE_OPTION_LENGTH } from "@/lib/venue-options";
 import { timeToMinutes } from "@/lib/venue-hours";
 
@@ -18,7 +19,7 @@ function wholeMinutes(label: string) {
     (val) =>
       val === "" || val === null || val === undefined ? undefined : Number(val),
     z
-      .number({ required_error: message, invalid_type_error: message })
+      .number({ error: message })
       .int(message)
       .min(0, message)
       .max(MAX_SETUP_TURNAROUND_MINUTES, message),
@@ -56,11 +57,13 @@ export const OPTION_TOO_LONG_MESSAGE = `Keep each one under ${MAX_VENUE_OPTION_L
 
 /** "Projector, Sound System" or ["Projector"] -> ["projector", "sound-system"] */
 const tagList = z.preprocess(
-  (val) =>
-    (Array.isArray(val) ? val : String(val ?? "").split(","))
-      .map((v) => toTag(String(v)))
-      .filter((v, i, all) => v !== "" && all.indexOf(v) === i),
-  z.array(z.string().max(MAX_VENUE_OPTION_LENGTH, OPTION_TOO_LONG_MESSAGE)),
+  (val) => {
+    const tags = (Array.isArray(val) ? val : String(val ?? "").split(",")).map((v) =>
+      toTag(String(v)),
+    );
+    return [...new Set(tags)].filter((v) => v !== "");
+  },
+  z.array(z.string().max(MAX_VENUE_OPTION_LENGTH, OPTION_TOO_LONG_MESSAGE)).max(MAX_LIST_ITEMS),
 );
 
 const openingDaySchema = z.object({
@@ -94,10 +97,7 @@ export const venueSchema = z
       (val) =>
         val === "" || val === null || val === undefined ? undefined : Number(val),
       z
-        .number({
-          required_error: CAPACITY_INVALID_MESSAGE,
-          invalid_type_error: CAPACITY_INVALID_MESSAGE,
-        })
+        .number({ error: CAPACITY_INVALID_MESSAGE })
         .int(CAPACITY_INVALID_MESSAGE)
         .positive(CAPACITY_INVALID_MESSAGE),
     ),
@@ -156,7 +156,7 @@ export function openingHoursRows(venue: VenueData) {
  * flagging. Empty on a first save, so a change that affects bookings warns
  * before anything is written.
  */
-const confirmedBookingIds = z.array(z.string()).default([]);
+const confirmedBookingIds = z.array(z.string()).max(MAX_LIST_ITEMS).default([]);
 
 export const venueUpdateSchema = venueSchema.and(
   z.object({ venueId: z.string().min(1, "Choose a venue."), confirmedBookingIds }),

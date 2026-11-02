@@ -707,7 +707,7 @@ describe("raiseChangeRequestSchema — SCRUM-41 AC1, AC4", () => {
     [{ startAt: "not a date", endAt: END.toISOString() }, "Invalid date format."],
     [{ programme: "x".repeat(5001) }, "Keep the programme under 5000 characters."],
     [{ registrationRequired: "no" }, "Choose whether the event needs registration."],
-    [{ registrationOpensAt: "2031-01-01" }, "Unrecognized key(s) in object: 'registrationOpensAt'"],
+    [{ registrationOpensAt: "2031-01-01" }, 'Unrecognized key: "registrationOpensAt"'],
   ])("SCRUM-41 [AC4] TC-41-07: %j is refused: %s", (changes, message) => {
     expect(messages({ changes })).toContain(message);
   });
