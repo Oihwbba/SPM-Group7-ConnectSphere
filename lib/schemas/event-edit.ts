@@ -7,7 +7,12 @@ import type { EventStatus } from "@prisma/client";
 import {
   EVENT_END_REQUIRED_MESSAGE,
   EVENT_START_REQUIRED_MESSAGE,
+  accessibilityNeedsText,
+  equipmentRequirementsText,
   eventPeriodError,
+  preferredLayoutText,
+  registrationNotesText,
+  venueRequirementsText,
 } from "@/lib/schemas/event";
 
 /**
@@ -130,8 +135,6 @@ export const CONFIRMATION_OUT_OF_DATE_MESSAGE =
 export const PAST_START_MESSAGE = "The start can't be in the past.";
 
 const text = (max: number) => z.string().trim().max(max).optional();
-// The request form caps none of these, so an event it accepted always saves here.
-const uncapped = z.string().trim().optional();
 
 export const eventDetailsEditSchema = z
   .object({
@@ -143,9 +146,10 @@ export const eventDetailsEditSchema = z
       .max(200, "Keep the name under 200 characters."),
     purpose: text(1000),
     description: text(5000),
-    accessibilityNeeds: uncapped,
-    preferredLayout: uncapped,
-    registrationNotes: uncapped,
+    // SCRUM-263 AC3: the request form's limits.
+    accessibilityNeeds: accessibilityNeedsText.optional(),
+    preferredLayout: preferredLayoutText.optional(),
+    registrationNotes: registrationNotesText.optional(),
     // SCRUM-171 AC5: "yes" or "no" from the form; left out, it stays as it is.
     registrationRequired: z.preprocess(
       (value) => (value === "yes" ? true : value === "no" ? false : value),
@@ -160,8 +164,8 @@ export const eventDetailsEditSchema = z
       .number({ error: "Attendance must be a positive whole number." })
       .int("Attendance must be a positive whole number.")
       .positive("Attendance must be a positive whole number."),
-    venueRequirements: uncapped,
-    equipmentRequirements: uncapped,
+    venueRequirements: venueRequirementsText.optional(),
+    equipmentRequirements: equipmentRequirementsText.optional(),
     // SCRUM-26 AC1: the arrangements the Coordinator was warned about and
     // agreed to flag. Empty until they have seen the warning.
     confirmedArrangements: z.array(z.string()).max(MAX_LIST_ITEMS).default([]),

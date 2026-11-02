@@ -113,7 +113,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Case ID | TC-13-05 |
 | Test Scenario | [Negative] AC 4: a request with a mandatory field empty, or only spaces, is not submitted, and the field is marked |
 | Pre-conditions | Signed in as the Organiser. |
-| Test Steps | 1. Click **Create Event Request** and click **Next** through every step without filling anything. <br> 2. Click **Submit Request for Review**. <br> 3. Click **1. Basics**. <br> 4. Repeat with the name, purpose and description filled with spaces only. |
+| Test Steps | 1. Click **Create Event Request** and click **Next** through every step without filling anything. <br> 2. Click **Submit Request for Review**. <br> 3. The form opens **1. Basics**, the first step with an error (SCRUM-263 AC 2). <br> 4. Repeat with the name, purpose and description filled with spaces only. |
 | Test Data | Every field empty; then "   " in the text fields |
 | Expected Result | "Please fix the highlighted fields before submitting." and nothing is created. Each empty field is marked with its own message, for example "Event name is required." and "Venue requirements are required."; an empty date or time says "Choose the event date and a start time." or "Choose an end time." (SCRUM-190) rather than calling the date invalid. Spaces count as empty. Leaving **Registration Needed** unanswered is refused too (SCRUM-171 AC 2, [TC-171-02](SCRUM-171.md#tc-171-02)). |
 
@@ -193,7 +193,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Pre-conditions | Signed in as the Organiser, with every other field valid. |
 | Test Steps | 1. Enter a name of 201 characters and submit. <br> 2. Enter a purpose of 1,001, a description of 5,001 and special requests of 5,001 characters, and submit. |
 | Test Data | Strings of the lengths given |
-| Expected Result | Each is refused with its limit, for example "Keep the name under 200 characters." and "Keep description under 5000 characters.", and nothing is created. |
+| Expected Result | Each is refused with its limit, for example "Keep the name under 200 characters." and "Keep description under 5000 characters.", and nothing is created. The form opens the first step with an error, and each message shows beside its field ([SCRUM-263](SCRUM-263.md)). The other open-text fields' limits are tested by [TC-263-08](SCRUM-263.md#tc-263-08). |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC11] TC-13-11: [Input Constraint] rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits"
 

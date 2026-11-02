@@ -647,6 +647,95 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    describe.each([
+      ["programme", "Keep programme under 5000 characters."],
+      ["specialRequests", "Keep special requests under 5000 characters."],
+      ["registrationNotes", "Keep registration notes under 5000 characters."],
+    ])("%s at its limit — SCRUM-263 AC1", (field, message) => {
+      it.each([
+        ["submitting", submitEventRequest, validSubmissionInput],
+        ["saving a draft", createDraftEvent, { name: "Regional Tech Conference" }],
+      ])(
+        `SCRUM-263 [AC1] TC-263-02: %s accepts exactly 5,000 characters of ${field}`,
+        async (_, action, input) => {
+          mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+          mockCreate.mockResolvedValue({ id: "evt_at_limit" });
+
+          const result = await action({ ...input, [field]: "A".repeat(5000) });
+
+          expect(result.ok).toBe(true);
+          expect(mockCreate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              data: expect.objectContaining({ [field]: "A".repeat(5000) }),
+            }),
+          );
+        },
+      );
+
+      it.each([
+        ["submitting", submitEventRequest, validSubmissionInput],
+        ["saving a draft", createDraftEvent, { name: "Regional Tech Conference" }],
+      ])(
+        `SCRUM-263 [AC1] TC-263-02: %s refuses 5,001 characters of ${field}, names the field, and writes nothing`,
+        async (_, action, input) => {
+          mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+          const result = await action({ ...input, [field]: "A".repeat(5001) });
+
+          expect(result.ok).toBe(false);
+          if (!result.ok) {
+            expect(result.fieldErrors).toEqual({ [field]: [message] });
+          }
+          expect(mockCreate).not.toHaveBeenCalled();
+        },
+      );
+    });
+
+    describe.each([
+      ["venueRequirements", 5000, "Keep venue requirements under 5000 characters."],
+      ["accessibilityNeeds", 5000, "Keep accessibility needs under 5000 characters."],
+      ["equipmentRequirements", 5000, "Keep equipment requirements under 5000 characters."],
+      ["preferredLayout", 200, "Keep room layout under 200 characters."],
+    ] as const)("%s at its limit — SCRUM-263 AC3", (field, limit, message) => {
+      it.each([
+        ["submitting", submitEventRequest, validSubmissionInput],
+        ["saving a draft", createDraftEvent, { name: "Regional Tech Conference" }],
+      ])(
+        `SCRUM-263 [AC3] TC-263-08: %s accepts exactly ${limit} characters of ${field}`,
+        async (_, action, input) => {
+          mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+          mockCreate.mockResolvedValue({ id: "evt_at_limit" });
+
+          const result = await action({ ...input, [field]: "A".repeat(limit) });
+
+          expect(result.ok).toBe(true);
+          expect(mockCreate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              data: expect.objectContaining({ [field]: "A".repeat(limit) }),
+            }),
+          );
+        },
+      );
+
+      it.each([
+        ["submitting", submitEventRequest, validSubmissionInput],
+        ["saving a draft", createDraftEvent, { name: "Regional Tech Conference" }],
+      ])(
+        `SCRUM-263 [AC3] TC-263-08: %s refuses ${limit + 1} characters of ${field}, names the field, and writes nothing`,
+        async (_, action, input) => {
+          mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+          const result = await action({ ...input, [field]: "A".repeat(limit + 1) });
+
+          expect(result.ok).toBe(false);
+          if (!result.ok) {
+            expect(result.fieldErrors).toEqual({ [field]: [message] });
+          }
+          expect(mockCreate).not.toHaveBeenCalled();
+        },
+      );
+    });
+
     it("SCRUM-13 [AC11] TC-13-12: [Script Injection Sanitisation & React Escaping] preserves text content safely while trim-sanitising input strings, relying on React's automatic context-aware DOM escaping to prevent script execution", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_script_test" });

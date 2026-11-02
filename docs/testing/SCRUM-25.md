@@ -221,11 +221,11 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Item | Content |
 |---|---|
 | Test Case ID | TC-25-17 |
-| Test Scenario | [Boundary] AC 1: long answers the request form accepted still save |
+| Test Scenario | [Boundary] AC 1: long answers within the request form's limits still save |
 | Pre-conditions | As TC-25-01. |
-| Test Steps | 1. Save the event with 3,000-character accessibility needs, layout, registration needs, venue requirements and equipment requirements. <br> 2. Save a programme of 5,001 characters. |
+| Test Steps | 1. Save the event with 3,000-character accessibility needs, registration needs, venue requirements and equipment requirements, and a 200-character layout. <br> 2. Save a programme of 5,001 characters. |
 | Test Data | — |
-| Expected Result | 1 saves: the request form caps none of these fields, so a value it accepted never blocks an edit. 2 is refused against the programme, as the request form also caps it at 5,000, and nothing is written. |
+| Expected Result | 1 saves: each is within the limit the request form applies (SCRUM-263 AC 3; [TC-263-09](SCRUM-263.md#tc-263-09) tests each limit), so a value it accepted never blocks an edit. 2 is refused against the programme, as the request form also caps it at 5,000, and nothing is written. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC1] TC-25-17: …"
 

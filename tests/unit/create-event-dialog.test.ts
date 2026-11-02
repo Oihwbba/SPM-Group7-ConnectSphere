@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 import {
+  firstStepWithError,
   getInitialFormData,
   REENTER_PERIOD_MESSAGE,
   storedAcrossTwoDays,
@@ -82,5 +83,41 @@ describe("reopening a request saved across two days — SCRUM-190 AC3", () => {
       endTime: "17:00",
     });
     expect(storedAcrossTwoDays(submitted)).toBe(false);
+  });
+});
+
+describe("the step that shows a refused field — SCRUM-263 AC2", () => {
+  it.each([
+    ["name", 1],
+    ["purpose", 1],
+    ["description", 1],
+    ["startAt", 2],
+    ["endAt", 2],
+    ["expectedAttendance", 2],
+    ["venueRequirements", 3],
+    ["preferredLayout", 3],
+    ["accessibilityNeeds", 3],
+    ["equipmentRequirements", 4],
+    ["registrationRequired", 5],
+    ["registrationNotes", 5],
+    ["programme", 5],
+    ["specialRequests", 5],
+  ])("SCRUM-263 [AC2] TC-263-05: an error on %s opens step %i", (field, step) => {
+    expect(firstStepWithError({ [field]: ["Refused."] })).toBe(step);
+  });
+
+  it("SCRUM-263 [AC2] TC-263-05: errors on several steps open the earliest", () => {
+    expect(
+      firstStepWithError({
+        specialRequests: ["Refused."],
+        equipmentRequirements: ["Refused."],
+      }),
+    ).toBe(4);
+  });
+
+  it("SCRUM-263 [AC2] TC-263-05: with no field to show, the form stays where it is", () => {
+    expect(firstStepWithError({})).toBeNull();
+    expect(firstStepWithError({ name: [] })).toBeNull();
+    expect(firstStepWithError({ id: ["Refused."] })).toBeNull();
   });
 });
