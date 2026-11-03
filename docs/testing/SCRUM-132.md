@@ -18,7 +18,7 @@ e2e run serves it). Every account's password is `Password123!`.
 | [TC-132-06](#tc-132-06) | Positive | AC 3 | e2e |
 | [TC-132-07](#tc-132-07) | Positive | AC 4 | e2e |
 | [TC-132-08](#tc-132-08) | Negative | AC 4 | Unit |
-| [TC-132-09](#tc-132-09) | Positive | AC 4 | Manual (audit) |
+| [TC-132-09](#tc-132-09) | Positive | AC 4 | Unit |
 | [TC-132-10](#tc-132-10) | Positive | AC 5 | Manual (review) |
 
 ### TC-132-01
@@ -136,7 +136,9 @@ e2e run serves it). Every account's password is `Password123!`.
 | Test Data | The client components under `app/` and `components/` that import from an `actions.ts`. |
 | Expected Result | Every writing action confirms success (a toast, or a status message in the form). Two exceptions, both deliberate: marking a notification read happens as it opens, and the list or page it opens is the confirmation; the edit-details dialog confirms through `showSaveReply`'s `close`. A refusal shows its message next to the field, saying which field to fix and how. |
 
-**Automated by:** Manual audit, run for this story on 19 Oct 2026 over every writing action a client component imports; the only one without a confirmation was closing or reopening registration, fixed in TC-132-07. Re-run the same day against `main` at `4f7fdc97`, after SCRUM-25, SCRUM-38, SCRUM-75, SCRUM-161 and SCRUM-171 merged: their writing actions (editing details, recording unavailability, retiring a venue, recording a suitability judgement, closing registration) all confirm success. The individual confirmations are covered by each story's own tests. On 2 Nov 2026 step 2 failed for seven actions: `requestClarification`, `transitionEventStatus`, `rejectPlanningEvent`, `cancelEvent`, `decideChangeRequest`, `decideBookingRequest` and `recordSafetyCheckOutcome` refused text over 2,000 characters with no error at the field, and mostly without naming it. [SCRUM-264](SCRUM-264.md) fixed all seven and automates them.
+**Automated by:** `tests/unit/action-confirmations.test.ts` › "SCRUM-270 [AC2] TC-270-02: every call of an action that changes data confirms success", "SCRUM-270 [AC3] TC-270-03: every call of an action that changes data shows a refusal's message" and "SCRUM-270 [AC3] TC-270-04: where an action can refuse with field errors, its caller reads them" ([SCRUM-270](SCRUM-270.md), from 3 Nov 2026). They read every client component's source for steps 1 and 2. Each story's own tests still prove the confirmation renders.
+
+Before that it was a manual audit, run for this story on 19 Oct 2026 over every writing action a client component imports; the only one without a confirmation was closing or reopening registration, fixed in TC-132-07. Re-run the same day against `main` at `4f7fdc97`, after SCRUM-25, SCRUM-38, SCRUM-75, SCRUM-161 and SCRUM-171 merged: their writing actions (editing details, recording unavailability, retiring a venue, recording a suitability judgement, closing registration) all confirm success. The individual confirmations are covered by each story's own tests. On 2 Nov 2026 step 2 failed for seven actions: `requestClarification`, `transitionEventStatus`, `rejectPlanningEvent`, `cancelEvent`, `decideChangeRequest`, `decideBookingRequest` and `recordSafetyCheckOutcome` refused text over 2,000 characters with no error at the field, and mostly without naming it. [SCRUM-264](SCRUM-264.md) fixed all seven and automates them.
 
 ### TC-132-10
 
