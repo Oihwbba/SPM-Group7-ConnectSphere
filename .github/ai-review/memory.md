@@ -193,14 +193,15 @@ change request still Submitted leaves it Submitted (SCRUM-82 AC11 will
 reject it). Known when a pull request touches change requests or claims
 SCRUM-82.
 
-- (2026-10-19, #227; Withdraw-after-start and the e2e failure path closed
-by #250 the same day) SCRUM-85's last low is still open: the
-confirmed-details backfill covers Confirmed events only, so events in
-Planning at deploy show Attendees nothing last-confirmed. Known when a
-pull request touches the re-planned view.
-
 - (2026-10-19, #214) The Equipment schedule's "Reported as not
 providable" label shows for every Needs Reconsideration flag: the flag is SCRUM-26's and shared — #181's
 change request already raises it on reservations — so one flagged another
 way reads as a Technical Support report that never happened. Known when a
 pull request touches the equipment schedule panel or the flag sources.
+
+- (2026-11-03, #355) SCRUM-270's field-error audit can't follow helpers
+imported from other modules: `namesFields` maps only the action
+module's own statements, so an action refusing with field errors
+through an imported helper escapes TC-270-04, with no entry in
+`FIELD_ERRORS_NOT_READ`. A review low, merged open. Known when a
+pull request touches that audit.
