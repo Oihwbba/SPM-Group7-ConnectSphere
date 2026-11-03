@@ -8,6 +8,18 @@ import { test, expect, type Page } from "@playwright/test";
  * database.
  */
 const PHONE = { width: 375, height: 812 };
+const DESKTOP = { width: 1280, height: 800 };
+// One seeded account per role; another account of the same role sees the
+// same layout.
+const EMAILS = [
+  "organiser@test.local",
+  "coordinator@test.local",
+  "venuestaff@test.local",
+  "techsupport@test.local",
+  "attendee@test.local",
+  "lead@test.local",
+  "safety@test.local",
+];
 
 async function signIn(page: Page, email: string) {
   await page.goto("/login");
@@ -25,13 +37,7 @@ async function signIn(page: Page, email: string) {
 test.describe("Top bar — SCRUM-168", () => {
   test.use({ viewport: PHONE });
 
-  for (const email of [
-    "organiser@test.local",
-    "coordinator@test.local",
-    "venuestaff@test.local",
-    "techsupport@test.local",
-    "attendee@test.local",
-  ]) {
+  for (const email of EMAILS) {
     test(`SCRUM-168 [AC1, AC3] TC-168-01, TC-168-03: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right`, async ({
       page,
     }) => {
@@ -64,6 +70,31 @@ test.describe("Top bar — SCRUM-168", () => {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(PHONE.width);
+    });
+  }
+});
+
+// SCRUM-271: TC-168-01 at desktop width, which was checked by hand.
+test.describe("Top bar at desktop width — SCRUM-168", () => {
+  test.use({ viewport: DESKTOP });
+
+  for (const email of EMAILS) {
+    test(`SCRUM-271 [AC1], SCRUM-168 [AC1] TC-168-01: at desktop width, ${email} sees the brand, the bell and the profile menu, and no search box`, async ({
+      page,
+    }) => {
+      await signIn(page, email);
+      const header = page.getByRole("banner");
+      await expect(
+        header.getByText("ConnectSphere", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        header.getByRole("link", { name: /^Notifications,/ }),
+      ).toBeVisible();
+      await expect(
+        header.getByRole("button", { name: "Open user menu" }),
+      ).toBeVisible();
+      await expect(header.getByRole("searchbox")).toHaveCount(0);
+      await expect(header.getByRole("textbox")).toHaveCount(0);
     });
   }
 });
