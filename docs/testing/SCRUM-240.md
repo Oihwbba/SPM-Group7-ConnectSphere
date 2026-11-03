@@ -42,7 +42,7 @@ pooler, with read-only queries.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-240-01](#tc-240-01) | Positive | AC 1, AC 2 | Unit |
+| [TC-240-01](#tc-240-01) | Positive | AC 1, AC 2, AC 4 | Unit |
 | [TC-240-02](#tc-240-02) | Boundary | AC 1 | Unit |
 | [TC-240-03](#tc-240-03) | Negative | AC 1 | Unit |
 | [TC-240-04](#tc-240-04) | Positive | AC 3 | Manual |

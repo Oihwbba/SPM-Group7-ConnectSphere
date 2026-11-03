@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-131 - Use the agreed status names on every screen
@@ -20,7 +20,7 @@
 
 **Acceptance criteria**
 
-1. Event statuses are shown exactly as Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected. The Organiser's "Submitted" tab in My Event Requests (SCRUM-84), which lists every request that isn't a draft, is renamed "Sent" so it isn't mistaken for the Submitted status.
+1. Event statuses are shown exactly as Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected. The Organiser's list filters by exactly these names (SCRUM-84); on that list, no control groups several statuses together under a different name, so "Submitted" always means the Submitted status.
 2. Venue bookings are shown as Pending, Held, Approved, Rejected, Expired or Cancelled. Equipment requests are shown as Pending Review, In Review, Approved, Rejected or Cancelled. Equipment reservations are shown as Reserved or Cancelled, never "Confirmed".
 3. Needs Reconsideration is shown as a separate warning badge next to a booking's or reservation's status, never in place of it (SCRUM-26).
 4. Registrations are shown as Registered, Withdrawn or Cancelled, never "Confirmed".
@@ -30,7 +30,7 @@
 
 **Related:** these are display names. Stored values can differ; for example a reservation stored as CONFIRMED is shown as Reserved, and a change request stored as PENDING_REVIEW is shown as Submitted.
 
-**Supersedes:** SCRUM-84 AC2's status names (shown in capitals) and the name of its "Submitted" tab, which is now "Sent" (AC1).
+**Supersedes:** SCRUM-84 AC2's status names (shown in capitals). Its "Submitted" tab is no longer renamed "Sent": the tabs were replaced by the status filter (SCRUM-207), so no control groups several statuses under one name and the clash AC1 guarded against cannot arise.
 
 **Why this is a new story:** SCRUM-84 (Sprint 1, Done) names the Organiser's tab "Submitted", although it also lists requests that are Under Review, in Planning, Confirmed and so on. Reservations are stored as CONFIRMED (SCRUM-31, Done), and the team's lifecycle table named registrations "Confirmed"; both collide with the event status.
 
@@ -40,5 +40,6 @@
 * 2026-10-07 (Week 7 changes 4 to 6): AC2 adds the Held and Expired booking statuses (SCRUM-163). AC5 drops the handover statuses, because the Lead now reassigns at once (SCRUM-21). AC7 names the safety check states and keeps the event in Planning (SCRUM-167). Re-estimated from 1 to 2 points.
 * 2026-10-07 (backlog refinement): AC6 points to SCRUM-85 and AC7 to SCRUM-166, which SCRUM-133 and SCRUM-167 were merged into.
 * 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Supersedes line for SCRUM-84, which AC1 already changed; SCRUM-84 now carries a matching note. Criteria unchanged.
+* 2026-11-02 (SCRUM-207, PO approved 2026-11-02): AC1 no longer renames the Organiser's "Submitted" tab to "Sent". The All, Drafts and Sent tabs were replaced by the status filter, so no control groups several statuses under one name and "Submitted" can only mean the status. The Supersedes line is updated to match; SCRUM-84 carries the matching note. No code change for this story; it stays Done.
 
 Functionality Area: Event Status Management

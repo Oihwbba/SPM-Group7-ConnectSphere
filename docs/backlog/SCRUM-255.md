@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-255 - Bug: Sign-in answers faster for an unknown email, which can reveal which accounts exist
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-9 - Access Control |
 | **Priority** | Low |
 | **Story points** | - |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-255 |
 

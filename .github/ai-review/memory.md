@@ -145,9 +145,7 @@ request touches the lifecycle. The seed has none since SCRUM-233
 reservable) nor a status filter; bringing either back is a finding.
 
 - (2026-10-13, #154; the holds-release low closed with #180's Cancel, per
-#181) SCRUM-163 merged with AC9 partial and one review low open. Recording
-unavailability over a live hold is refused rather than flagging it
-(SCRUM-161), the same refusal as over an approved booking. A hold on an
+#181) SCRUM-163 merged with AC9 partial and one review low open. A hold on an
 APPROVED-status event has no Confirm/Release surface anywhere: the readiness
 checklist renders for Planning events only, legacy APPROVED rows cannot
 reach Planning (#120), and `BOOKABLE_EVENT_STATUSES` still includes APPROVED
@@ -156,51 +154,13 @@ post-expiry surfaces have no e2e (PO follow-up). Known when a pull request
 touches holds, booking statuses or unavailability, or claims
 SCRUM-82/SCRUM-161.
 
-- (2026-10-14, #191) #162's stuck-"Submitting…" defect is fixed for the
-change-request panel only: `ClarificationPanel`
-(`components/events/clarification-panel.tsx`) has the same shape knowingly
-left to SCRUM-108 — `submitResponse()` resets its state only after a reply,
-so a failed submission strands that form the same way. And the review's one
-low merged open: nothing pins the catch's `reload()` (the e2e aborts before
-the server, so the "saved but the answer was lost" half is untested). Known
-when a pull request touches either panel or claims SCRUM-108.
-
-- (2026-10-14, #190) SCRUM-124 AC4 is half-delivered: approving a hold
-notifies the Coordinator (or venue requester) with the deadline, but a
-booking Venue Staff approve or reject still writes no notice — that half
-is SCRUM-53's — and confirming or releasing a hold still tells Venue
-Staff nothing (AC6). Known when a pull request touches booking decisions
-or hold settlement, or claims SCRUM-53/SCRUM-124.
-
-- (2026-10-15, #172; callers 2026-10-18 #181, 2026-10-19 #214; SCRUM-34's
-venue-edit flags since #203, accessibility added 2026-10-19, #230)
-SCRUM-26's `flagArrangements` is now called by those sources, but the
-AC1 warning screen is still SCRUM-25's and the other AC3 sources
-(SCRUM-160/161/166) raise none. Known when a pull request touches
-reconsideration or claims those stories.
-
-- (2026-10-18, #216) SCRUM-190 (an event takes place within one day) is
-deferred past Release 1 with no customer answer, so a multi-day event
-stays requestable but can never be booked or confirmed — search covers
-one day and a date without times excludes only venues Closed that day
-(both PO-approved, SCRUM-38's change log), and a booking must fit one
-day's opening hours (SCRUM-34 AC7). Known when a pull request touches
-event periods, venue search or booking hours, or claims SCRUM-190.
-
-- (2026-10-18, #181; SCRUM-128's notice half closed by #227 and its
-Registration-needed half by #221, 2026-10-19) An event completing with a
-change request still Submitted leaves it Submitted (SCRUM-82 AC11 will
-reject it). Known when a pull request touches change requests or claims
-SCRUM-82.
+- (2026-10-14, #191; the clarification panel's half fixed by #277) The
+review's one low merged open: nothing pins the change-request panel's catch
+`reload()` (the e2e aborts before the server, so the "saved but the answer
+was lost" half is untested). Known when a pull request touches that panel.
 
 - (2026-10-19, #227; Withdraw-after-start and the e2e failure path closed
 by #250 the same day) SCRUM-85's last low is still open: the
 confirmed-details backfill covers Confirmed events only, so events in
 Planning at deploy show Attendees nothing last-confirmed. Known when a
 pull request touches the re-planned view.
-
-- (2026-10-19, #214) The Equipment schedule's "Reported as not
-providable" label shows for every Needs Reconsideration flag: the flag is SCRUM-26's and shared — #181's
-change request already raises it on reservations — so one flagged another
-way reads as a Technical Support report that never happened. Known when a
-pull request touches the equipment schedule panel or the flag sources.

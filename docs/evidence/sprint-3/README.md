@@ -32,3 +32,7 @@ view an event 210 ms, search venues 369 ms, open a venue's availability
 138 ms, check equipment availability 25 ms, submit a registration 165 ms.
 Each is still well under 2,000 ms. Re-run on a freshly seeded database for
 the sprint review.
+
+The seeded event timed as "Planning — Freshman Orientation" has been named
+"Planning: Venue Pending — Freshman Orientation" since SCRUM-233 (3 Nov), after
+these timings were taken.

@@ -33,7 +33,7 @@ comment and set its check. What each person still decides is listed below.
   - every AI-assisted commit keeps its `Co-Authored-By: Claude` trailer.
 - **[`CONTRIBUTING.md`](../CONTRIBUTING.md)**, the pattern for building a feature and the checklist before a pull request. Human reviewers and GLM use the same list.
 - **[`.github/ai-review/instructions.md`](../.github/ai-review/instructions.md)**, what GLM checks: security and authorisation, each acceptance criterion against the diff, correctness and concurrency, data and migrations, the team's conventions, the tests, and the UI's states.
-- **[`.github/ai-review/memory.md`](../.github/ai-review/memory.md)**, 28 dated entries, each citing the pull request it came from. 18 explain what the team chose on purpose, and 10 record known open gaps.
+- **[`.github/ai-review/memory.md`](../.github/ai-review/memory.md)**, 23 dated entries, each citing the pull request it came from. 18 explain what the team chose on purpose, and 5 record known open gaps.
 - **GLM reads these files from the pull request's base branch**, so a pull request can't change the rules it is reviewed by (ADR 0008).
 
 ## What a person decides or checks
@@ -44,7 +44,7 @@ comment and set its check. What each person still decides is listed below.
 | Whether a story is Done | The sprint's Product Owner | Done needs the merge, CI green **and** the PO's acceptance (CLAUDE.md, "Board discipline") |
 | Whether a pull request merges | Its author, once `build-and-test` and the GLM review are green, after reading the review | `build-and-test` is a required check on `main`. The GLM review is required by the team's rule (CLAUDE.md), not by branch protection: it was taken off the required checks on 16 Oct while GLM's quota had run out, and hasn't been put back. |
 | Changes to the checks themselves (`.github/`, `package.json`, the test configs, `vercel.json`, `.gitattributes`) | A teammate other than the author | [`CODEOWNERS`](../.github/CODEOWNERS) requires their approval. Branch protection doesn't apply to repository admins. |
-| What the reviewer learns | A person, before it reaches `main` | `ai-memory.mjs` only opens a pull request: 13 have merged, and #290 is open |
+| What the reviewer learns | A person, before it reaches `main` | `ai-memory.mjs` only opens a pull request: 13 have merged, and none is open |
 | Anything run against the shared database | A person, explicitly | CLAUDE.md fact 5: only `db:deploy` and `db:seed` there; reset and migrate only a local database |
 | Questions the customer answers, and the demo | The team | The customer Q&A register and Week 4 instructions (course Google Drive) |
 

@@ -11,9 +11,9 @@ it can be read aloud in the oral exam.
 | [0003](0003-denormalised-booking-times.md) | Bookings and reservations store their own times, so a moved event shows its arrangements out of date | SCRUM-26 | Current |
 | [0004](0004-centralised-authorisation.md) | All authorisation goes through `can()`: role and relationship, in one table | SCRUM-66, 67, 68 | Current |
 | [0005](0005-ephemeral-ci-database.md) | CI runs against a throwaway Postgres, migrated and seeded from nothing | — | Current |
-| [0006](0006-single-event-status-transition-gate.md) | Every Coordinator status change goes through one gate that checks the current status | SCRUM-23, 24, 19, 20, 81 | Current, with addenda |
+| [0006](0006-single-event-status-transition-gate.md) | Every Coordinator status change goes through one gate that checks the current status | SCRUM-23, 24, 19, 20, 81, 208 | Current, with addenda; amended 2026-11-03 |
 | [0007](0007-lock-equipment-pools-when-reserving.md) | Lock the equipment rows while reserving; lock the event, then the request, then equipment by id | SCRUM-31, 155, 156 | Amended 2026-10-05 |
-| [0008](0008-advisory-ai-code-review.md) | An AI review on every pull request, on GLM because the team has no Copilot review credits; a required check on critical findings | SCRUM-88, 111, 112, 152, 157, 178, 180, 181, 225 | Amended 2026-10-26 |
+| [0008](0008-advisory-ai-code-review.md) | An AI review on every pull request, on GLM because the team has no Copilot review credits; a required check on critical findings | SCRUM-88, 111, 112, 152, 157, 178, 180, 181, 225 | Amended 2026-10-26: the addenda replace the original advisory review and its `.opencodereview` rules |
 | [0009](0009-deploy-from-github-actions.md) | Deploy production from GitHub Actions, not Vercel's Git integration | — | Current |
 | [0010](0010-database-prevents-venue-double-booking.md) | The database, not the application, prevents venue double-booking, over occupied periods and holds since Week 7 | SCRUM-53, 37, 159, 161, 162, 163, 172 | Amended 2026-10-08 |
 | [0011](0011-event-readiness-checklist.md) | The readiness checklist is computed on demand, per viewer | SCRUM-110 | Amended 2026-10-04 |
@@ -27,7 +27,7 @@ it can be read aloud in the oral exam.
 | [0019](0019-closing-an-event.md) | Events complete on the next read after they end, not by a scheduled job | SCRUM-82 | Current |
 | [0020](0020-deciding-a-change-request.md) | An approved change request is applied in the same transaction that approves it | SCRUM-128 | Current |
 | [0021](0021-flagging-setup-and-turnaround-clashes.md) | A longer setup or turnaround flags the bookings it makes clash; it moves none | SCRUM-160 | Current |
-| [0022](0022-cap-the-database-pool-on-supabase.md) | Each copy of the app opens at most 3 connections to Supabase, which allows 15 in all | SCRUM-240 | Current |
+| [0022](0022-cap-the-database-pool-on-supabase.md) | Each copy of the app opens at most 3 connections to Supabase, whose session pooler allows 43 in all | SCRUM-240 | Amended 2026-11-02 |
 | [0023](0023-closed-hours-on-the-availability-calendar.md) | Closed hours are a kind of stretch on the availability calendar, shown under everything else | SCRUM-241 | Current |
 
 ## Writing one
