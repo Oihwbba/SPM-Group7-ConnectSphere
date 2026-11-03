@@ -26,7 +26,7 @@ the database keeps or refuses. Times are UTC.
 | [TC-172-12](#tc-172-12) | Negative, Positive | AC 9 (one per event and venue) | Integration |
 | [TC-172-13](#tc-172-13) | Boundary | AC 9 (an expired hold) | Integration |
 | [TC-172-14](#tc-172-14) | Concurrency | AC 9 | Integration |
-| [TC-172-15](#tc-172-15) | Positive | AC 10 | Integration |
+| [TC-172-15](#tc-172-15) | Positive | AC 10 | Integration, CI's migrate step; step 3 Manual |
 | [TC-172-16](#tc-172-16) | Positive | AC 11 | Whole suite (CI) |
 | [TC-172-17](#tc-172-17) | Positive, Negative | AC 12 | Integration |
 | [TC-172-18](#tc-172-18) | Positive, Negative, Boundary | AC 13 | Integration |
