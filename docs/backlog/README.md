@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **96** |
+| Tasks | **97** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -292,3 +292,4 @@ _5 stories, 9 points_
 | [SCRUM-263](SCRUM-263.md) | Bug: The event request form says to fix the highlighted fields but highlights none | SCRUM Sprint 4 | In Review |
 | [SCRUM-264](SCRUM-264.md) | Bug: Seven text boxes over 2,000 characters are refused with no error at the field | SCRUM Sprint 4 | In Progress |
 | [SCRUM-265](SCRUM-265.md) | Chore: Record the Sprint 4 response times for SCRUM-132 AC2 | SCRUM Sprint 4 | In Progress |
+| [SCRUM-266](SCRUM-266.md) | Chore: Make every step of the demo script match the seed | SCRUM Sprint 4 | In Review |
