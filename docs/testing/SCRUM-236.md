@@ -6,7 +6,8 @@ Format and conventions: [README.md](README.md).
 SCRUM-236 is a Chore task. What it delivers is the test titles and the
 test-case documents themselves, so its cases are checks over the whole suite
 rather than new tests. Each was run by the audit described in pull request
-#313. TC-236-04 is automated by SCRUM-196's citation check once that merges.
+#313. TC-236-04 is automated by SCRUM-196's citation check, and TC-236-05 by
+a unit test reading the documents (SCRUM-271).
 
 **Shared pre-conditions:** this branch checked out. Each check reads every
 `it`, `test` and `describe` title in `tests/` and `e2e/`, and every file in
@@ -17,8 +18,8 @@ rather than new tests. Each was run by the audit described in pull request
 | [TC-236-01](#tc-236-01) | Positive | AC 1 | Manual (an audit of every title) |
 | [TC-236-02](#tc-236-02) | Negative | AC 2 | Manual (an audit of every title) |
 | [TC-236-03](#tc-236-03) | Positive | AC 3 | Manual (an audit of every title) |
-| [TC-236-04](#tc-236-04) | Negative | AC 4 | CI, by SCRUM-196's check once it merges |
-| [TC-236-05](#tc-236-05) | Positive | AC 5 | Manual (a document check) |
+| [TC-236-04](#tc-236-04) | Negative | AC 4 | CI, by SCRUM-196's check |
+| [TC-236-05](#tc-236-05) | Positive | AC 5 | Unit |
 | [TC-236-06](#tc-236-06) | Negative | AC 6 | Manual (a diff review) |
 
 ---
@@ -73,7 +74,7 @@ rather than new tests. Each was run by the audit described in pull request
 | Test Data | — |
 | Expected Result | No citation is reported. Every citation of a renamed test cites its new title. |
 
-**Automated by:** the **Check test-case citations** step of `build-and-test`, once SCRUM-196 merges. On this branch the same check ran from the audit before SCRUM-196 existed.
+**Automated by:** the **Check test-case citations** step of `build-and-test` (SCRUM-196), on every pull request. Before SCRUM-196 merged, the same check ran from the audit in #313.
 
 ### TC-236-05
 
@@ -86,7 +87,7 @@ rather than new tests. Each was run by the audit described in pull request
 | Test Data | — |
 | Expected Result | 1: every case has both, and every summary row agrees. 2: every count matches. 3: the README says how a test of several stories, a case with no criterion, a bug task whose case lives in another story's document and an uncited test are named. |
 
-**Automated by:** Manual (a document check, in #313).
+**Automated by:** `tests/unit/test-case-docs.test.ts` › "SCRUM-271 [AC3], SCRUM-236 [AC5] TC-236-05: ${doc} follows the template, and each summary row agrees with its case" (step 1, once for each document), "SCRUM-271 [AC3], SCRUM-236 [AC5] TC-236-05: the README lists every test-case document, with its number of cases" (step 2) and "SCRUM-271 [AC3], SCRUM-236 [AC5] TC-236-05: the README shows how a test of several stories, a case with no criterion, a task's test of another story's case and an uncited test are titled" (step 3). A retired, superseded or moved case keeps only a note saying where it went, so it needs no table. A document with no summary table, such as SCRUM-25's, is checked for its Test Case ID rows and Automated by lines only.
 
 ### TC-236-06
 
