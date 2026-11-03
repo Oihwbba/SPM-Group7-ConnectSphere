@@ -51,6 +51,7 @@ action that can't be undone asking in the shared confirmation dialog
 | [TC-207-28](#tc-207-28) | Positive, Boundary | AC 5 | e2e |
 | [TC-207-29](#tc-207-29) | Positive, Boundary | AC 4 | e2e |
 | [TC-207-30](#tc-207-30) | Positive, Negative | AC 2 | e2e |
+| [TC-207-31](#tc-207-31) | Negative | AC 4, AC 5 | e2e |
 
 "User story" cases check the customer's page-by-page changes that make pages
 look and behave the same; each supports the story as a whole rather than one
@@ -463,3 +464,18 @@ Not in the dialog, deliberately: Record unavailability, which already asks again
 **Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC2] TC-207-30: the Coordinator's Awaiting review option lists Submitted and Under Review together"
 
 The PO (Hann Qian) kept this view on 2 Nov 2026 when the event list's tabs became one status filter. It filters the list already loaded; what the Coordinator may see is unchanged.
+
+### TC-207-31
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-31 |
+| Test Scenario | [Negative] AC 4, AC 5: a too-long Approve note is refused inside its confirmation dialog, saying what to do next, and nothing is recorded |
+| Pre-conditions | Seed data: a safety check Awaiting review (`sfc_awaiting`). |
+| Test Steps | 1. As a Safety Officer, open the check from **Safety Checks**. <br> 2. Choose **Approve**, write a 2,001-character note in the dialog, and choose **Approve** again. |
+| Test Data | `safety@test.local` |
+| Expected Result | 1: no note box on the page; Approve's optional note is inside its dialog, as Request changes' and Reject's are, and the dialog doesn't point to a note "above". 2: the dialog stays open with the note kept and marked, and says "Keep the note under 2000 characters." (SCRUM-264); the check is still Awaiting review with no note, and its history is unchanged. |
+
+**Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC4, AC5] TC-207-31: a too-long Approve note is refused inside its confirmation dialog, saying what to do next, and nothing is recorded"
+
+The note box used to be on the page behind Approve's dialog, so a refused note left the dialog open with no visible message (GLM, #331).

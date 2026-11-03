@@ -9,7 +9,7 @@ import { signedIn, usesLocalDatabase } from "./helpers";
  * SCRUM-207 AC1, AC2, AC4, AC5 — every page's title, description and back
  * link; the Coordinator's Awaiting review view; errors inline; every
  * irreversible action asking in the shared dialog.
- * Test cases: docs/testing/SCRUM-207.md (TC-207-01, -02, -09, -10, -30).
+ * Test cases: docs/testing/SCRUM-207.md (TC-207-01, -02, -09, -10, -30, -31).
  */
 
 const ACCOUNTS: { role: Role; email: string }[] = [
@@ -459,5 +459,40 @@ test.describe("SCRUM-207 [AC5] irreversible actions ask in the shared dialog", (
         })
       ).status,
     ).toBe("AWAITING_REVIEW");
+  });
+
+  test("SCRUM-207 [AC4, AC5] TC-207-31: a too-long Approve note is refused inside its confirmation dialog, saying what to do next, and nothing is recorded", async ({
+    browser,
+  }) => {
+    const history = { where: { entityId: "sfc_awaiting" } };
+    const historyBefore = await prisma.auditLog.count(history);
+    const safety = await signedIn(browser, "safety@test.local");
+    await safety.goto("/safety-checks?status=all&open=sfc_awaiting");
+    const panel = safety.getByTestId("safety-check-outcome");
+    // The note is asked for in the dialog, not on the page behind it.
+    await expect(panel.getByRole("textbox")).toHaveCount(0);
+    await panel.getByRole("button", { name: "Approve" }).click();
+    const dialog = safety.getByRole("dialog", {
+      name: "Approve this safety check?",
+    });
+    await expect(dialog).not.toContainText("above");
+
+    const tooLong = "x".repeat(2001);
+    const note = dialog.getByLabel(/^Note/);
+    await note.fill(tooLong);
+    await dialog.getByTestId("confirm-dialog-confirm").click();
+    // SCRUM-264's limit, and AC4's next step, inside the dialog.
+    await expect(
+      dialog.getByText("Keep the note under 2000 characters."),
+    ).toBeVisible();
+    await expect(note).toHaveAttribute("aria-invalid", "true");
+    await expect(note).toHaveValue(tooLong);
+
+    expect(
+      await prisma.safetyCheck.findUniqueOrThrow({
+        where: { id: "sfc_awaiting" },
+      }),
+    ).toMatchObject({ status: "AWAITING_REVIEW", note: null, decidedAt: null });
+    expect(await prisma.auditLog.count(history)).toBe(historyBefore);
   });
 });

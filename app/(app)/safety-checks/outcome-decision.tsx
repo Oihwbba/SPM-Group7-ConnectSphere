@@ -26,10 +26,10 @@ type Arrangement = {
 
 /**
  * SCRUM-166 AC3, SCRUM-211 AC3, AC4 — record the outcome, in the order every
- * queue uses: Approve, Request changes, Reject. Approve records at once, with
- * the optional note. Request changes asks for a note and at least one picked
- * arrangement; Reject asks for a note: both confirm first, since neither can
- * be undone. The server enforces the same rules; once recorded, the next
+ * queue uses: Approve, Request changes, Reject. Each confirms first in the
+ * shared dialog, with its note inside it: optional for Approve; Request
+ * changes also needs at least one picked arrangement, and Reject a note.
+ * The server enforces the same rules; once recorded, the next
  * waiting check opens, and a refusal is shown here with nothing changed.
  */
 export function OutcomeDecision({
@@ -121,7 +121,6 @@ export function OutcomeDecision({
     <div className={DECISION_PANEL} data-testid="safety-check-outcome">
       <h2 className="text-sm font-semibold">Record the outcome</h2>
       <ActionError message={refusal} testId="decision-refused" />
-      {noteField("safety-note", false)}
       <div className={DECISION_ROW}>
         <Button
           variant="outline"
@@ -150,11 +149,13 @@ export function OutcomeDecision({
         open={asking === "APPROVED"}
         onOpenChange={closeUnlessOpen}
         title="Approve this safety check?"
-        message="The Coordinator is told, and can confirm the event once everything else is ready. The note above, if any, goes with it."
+        message="The Coordinator is told, and can confirm the event once everything else is ready. Any note you add goes with it."
         confirmLabel="Approve"
         pendingLabel="Approving…"
         onConfirm={() => saveNow("APPROVED")}
-      />
+      >
+        {noteField("safety-approve-note", false)}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={asking === "CHANGES_REQUESTED"}
