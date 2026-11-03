@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **100** |
+| Tasks | **101** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -299,3 +299,4 @@ _5 stories, 9 points_
 | [SCRUM-269](SCRUM-269.md) | Chore: Cite the e2e tests that seven test cases leave out of their Automated by lines | SCRUM Sprint 4 | In Review |
 | [SCRUM-270](SCRUM-270.md) | Chore: Automate TC-132-09's confirmation audit | SCRUM Sprint 4 | In Review |
 | [SCRUM-272](SCRUM-272.md) | Chore: Sync docs/backlog for SCRUM-269 and SCRUM-270 | SCRUM Sprint 4 | In Review |
+| [SCRUM-275](SCRUM-275.md) | Chore: Fix the docs that no longer match the code: design reference, evidence, README, ADR 0006 and reviewer memory | SCRUM Sprint 4 | In Review |
