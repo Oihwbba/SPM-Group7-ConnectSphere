@@ -7,14 +7,22 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
-import { cancelInTransaction } from "@/lib/event-closing";
+import {
+  cancelInTransaction,
+  completeIfTakenPlace,
+  EVENT_TOOK_PLACE,
+} from "@/lib/event-closing";
 import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
 
 const REASON_REQUIRED = "A cancellation reason is required.";
 
 const cancelSchema = z.object({
   eventId: z.string().min(1),
-  reason: z.string().trim().max(2000).optional(),
+  reason: z
+    .string()
+    .trim()
+    .max(2000, "Keep the cancellation reason under 2000 characters.")
+    .optional(),
 });
 
 /**
@@ -46,7 +54,12 @@ export async function cancelEvent(
     requirePermission(user, "event:cancel");
 
     const parsed = cancelSchema.safeParse(input);
-    if (!parsed.success) return err("Please provide a valid event to cancel.");
+    if (!parsed.success) {
+      const tooLong = parsed.error.flatten().fieldErrors.reason;
+      return tooLong
+        ? err(tooLong[0], { reason: tooLong })
+        : err("Please provide a valid event to cancel.");
+    }
     const { eventId, reason } = parsed.data;
     if (!reason) return err(REASON_REQUIRED, { reason: [REASON_REQUIRED] });
 
@@ -60,6 +73,8 @@ export async function cancelEvent(
 
     const outcome = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+      // SCRUM-262: an event that has taken place is completed, never cancelled.
+      if (await completeIfTakenPlace(tx, eventId)) return { refused: EVENT_TOOK_PLACE };
       const current = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: { status: true, coordinatorId: true },

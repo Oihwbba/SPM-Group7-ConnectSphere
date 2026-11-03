@@ -46,13 +46,14 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | [TC-38-09](#tc-38-09) | Positive | AC 8 | Unit, e2e |
 | [TC-38-10](#tc-38-10) | Positive | AC 9 | Unit, integration, e2e |
 | [TC-38-11](#tc-38-11) | Positive | AC 10 | e2e |
-| [TC-38-12](#tc-38-12) | Positive | AC 11, AC 13 | Unit, integration |
+| [TC-38-12](#tc-38-12) | Positive | AC 11, AC 13 | Unit, integration, e2e |
 | [TC-38-13](#tc-38-13) | Boundary | AC 12 | Unit |
 | [TC-38-14](#tc-38-14) | Positive | AC 14 | e2e |
 | [TC-38-15](#tc-38-15) | Negative, Boundary | AC 4 | Unit, integration, e2e |
 | [TC-38-16](#tc-38-16) | Boundary | AC 15 | Unit, integration |
 | [TC-38-17](#tc-38-17) | Negative | AC 1, AC 2 | Unit, e2e |
 | [TC-38-18](#tc-38-18) | Positive | AC 1 | Unit, e2e |
+| [TC-38-19](#tc-38-19) | Retired | — | — |
 | [TC-38-20](#tc-38-20) | Negative | AC 4 | Unit, integration, e2e |
 | [TC-38-21](#tc-38-21) | Positive | AC 2 | Unit, e2e |
 
@@ -247,7 +248,7 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Pre-conditions | SCRUM-34's opening hours; a venue open 09:00 to 18:00 on weekdays and Closed at weekends; seeded venues. |
 | Test Steps | 1. Search a Tuesday 15:00 to 18:01. <br> 2. 08:59 to 12:00. <br> 3. 09:00 to 18:00. <br> 4. A Saturday 10:00 to 12:00. <br> 5. Seeded venues, a Tuesday 07:30 to 09:00. |
 | Test Data | — |
-| Expected Result | 1, 2, 4: excluded. 3: included: exactly at opening and closing is within (SCRUM-34 AC7). A venue with no hours recorded is included in every case. 5: Exhibition Hall (opens 06:00) and Grand Auditorium (07:00); not Seminar Room 2.1 (08:00) or the Executive Boardroom (09:00). |
+| Expected Result | 1, 2, 4: excluded. 3: included: exactly at opening and closing is within (SCRUM-34 AC7). A venue with no hours recorded is included in every case. 5: Exhibition Hall (opens 06:00) and Grand Auditorium (07:00); not the Black Box Studio or Seminar Room 2.1 (08:00) or the Executive Boardroom (09:00). |
 
 **Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-15: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-16: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-20: …"
 
@@ -303,7 +304,7 @@ Retired on 2026-10-16, before it was merged: a date-only search listing venues f
 | Pre-conditions | As TC-38-15; seeded venues. |
 | Test Steps | 1. Search a Tuesday, no times. <br> 2. A Saturday, no times. <br> 3. A Saturday from 00:30, no end time (still Friday in UTC). <br> 4. Seeded venues, a Saturday, no times. <br> 5. Seeded venues, a Tuesday, no times. |
 | Test Data | — |
-| Expected Result | 1: included, though the venue isn't open all day. 2, 3: excluded. 4: Exhibition Hall and Grand Auditorium only; Seminar Room 2.1 and the Executive Boardroom are Closed at weekends. 5: all four. |
+| Expected Result | 1: included, though the venue isn't open all day. 2, 3: excluded. 4: Black Box Studio, Exhibition Hall and Grand Auditorium only; Seminar Room 2.1 and the Executive Boardroom are Closed at weekends. 5: all five. |
 
 **Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-20: …"
 

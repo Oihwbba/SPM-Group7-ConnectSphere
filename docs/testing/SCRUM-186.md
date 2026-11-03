@@ -23,8 +23,9 @@ for the first and then finds it (TC-186-04, TC-186-05).
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `coordinator@test.local`
-(`Password123!`), the Coordinator of the seeded "Approved — Research
-Symposium" (`evt_approved`), unless the case says otherwise.
+(`Password123!`), the Coordinator of the seeded "Planning: Venue Booked — Research
+Symposium" (`evt_approved`, Planning since SCRUM-233), unless the case says
+otherwise.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|

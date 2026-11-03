@@ -2,8 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 
 /**
  * SCRUM-141 — every event, read-only, for planning. Read-only against the
- * seed: "Submitted — Alumni Homecoming" is unassigned, "Confirmed — Charity
- * Gala" is Cody's with Exhibition Hall booked, and "Draft — Annual Tech
+ * seed: "Submitted: Awaiting Lead — Alumni Homecoming" is unassigned, "Confirmed: Registration Open — Charity
+ * Gala" is Cody's with Exhibition Hall booked, and "Draft: Missing Details — Annual Tech
  * Summit" is a draft.
  */
 async function signInAs(page: Page, email: string) {
@@ -27,16 +27,16 @@ test.describe("SCRUM-141 — See every event read-only for planning", () => {
     await page.getByRole("link", { name: "All Events" }).click();
     await page.waitForURL("**/all-events");
 
-    const gala = row(page, "Confirmed — Charity Gala");
+    const gala = row(page, "Confirmed: Registration Open — Charity Gala");
     await expect(gala.getByTestId("venues")).toContainText("Exhibition Hall");
     await expect(gala.getByTestId("coordinator")).toHaveText(
       "Cody Coordinator",
     );
     await expect(gala).toContainText("SGT");
     await expect(
-      row(page, "Submitted — Alumni Homecoming").getByTestId("coordinator"),
+      row(page, "Submitted: Awaiting Lead — Alumni Homecoming").getByTestId("coordinator"),
     ).toHaveText("Unassigned");
-    await expect(row(page, "Draft — Annual Tech Summit")).toHaveCount(0);
+    await expect(row(page, "Draft: Missing Details — Annual Tech Summit")).toHaveCount(0);
   });
 
   test("SCRUM-141 [AC2, AC7] TC-141-02, TC-141-10: filtering by status narrows the list, and no match says so", async ({
@@ -45,8 +45,8 @@ test.describe("SCRUM-141 — See every event read-only for planning", () => {
     await signInAs(page, "venuestaff@test.local");
     await page.goto("/all-events?status=CANCELLED");
 
-    await expect(row(page, "Cancelled — Winter Workshop")).toBeVisible();
-    await expect(row(page, "Confirmed — Charity Gala")).toHaveCount(0);
+    await expect(row(page, "Cancelled: After Confirmation — Winter Workshop")).toBeVisible();
+    await expect(row(page, "Confirmed: Registration Open — Charity Gala")).toHaveCount(0);
 
     await page.goto("/all-events?status=COMPLETED&from=2099-01-01");
     await expect(page.getByText("No events match")).toBeVisible();
@@ -69,10 +69,10 @@ test.describe("SCRUM-141 — See every event read-only for planning", () => {
   }) => {
     await signInAs(page, "coordinator2@test.local");
     await page.goto("/all-events");
-    await row(page, "Confirmed — Charity Gala").getByRole("link").click();
+    await row(page, "Confirmed: Registration Open — Charity Gala").getByRole("link").click();
 
     await expect(
-      page.getByRole("heading", { name: "Confirmed — Charity Gala" }),
+      page.getByRole("heading", { name: "Confirmed: Registration Open — Charity Gala" }),
     ).toBeVisible();
     await expect(page.getByTestId("read-only")).toContainText(
       "only the event's assigned Coordinator can change it",
@@ -96,14 +96,14 @@ test.describe("SCRUM-141 — See every event read-only for planning", () => {
       .filter({ hasText: "Cody Coordinator" });
     await expect(cody).toContainText("active");
     await cody.click();
-    await expect(row(page, "Confirmed — Charity Gala")).toBeVisible();
-    await expect(row(page, "Submitted — Alumni Homecoming")).toHaveCount(0);
+    await expect(row(page, "Confirmed: Registration Open — Charity Gala")).toBeVisible();
+    await expect(row(page, "Submitted: Awaiting Lead — Alumni Homecoming")).toHaveCount(0);
 
     await page.goto("/all-events?unassigned=1");
-    await expect(row(page, "Submitted — Alumni Homecoming")).toBeVisible();
-    await expect(row(page, "Confirmed — Charity Gala")).toHaveCount(0);
+    await expect(row(page, "Submitted: Awaiting Lead — Alumni Homecoming")).toBeVisible();
+    await expect(row(page, "Confirmed: Registration Open — Charity Gala")).toHaveCount(0);
 
-    await row(page, "Submitted — Alumni Homecoming").getByRole("link").click();
+    await row(page, "Submitted: Awaiting Lead — Alumni Homecoming").getByRole("link").click();
     await page.getByTestId("assign-link").click();
     await page.waitForURL("**/queue/**");
   });

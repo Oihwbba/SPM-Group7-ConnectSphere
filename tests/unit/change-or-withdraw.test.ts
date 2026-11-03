@@ -261,7 +261,7 @@ describe("changeEquipmentRequest and withdrawEquipmentRequest — SCRUM-142", ()
     ],
     ["withdrawal", () => withdrawEquipmentRequest({ requestId: "eqr_1" })],
   ])(
-    "SCRUM-142 TC-142-15: an unexpected database failure during a %s is not swallowed",
+    "SCRUM-142 [AC1, AC3, AC4] TC-142-15: an unexpected database failure during a %s is not swallowed",
     async (_, attempt) => {
       db.$transaction.mockRejectedValue(new Error("connection lost"));
 
@@ -440,7 +440,7 @@ describe("withdrawBookingRequest — SCRUM-142 AC4", () => {
     expect(db.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-142 [AC4] TC-142-13: a request held while being withdrawn says to release the hold, with nothing written", async () => {
+  it("SCRUM-142 [AC4, AC8] TC-142-13: a request held while being withdrawn says to release the hold, with nothing written", async () => {
     db.booking.updateMany.mockResolvedValue({ count: 0 });
     db.booking.findUniqueOrThrow.mockResolvedValue({
       status: "HELD",
@@ -456,7 +456,7 @@ describe("withdrawBookingRequest — SCRUM-142 AC4", () => {
     expect(db.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-142 TC-142-15: an unexpected database failure is not swallowed", async () => {
+  it("SCRUM-142 [AC1, AC3, AC4] TC-142-15: an unexpected database failure is not swallowed", async () => {
     db.$transaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(

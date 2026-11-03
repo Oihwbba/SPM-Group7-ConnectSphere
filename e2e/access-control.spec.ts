@@ -104,7 +104,7 @@ test.describe("SCRUM-66 — on-screen actions are gated by role", () => {
   }) => {
     await signIn(page, "coordinator@test.local");
     await page.waitForURL("**/events");
-    // The seed assigns "Under Review — Career Fair" to this coordinator, so it
+    // The seed assigns "Under Review: Clarification Open — Career Fair" to this coordinator, so it
     // shows with the Approve / Reject decision controls (SCRUM-135 AC3, AC4).
     // An unassigned request waits in the Lead's queue instead (SCRUM-165).
     await expect(

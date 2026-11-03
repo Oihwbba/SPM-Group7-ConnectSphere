@@ -137,14 +137,12 @@ touches that code or claims that story, and say it was already known.
 - (2026-09-29, #99) Recorded unavailability can't be removed or shortened
 in the app. Known when a pull request touches unavailability.
 
-- (2026-10-04, #120; 2026-10-19, #226) Events approved before #120 sit in
-APPROVED with no way out: approval now writes PLANNING directly,
-`transitionEventStatus` only decides Submitted/Under Review, and
-`confirmEvent` refuses anything not Planning, so legacy rows (the seed's
-`evt_approved` among them, and the reason APPROVED stays reservable) can never
-be confirmed or resubmitted, and #226's `REASSIGNABLE` excludes APPROVED, so
-they cannot be reassigned either. Treat it as known when a pull request
-touches the status lifecycle, reassignment or the seed.
+- (2026-10-04, #120; #226; 2026-10-29, SCRUM-233) Approval writes PLANNING
+directly, so no event rests in APPROVED. Legacy APPROVED rows can't be
+confirmed, resubmitted or reassigned (`REASSIGNABLE`): known when a pull
+request touches the lifecycle. The seed has none since SCRUM-233
+(`evt_approved` is Planning), and APPROVED is neither requestable (so not
+reservable) nor a status filter; bringing either back is a finding.
 
 - (2026-10-13, #154; the holds-release low closed with #180's Cancel, per
 #181) SCRUM-163 merged with AC9 partial and one review low open. Recording

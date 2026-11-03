@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { isValidPeriod } from "@/lib/period";
 import { INVALID_PERIOD_MESSAGE } from "@/lib/schemas/booking";
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
 
 /**
  * SCRUM-161 AC1 — the reasons a venue can be unavailable other than a
@@ -45,11 +46,9 @@ export const recordUnavailabilitySchema = z
     venueId: z.string().min(1, "Choose a venue."),
     startAt: z.string().min(1, "Choose a start time."),
     endAt: z.string().min(1, "Choose an end time."),
-    reason: z.enum(UNAVAILABILITY_REASONS, {
-      errorMap: () => ({ message: "Choose a reason." }),
-    }),
+    reason: z.enum(UNAVAILABILITY_REASONS, { error: "Choose a reason." }),
     note: z.string().trim().max(500).optional(),
-    confirmedBookingIds: z.array(z.string()).max(500).default([]),
+    confirmedBookingIds: z.array(z.string()).max(MAX_LIST_ITEMS).default([]),
   })
   .superRefine((data, ctx) => {
     const period = {

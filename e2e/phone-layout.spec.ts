@@ -68,7 +68,7 @@ async function height(target: Locator) {
 
 test.describe("SCRUM-207 every page fits a phone", () => {
   for (const [role, email] of ACCOUNTS) {
-    test(`SCRUM-207 [AC1] TC-207-25: ${role}'s pages scroll only up and down at phone width`, async ({
+    test(`SCRUM-207 [AC1] TC-207-26: ${role}'s pages scroll only up and down at phone width`, async ({
       browser,
     }) => {
       const page = await signedIn(browser, email);
@@ -87,7 +87,7 @@ test.describe("SCRUM-207 every page fits a phone", () => {
     });
   }
 
-  test("SCRUM-207 [AC1] TC-207-26: a queue's rows show every column with its name, and what you tap is at least 44px tall, at phone width", async ({
+  test("SCRUM-207 [AC1] TC-207-27: a queue's rows show every column with its name, and what you tap is at least 44px tall, at phone width", async ({
     browser,
   }) => {
     const page = await signedIn(browser, "venuestaff@test.local");
@@ -122,7 +122,7 @@ test.describe("SCRUM-207 every page fits a phone", () => {
     }
   });
 
-  test("SCRUM-207 [AC5] TC-207-27: the confirmation pop-up fits a small phone, with both its buttons in view and big enough to tap", async ({
+  test("SCRUM-207 [AC5] TC-207-28: the confirmation pop-up fits a small phone, with both its buttons in view and big enough to tap", async ({
     browser,
   }) => {
     const page = await signedIn(browser, "venuestaff@test.local");
@@ -148,7 +148,7 @@ test.describe("SCRUM-207 every page fits a phone", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("SCRUM-207 [AC4] TC-207-28: a form's text fields use 16px type, and its checkboxes and close button are big enough to tap, at phone width", async ({
+  test("SCRUM-207 [AC4] TC-207-29: a form's text fields use 16px type, and its checkboxes and close button are big enough to tap, at phone width", async ({
     browser,
   }) => {
     const page = await signedIn(browser, "venuestaff@test.local");

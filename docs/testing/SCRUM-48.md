@@ -14,12 +14,12 @@ AC8 cases write those rows directly. Times are UTC.
 | [TC-48-01](#tc-48-01) | Positive | AC 1 | Unit, integration |
 | [TC-48-02](#tc-48-02) | Positive | AC 2, AC 3 | Unit, integration, e2e |
 | [TC-48-03](#tc-48-03) | Boundary | AC 2 | Integration |
-| [TC-48-04](#tc-48-04) | Positive | AC 3 | Unit, integration, e2e |
+| [TC-48-04](#tc-48-04) | Positive | AC 3 | Unit, e2e |
 | [TC-48-05](#tc-48-05) | Positive | AC 4 | Integration, e2e |
 | [TC-48-06](#tc-48-06) | Positive, Negative | AC 5 | Unit, integration |
 | [TC-48-07](#tc-48-07) | Positive | AC 5 | e2e |
 | [TC-48-08](#tc-48-08) | Positive | AC 5 (Safety Officer) | Unit, integration |
-| [TC-48-09](#tc-48-09) | Negative | AC 5, AC 6 | Unit, integration, e2e |
+| [TC-48-09](#tc-48-09) | Negative | AC 6 | Unit, integration, e2e |
 | [TC-48-10](#tc-48-10) | Positive | AC 6 (several roles) | Integration |
 | [TC-48-11](#tc-48-11) | Positive | AC 7 | Integration |
 | [TC-48-12](#tc-48-12) | Boundary | AC 8 | Unit, integration |
@@ -115,8 +115,8 @@ AC8 cases write those rows directly. Times are UTC.
 | Test Scenario | [Positive] AC 5: an Organiser opening a notification lands on the event |
 | Pre-conditions | As TC-48-02. |
 | Test Steps | 1. Open the newest notification. |
-| Test Data | `organiser@test.local`, "Under Review — Career Fair" |
-| Expected Result | The address is `/events/evt_under_review` and the event's own page for "Under Review — Career Fair" opens (SCRUM-208); there is no dialog to close. |
+| Test Data | `organiser@test.local`, "Under Review: Clarification Open — Career Fair" |
+| Expected Result | The address is `/events/evt_under_review` and the event's own page for "Under Review: Clarification Open — Career Fair" opens (SCRUM-208); there is no dialog to close. |
 
 **Automated by:** `e2e/notifications.spec.ts` › "SCRUM-48 [AC1, AC2, AC3, AC5] TC-48-02, TC-48-04, TC-48-07: …"
 
@@ -222,4 +222,4 @@ AC8 cases write those rows directly. Times are UTC.
 | Test Data | `{}`, `{ id: "" }`, `{ id: 7 }`, `null` |
 | Expected Result | Step 1: refused before anything is read. Step 2: "You do not have permission to do that." Nothing is read or written in either. |
 
-**Automated by:** `tests/unit/notifications.test.ts` › "SCRUM-48 [AC2] TC-48-15: invalid input %j is refused before any read or write", "SCRUM-48 [AC6] TC-48-15: a signed-out caller is refused, and nothing is read or written" and "SCRUM-48 [AC2] TC-48-15: an unexpected database failure is not swallowed"
+**Automated by:** `tests/unit/notifications.test.ts` › "SCRUM-48 [AC2] TC-48-15: invalid input %j is refused before any read or write", "SCRUM-48 [AC2] TC-48-15: a signed-out caller is refused, and nothing is read or written" and "SCRUM-48 [AC2] TC-48-15: an unexpected database failure is not swallowed"

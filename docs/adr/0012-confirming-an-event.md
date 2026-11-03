@@ -154,3 +154,49 @@ and a closing time that has passed does exactly that. Reopening clears
 `registrationOpensAt` and `registrationClosesAt`, so registration is open from
 then until the event's start (AC 4, AC 6). Both lock the event row, as
 registering does, and an Attendee sees "Registration closed" either way.
+
+## Addendum (2026-10-29) — No seeded event stays Approved (SCRUM-233)
+
+Consequences says the seeded `evt_approved` "still demonstrates the Approved
+badge (SCRUM-23)". SCRUM-233 reverses that: SCRUM-81 AC 1 and SCRUM-135 AC 12
+say no event remains Approved, so the seed now stores it as Planning ("Planning: Venue
+Booked — Research Symposium") with the two history entries the Decision describes:
+the Coordinator's approval, then the system's move to Planning with no actor.
+Its id is unchanged, since many tests use it. Approved stays a status and keeps
+its label, but only in an event's history: the All Events and My Events
+filters no longer offer it, and `REQUESTABLE_EVENT_STATUSES` (and so
+`RESERVABLE_EVENT_STATUSES`, which Reservations for Planning events above
+widened to Approved and Planning) is now Planning only (SCRUM-27 AC 1).
+
+The seed's other history entries now match what the actions write, as the
+Decision above sets out: the move to Planning has no actor and follows the
+Coordinator's approval, and the confirmation names the assigned Coordinator,
+not an automatic confirmation, which Alternatives rejected. Every seeded
+Confirmed event also passes the readiness checklist that confirming re-checks,
+and every seeded event that reached Confirmed, whatever became of it after,
+carries all three entries: approval, the move to Planning, and the confirmation
+after its booking, equipment and safety check, dated in the order the actions
+allow. The completed Hackathon then shows the system's move to Completed after
+its end time, and the re-planned Jazz Night the approved change that brought it
+back to Planning.
+
+## Addendum (2026-10-31) — An overdue event can't be approved or confirmed (SCRUM-249)
+
+SCRUM-82 AC 10 shows an event as Overdue once its start passes while it is
+Submitted, Under Review or Planning, but nothing stopped its Coordinator
+approving or confirming it. A late Confirm then opened registration already
+closed, and the event read as Completed once its end passed, though it was
+never confirmed in time.
+
+Both actions now refuse with one message, `OVERDUE_REFUSAL`, using
+`isOverdue`, the rule the Overdue badge uses: the start is strictly before
+now. Rejecting and cancelling are unaffected.
+
+The check is under the event-row lock. `confirmEvent` already held it, and
+checks before readiness. `transitionEventStatus` didn't lock at all: its
+conditional update (ADR 0006) guards the status it read, not the start time, so
+approving now takes the lock first. Rejecting doesn't need it, because an
+overdue event can still be rejected.
+
+A Coordinator who still wants the event can move its start to a later time
+first (SCRUM-25); it is then no longer overdue.

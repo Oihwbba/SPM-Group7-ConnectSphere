@@ -355,6 +355,8 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       await expect
         .poll(async () => (await back.boundingBox())?.height ?? 0)
         .toBeGreaterThan((await view.boundingBox())?.height ?? Infinity);
+      // TC-211-07, AC4: the next waiting request is one choice away.
+      await expect(done.getByTestId("next-request")).toBeVisible();
       await view.click();
       await expect(done).toHaveCount(0);
       await expectOpened(page, B);
@@ -528,6 +530,9 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
           await expect(done.getByRole("heading", { name: "Request approved" })).toBeVisible();
         }
         if (name === A) {
+          // TC-211-07, AC4: with B and C still waiting, the pop-up offers the
+          // next one rather than opening it on its own.
+          await expect(done.getByTestId("next-request")).toBeVisible();
           // View this request: it stays open, decided, its buttons disabled.
           await done.getByRole("button", { name: "View this request" }).click();
           await expect(done).toHaveCount(0);

@@ -48,7 +48,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "What is the expected start time?" |
 | Expected Result | The request is still Under Review, shown as awaiting clarification. The Organiser has a notification of the question. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 [AC1, AC6] TC-18-01, SCRUM-24 [AC3] TC-24-02: [Positive] coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
 
 ### TC-18-02
 
@@ -74,7 +74,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | ""; a field "budget" |
 | Expected Result | Step 1 is refused with "Say what you need clarified."; step 2 is refused. Neither creates a clarification. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Negative] AC: a blank message is rejected and nothing is written"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC1] TC-108-01: a field that isn't on the request form is refused and nothing is created"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: …" (Send stays disabled for a blank question)
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 [AC2] TC-18-03: [Negative] a blank message is rejected and nothing is written"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC1] TC-108-01: a field that isn't on the request form is refused and nothing is created"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: …" (Send stays disabled for a blank question)
 
 ### TC-18-04
 
@@ -100,7 +100,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "It starts at 9am." |
 | Expected Result | The clarification is Answered. The Coordinator is notified, sees the answer and can review the request again. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: organiser responds, clarification is marked answered, coordinator is notified", "[Positive] AC: a question asked on an unclaimed event still notifies the coordinator who asked"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 [AC4, AC6] TC-18-05, SCRUM-45 [AC8, AC14] TC-45-05: [Positive] organiser responds, clarification is marked answered, coordinator is notified", "SCRUM-18 [AC4, AC6] TC-18-05: [Positive] a question asked on an unclaimed event still notifies the coordinator who asked"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
 
 ### TC-18-06
 
@@ -113,7 +113,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | ""; any text |
 | Expected Result | Step 1 is refused with "Enter a response before sending."; step 2 with "This clarification request has already been answered." Nothing changes. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Negative] AC: an empty response is rejected", "[Negative] Boundary: an already-answered clarification cannot be answered again"
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 [AC4] TC-18-06: [Negative] an empty response is rejected", "SCRUM-18 [AC4] TC-18-06: [Negative] Boundary: an already-answered clarification cannot be answered again"
 
 ### TC-18-07
 
@@ -126,7 +126,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "Also, how many speakers?" |
 | Expected Result | Refused with "There is already an open clarification request on this event." There is still one open clarification. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Boundary] AC: no second open clarification is created for the same event"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: …" (the second question, in the browser)
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 [AC5] TC-18-07: [Boundary] no second open clarification is created for the same event"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: …" (the second question, in the browser)
 
 ### TC-18-08
 
@@ -139,7 +139,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | Any text |
 | Expected Result | Step 1 leaves one open clarification and refuses the other. Step 2 leaves one answer, refuses the other, and notifies the Coordinator once. Step 3 never leaves an open clarification on the decided request. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-18: two simultaneous requests on one event create exactly one OPEN clarification and refuse the other", "SCRUM-18: two simultaneous replies leave one ANSWERED row, refuse the other, and notify the coordinator once", "SCRUM-18: a question asked at the same instant as a decision never leaves an OPEN clarification on the decided event"; `tests/unit/clarification.test.ts` › "[Boundary] AC: the open-clarification check runs under a lock on the Event row, so a simultaneous second request sees the first", "[Boundary] AC: when two replies race, the loser is refused and the coordinator is notified only once"
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-18 [AC4, AC5] TC-18-08: two simultaneous requests on one event create exactly one OPEN clarification and refuse the other", "SCRUM-18 [AC4, AC5] TC-18-08: two simultaneous replies leave one ANSWERED row, refuse the other, and notify the coordinator once", "SCRUM-18 [AC4, AC5] TC-18-08: a question asked at the same instant as a decision never leaves an OPEN clarification on the decided event"; `tests/unit/clarification.test.ts` › "SCRUM-18 [AC4, AC5] TC-18-08: [Boundary] the open-clarification check runs under a lock on the Event row, so a simultaneous second request sees the first", "SCRUM-18 [AC4, AC5] TC-18-08: [Boundary] when two replies race, the loser is refused and the coordinator is notified only once"
 
 ### TC-18-09
 
@@ -152,7 +152,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | A Draft; a request with an open clarification |
 | Expected Result | Step 1 is refused with "Clarification can only be requested on a submitted or under-review request." In step 2 the decision closes the clarification, so a resubmitted request can be questioned again. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Negative] a request cannot be clarified while it is still DRAFT"; `tests/unit/event-status.test.ts` › "SCRUM-18: deciding an event closes its still-OPEN clarification so a resubmitted request can be questioned again", "SCRUM-18: a lost decision race closes nothing"
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 [AC1] TC-18-09: [Negative] a request cannot be clarified while it is still DRAFT"; `tests/unit/event-status.test.ts` › "SCRUM-18 [AC1] TC-18-09, SCRUM-108 [AC6, AC8, AC10] TC-108-12: deciding an event closes its still-OPEN clarification so a resubmitted request can be questioned again", "SCRUM-18 [AC1] TC-18-09: a lost decision race closes nothing"
 
 ### TC-18-10
 
@@ -165,7 +165,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | The request's and clarification's ids |
 | Expected Result | Each is refused. Steps 3 get "not found", revealing nothing; step 4 is refused as not signed in. Nothing is written. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Negative] Security gate: an Organiser cannot request clarification on their own event", "[Negative] a Coordinator cannot respond on the organiser's behalf", "[Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one", "[Negative] another organiser's clarification is indistinguishable from a missing one", "[Negative] an unrelated user gets not-found, never the clarification content", "[Negative] a signed-out caller is refused"
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 TC-18-10: [Negative] Security gate: an Organiser cannot request clarification on their own event", "SCRUM-18 TC-18-10: [Negative] a Coordinator cannot respond on the organiser's behalf", "SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] another coordinator's event is indistinguishable from a missing one (SCRUM-68)", "SCRUM-18 TC-18-10, SCRUM-68 [AC2, AC3, AC5] TC-68-02: [Negative] another organiser's clarification is indistinguishable from a missing one", "SCRUM-18 TC-18-10: [Negative] an unrelated user gets not-found, never the clarification content", "SCRUM-18 TC-18-10: [Negative] a signed-out caller is refused"
 
 ### TC-18-11
 

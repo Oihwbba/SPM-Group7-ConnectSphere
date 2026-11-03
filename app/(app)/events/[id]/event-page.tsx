@@ -157,8 +157,14 @@ export function EventPage({
               onBookingsChanged={() => setBookingChanges((n) => n + 1)}
             />
           )}
-          {/* SCRUM-81: what a Confirmed event has secured */}
-          {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
+          {/* SCRUM-81: what a Confirmed event has secured. Read again when the
+              flags change, whoever changed them (SCRUM-258). */}
+          {event.status === "CONFIRMED" && (
+            <ConfirmedArrangements
+              key={`confirmed-${attention.unresolvedFlags}`}
+              eventId={event.id}
+            />
+          )}
           {/* SCRUM-162 AC7: every venue booking (a Confirmed event lists
               them among its confirmed arrangements). */}
           {/* Planning's are in the Venues section above (SCRUM-209). */}

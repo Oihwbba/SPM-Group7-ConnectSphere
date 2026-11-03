@@ -430,7 +430,7 @@ describe.skipIf(!usesLocalDatabase)(
       });
     });
 
-    it("SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: Venue Staff reject a live hold with a reason, which withdraws its notices still to come", async () => {
+    it("SCRUM-163 [AC5, AC7] TC-163-10, TC-163-12: Venue Staff reject a live hold with a reason, which withdraws its notices still to come", async () => {
       const { id } = await pending(eventIds[0]);
       await hold(id);
 

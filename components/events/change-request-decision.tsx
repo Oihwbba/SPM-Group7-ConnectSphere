@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import {
   decideChangeRequest,
@@ -41,6 +42,8 @@ export function ChangeRequestDecision({
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [reason, setReason] = useState("");
+  // SCRUM-264: a reason refused for length is said at the box.
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   // A refusal left the list possibly out of date: read it again once the
   // dialog that shows why is closed (SCRUM-207 AC4, AC5).
   const [stale, setStale] = useState(false);
@@ -107,6 +110,7 @@ export function ChangeRequestDecision({
       // A blank reason changed nothing on the server. Anything else (decided
       // in another tab, the event reassigned or closed) may mean the list is
       // out of date, so it is read again once the dialog is closed.
+      setErrors(result.fieldErrors ?? {});
       if (!result.fieldErrors) setStale(true);
       return result;
     }
@@ -211,9 +215,18 @@ export function ChangeRequestDecision({
         >
           <Textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setErrors({});
+            }}
             placeholder="Why can't this change be made?"
             aria-label="Reason for rejecting the change request"
+            aria-invalid={Boolean(errors.reason)}
+            aria-describedby={errors.reason ? "change-rejection-reason-error" : undefined}
+          />
+          <FieldError
+            id="change-rejection-reason-error"
+            messages={errors.reason}
           />
         </ConfirmDialog>
       </div>

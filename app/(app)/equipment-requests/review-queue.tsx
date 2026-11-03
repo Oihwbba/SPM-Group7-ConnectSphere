@@ -128,9 +128,14 @@ export function ReviewDetails({
 export function ReviewDecision({
   request,
   listHref,
+  nextHref,
+  hasNext = false,
 }: {
   request: QueuedEquipmentRequest;
   listHref: string;
+  nextHref: string;
+  /** AC4: whether anything is still waiting, so Next request is worth offering. */
+  hasNext?: boolean;
 }) {
   // The pop-up after an approval or a rejection. The same component shows the
   // request once decided, so it outlives the refresh.
@@ -295,6 +300,16 @@ export function ReviewDecision({
           onClick: () => router.push(listHref),
           prominent: true,
         }}
+        // AC4: the next request is one choice away, while there is one.
+        secondaryAction={
+          hasNext
+            ? {
+                label: "Next request",
+                onClick: () => router.push(nextHref),
+                testId: "next-request",
+              }
+            : undefined
+        }
         testId="decision-done"
       >
         {outcome && DONE_MESSAGE[outcome]}

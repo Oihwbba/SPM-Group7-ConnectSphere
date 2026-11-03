@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ConfirmDialog,
@@ -21,11 +22,16 @@ import { cancelEvent } from "@/app/(app)/events/cancel-actions";
  */
 export function CancelEvent({ eventId }: { eventId: string }) {
   const [reason, setReason] = useState("");
+  // SCRUM-264: a reason refused for length is said at the box.
+  const [reasonErrors, setReasonErrors] = useState<string[]>();
   const router = useRouter();
 
   async function cancel(): Promise<ConfirmOutcome> {
     const result = await cancelEvent({ eventId, reason });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      if (result.fieldErrors?.reason) setReasonErrors(result.fieldErrors.reason);
+      return result;
+    }
     toast.success("Event cancelled. Its arrangements and registrations were released.");
     router.refresh();
   }
@@ -57,10 +63,16 @@ export function CancelEvent({ eventId }: { eventId: string }) {
     >
       <Textarea
         value={reason}
-        onChange={(e) => setReason(e.target.value)}
+        onChange={(e) => {
+          setReason(e.target.value);
+          setReasonErrors(undefined);
+        }}
         placeholder="Why is it cancelled?"
         aria-label="Cancellation reason"
+        aria-invalid={Boolean(reasonErrors)}
+        aria-describedby={reasonErrors ? "cancellation-reason-error" : undefined}
       />
+      <FieldError id="cancellation-reason-error" messages={reasonErrors} />
     </ConfirmDialog>
   );
 }

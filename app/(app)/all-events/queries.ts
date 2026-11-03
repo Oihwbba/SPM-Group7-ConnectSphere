@@ -4,13 +4,17 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
 import { getCoordinatorLoads } from "@/lib/coordinator-assignment";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import { parseSingaporeDateTime } from "@/lib/datetime";
 
-/** Every status the list can show: all but Draft (SCRUM-141 AC1). */
+/**
+ * Every status the list can show: all but Draft (SCRUM-141 AC1), and all but
+ * Approved, which no event stays in: approval saves Planning (SCRUM-81 AC1,
+ * SCRUM-233).
+ */
 export const LISTED_STATUSES = [
   "SUBMITTED",
   "UNDER_REVIEW",
-  "APPROVED",
   "PLANNING",
   "CONFIRMED",
   "COMPLETED",
@@ -68,6 +72,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export async function getAllEvents(filters: AllEventsFilters) {
   const session = await auth();
   if (!session?.user || !can(session.user, "event:view-all")) return null;
+  // SCRUM-262: a finished event reads as Completed here too (SCRUM-82 AC7).
+  await completeFinishedEvents(prisma);
   // The Lead's tools follow the permission to assign (SCRUM-165), never the role name.
   const isLead = can(session.user, "event:assign");
 
@@ -131,6 +137,7 @@ export type ListedEvent = NonNullable<
 export async function getEventForPlanning(id: string) {
   const session = await auth();
   if (!session?.user || !can(session.user, "event:view-all")) return null;
+  await completeFinishedEvents(prisma);
 
   const event = await prisma.event.findUnique({
     where: { id },

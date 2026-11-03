@@ -33,9 +33,9 @@ and the app is running. Every account's password is `Password123!`.
 | Pre-conditions | Signed in as the Organiser, who owns seeded events in several statuses. |
 | Test Steps | 1. Open My Events. <br> 2. Read the filter tabs. <br> 3. Open the status filter. |
 | Test Data | `organiser@test.local` |
-| Expected Result | The tabs read "All (n)", "Drafts (n)" and "Sent (n)"; no tab reads "Submitted". The filter offers All Statuses, then Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected. Every status badge uses one of those nine names. |
+| Expected Result | The tabs read "All (n)", "Drafts (n)" and "Sent (n)"; no tab reads "Submitted". The filter offers All Statuses, then Draft, Submitted, Under Review, Planning, Confirmed, Completed, Cancelled, Rejected: every agreed name but Approved, which no event stays in (SCRUM-233). Every status badge uses one of the nine names. |
 
-**Automated by:** `tests/unit/status-labels.test.ts` › "SCRUM-131 [AC1] TC-131-01: event statuses are shown exactly as the nine agreed names, in lifecycle order"; `e2e/status-names.spec.ts` › "SCRUM-131 [AC1] TC-131-01: the Organiser's tab of every request that isn't a draft reads Sent, and the status filter offers the nine agreed names"
+**Automated by:** `tests/unit/status-labels.test.ts` › "SCRUM-131 [AC1] TC-131-01: event statuses are shown exactly as the nine agreed names, in lifecycle order"; `e2e/status-names.spec.ts` › "SCRUM-131 [AC1] TC-131-01: the Organiser's tab of every request that isn't a draft reads Sent, and the status filter offers the agreed names an event can rest in"
 
 ### TC-131-02
 

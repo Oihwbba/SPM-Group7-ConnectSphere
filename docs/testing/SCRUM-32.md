@@ -50,7 +50,7 @@ selected.
 | Test Data | "", "   ", 500 and 501 characters |
 | Expected Result | 1: **Report** stays disabled. 2: "Say why it can no longer be provided." at the field (or "Reservation not found." without a reservation), and nothing is read or written. 3: 500 is accepted; 501 is refused. |
 
-**Automated by:** `tests/unit/report-reservation.test.ts` › "SCRUM-32 [AC2] TC-32-02: a report without a reason (%j) is refused before anything is read", "SCRUM-32 [AC2] TC-32-02: a reason over 500 characters is refused, and one of exactly 500 is accepted" and "SCRUM-32 [AC1] TC-32-02: a request without a reservation id is not found, before anything is read"; `e2e/report-reservation.spec.ts` › "SCRUM-32 [AC1, AC2, AC4] TC-32-01, TC-32-02: …" (the disabled Report)
+**Automated by:** `tests/unit/report-reservation.test.ts` › "SCRUM-32 [AC2] TC-32-02: a report without a reason (%j) is refused before anything is read", "SCRUM-32 [AC2] TC-32-02: a reason over 500 characters is refused, and one of exactly 500 is accepted" and "SCRUM-32 [AC2] TC-32-02: a request without a reservation id is not found, before anything is read"; `e2e/report-reservation.spec.ts` › "SCRUM-32 [AC1, AC2, AC4] TC-32-01, TC-32-02: …" (the disabled Report)
 
 ### TC-32-03
 
@@ -89,7 +89,7 @@ selected.
 | Test Data | — |
 | Expected Result | "You do not have permission to do that.", before anything is read. The report itself only flags (TC-32-01): there is no way here to cancel a reservation or change its quantity or period. |
 
-**Automated by:** `tests/unit/report-reservation.test.ts` › "SCRUM-32 [AC4] TC-32-05: %s can't report a reservation, and nothing is read", "SCRUM-32 [AC4] TC-32-05: only Technical Support hold the permission to report" and "SCRUM-32 TC-32-05: a signed-out caller is refused"
+**Automated by:** `tests/unit/report-reservation.test.ts` › "SCRUM-32 [AC4] TC-32-05: %s can't report a reservation, and nothing is read", "SCRUM-32 [AC4] TC-32-05: only Technical Support hold the permission to report" and "SCRUM-32 [AC4] TC-32-05: a signed-out caller is refused"
 
 ### TC-32-06
 

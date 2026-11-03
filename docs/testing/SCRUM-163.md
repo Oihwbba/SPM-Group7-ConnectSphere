@@ -163,7 +163,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | — |
 | Expected Result | The reminder and expiry notice are withdrawn and never appear; the "held" notice, already shown, stays. |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12, TC-163-16: …", "SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: …" and "SCRUM-163 [AC9] TC-163-13: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-10" tests
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12, TC-163-16: …", "SCRUM-163 [AC5, AC7] TC-163-10, TC-163-12: …" and "SCRUM-163 [AC9] TC-163-13: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-10" tests
 
 ### TC-163-11
 
@@ -189,7 +189,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | — |
 | Expected Result | Step 1: it is listed with its expiry and note, offering Approve and Reject (approving is TC-163-17). Step 2: `REJECTED` with the reason; its notices still to come are withdrawn. Step 3: "Venue Staff rejected this hold." Step 4: "This hold has already been confirmed."; one history entry. |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: Venue Staff reject a live hold with a reason, which withdraws its notices still to come" and "SCRUM-163 [AC2, AC7] TC-163-04, TC-163-12: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-12" tests; `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] …" (step 1)
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC5, AC7] TC-163-10, TC-163-12: Venue Staff reject a live hold with a reason, which withdraws its notices still to come" and "SCRUM-163 [AC2, AC7] TC-163-04, TC-163-12: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-12" tests; `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] …" (step 1)
 
 ### TC-163-13
 

@@ -233,6 +233,12 @@ export function queueState(
       open: next,
       done: next === null,
     }),
+    /**
+     * AC4: whether anything is still waiting after the open item. A queue that
+     * offers the next request rather than opening it needs to know, so it
+     * doesn't offer one when the queue is caught up.
+     */
+    hasNext: next !== null,
     href: (change: Partial<QueueView>) =>
       queueHref(base, view, defaults, change),
   };

@@ -27,7 +27,7 @@ needs them.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-31-01](#tc-31-01) | Positive | AC 1, AC 7 | Unit, e2e |
+| [TC-31-01](#tc-31-01) | Positive | AC 1, AC 7 | Unit, integration, e2e |
 | [TC-31-02](#tc-31-02) | Positive | AC 2 | Unit, integration |
 | [TC-31-03](#tc-31-03) | Negative | AC 3 | Unit, integration |
 | [TC-31-04](#tc-31-04) | Boundary | AC 1, AC 3 | Unit, integration |
@@ -36,7 +36,7 @@ needs them.
 | [TC-31-07](#tc-31-07) | Negative, Boundary | AC 6 | Unit, e2e |
 | [TC-31-08](#tc-31-08) | Positive | AC 7 | Unit |
 | [TC-31-09](#tc-31-09) | Negative, Boundary | Valid period | Unit, e2e (SCRUM-155's) |
-| [TC-31-10](#tc-31-10) | Positive, Negative | Approved and Planning events only | Unit, integration |
+| [TC-31-10](#tc-31-10) | Positive, Negative | Planning events only | Unit, integration |
 | [TC-31-11](#tc-31-11) | Negative | Technical Support only | Unit |
 
 ---
@@ -47,7 +47,7 @@ needs them.
 |---|---|
 | Test Case ID | TC-31-01 |
 | Test Scenario | [Positive] AC 1, AC 7: a quantity within availability is reserved as Confirmed, and availability drops by exactly that quantity |
-| Pre-conditions | Signed in as Technical Support. The event "Approved — Research Symposium" is APPROVED. No reservation or maintenance hold overlaps the test period for Lectern. |
+| Pre-conditions | Signed in as Technical Support. The event "Planning: Venue Booked — Research Symposium" is PLANNING. No reservation or maintenance hold overlaps the test period for Lectern. |
 | Test Steps | Superseded by [TC-155-04](SCRUM-155.md#tc-155-04). SCRUM-156 moved reserving from the one-type form to the "Reserve an approved request" card, so follow that case's steps; this case's intent (the scenario above) is unchanged. |
 | Test Data | As in TC-155-04. |
 | Expected Result | As in TC-155-04. |
@@ -62,7 +62,7 @@ needs them.
 | Test Scenario | [Positive] AC 2: a reservation is permanently linked to the event it was made for |
 | Pre-conditions | As TC-31-01. |
 | Test Steps | 1. Reserve 1 Lectern for the approved event, as in TC-31-01. <br> 2. Look up the new reservation in the database (or the event's reservations). |
-| Test Data | Event ID: `evt_approved` (Approved — Research Symposium) <br> Equipment type: Lectern <br> Start: 2031-05-11 09:00 <br> End: 2031-05-11 17:00 <br> Quantity: 1 |
+| Test Data | Event ID: `evt_approved` (Planning: Venue Booked — Research Symposium) <br> Equipment type: Lectern <br> Start: 2031-05-11 09:00 <br> End: 2031-05-11 17:00 <br> Quantity: 1 |
 | Expected Result | The reservation's `eventId` is `evt_approved`, `reservedById` is the Technical Support user, and the reservation offers no way to move it to another event. |
 
 **Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: reserves every row together, Confirmed and linked to the event and the request"
@@ -163,13 +163,13 @@ needs them.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-31-10 |
-| Test Scenario | [Positive, Negative] equipment can be reserved for an APPROVED or PLANNING event, and no other |
-| Pre-conditions | Signed in as Technical Support. The seeded events "Planning — Freshman Orientation" (PLANNING) and "Confirmed — Charity Gala" (CONFIRMED) exist. |
+| Test Scenario | [Positive, Negative] equipment can be reserved for a PLANNING event, and no other (APPROVED was dropped by SCRUM-233: no event stays in it) |
+| Pre-conditions | Signed in as Technical Support. The seeded events "Planning: Venue Pending — Freshman Orientation" (PLANNING) and "Confirmed: Registration Open — Charity Gala" (CONFIRMED) exist. |
 | Test Steps | Superseded by [TC-155-10](SCRUM-155.md#tc-155-10). SCRUM-156 moved reserving from the one-type form to the "Reserve an approved request" card, so follow that case's steps; this case's intent (the scenario above) is unchanged. |
 | Test Data | As in TC-155-10. |
 | Expected Result | As in TC-155-10. |
 
-**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31 TC-31-10, SCRUM-81 TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
 
 ### TC-31-11
 
@@ -182,4 +182,4 @@ needs them.
 | Test Data | Roles: ORGANISER, COORDINATOR, VENUE_STAFF, ATTENDEE (seeded `@test.local` accounts, password `Password123!`) <br> Equipment type: Lectern <br> Quantity: 1 |
 | Expected Result | Each reservation attempt is refused with a permission message, and nothing is written. Attendee's availability check is refused without reading the equipment. |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "refuses a role without equipment:reserve before reading anything"; `tests/unit/reservation.test.ts` › "refuses a role without equipment:read"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-31 TC-31-11: refuses a role without equipment:reserve before reading anything"; `tests/unit/reservation.test.ts` › "SCRUM-31 TC-31-11: refuses a role without equipment:read" and "SCRUM-31 TC-31-11: the every-type check refuses a role without equipment:read"

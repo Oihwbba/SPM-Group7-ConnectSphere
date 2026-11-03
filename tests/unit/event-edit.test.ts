@@ -104,6 +104,7 @@ beforeEach(() => {
   db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
   db.event.findMany.mockResolvedValue([]);
   db.user.findMany.mockResolvedValue([]);
+  db.registration.count.mockResolvedValue(0);
 });
 
 describe("updateEventDetails — SCRUM-171 AC5, Registration needed", () => {
@@ -214,6 +215,93 @@ describe("updateEventDetails — SCRUM-171 AC5, Registration needed", () => {
   });
 });
 
+describe("updateEventDetails — SCRUM-247, expected attendance and active registrations", () => {
+  // A re-planned event (SCRUM-128 AC5) keeps its 50 registrations; the
+  // expected attendance is its registration capacity (SCRUM-74).
+  beforeEach(() => {
+    db.event.findUnique.mockResolvedValue(stored({ expectedAttendance: 60 }));
+    db.registration.count.mockResolvedValue(50);
+  });
+
+  it.each([30, 49])(
+    "SCRUM-247 [AC1] TC-247-01: with 50 active registrations, an attendance of %i is refused with the number shown, and nothing is written",
+    async (attendance) => {
+      const message =
+        "This event has 50 active registrations, so the expected attendance can't be lower than 50.";
+
+      const result = await updateEventDetails({
+        ...unchanged,
+        expectedAttendance: String(attendance),
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        error: message,
+        fieldErrors: { expectedAttendance: [message] },
+      });
+      expect(db.registration.count).toHaveBeenCalledWith({
+        where: { eventId: "evt_1", status: "REGISTERED" },
+      });
+      expect(db.event.updateMany).not.toHaveBeenCalled();
+      expect(db.auditLog.createMany).not.toHaveBeenCalled();
+      expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
+      expect(db.reservation.updateManyAndReturn).not.toHaveBeenCalled();
+      expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("SCRUM-247 [AC1] TC-247-02: an attendance of exactly the 50 active registrations is saved and audited", async () => {
+    const result = await updateEventDetails({
+      ...unchanged,
+      expectedAttendance: "50",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        changed: ["expectedAttendance"],
+        safetyCheckOutdated: false,
+        flagged: 0,
+      },
+    });
+    expect(db.event.updateMany).toHaveBeenCalledWith({
+      where: { id: "evt_1", status: "PLANNING", coordinatorId: "usr_coord" },
+      data: { expectedAttendance: 50 },
+    });
+    expect(db.auditLog.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          fieldName: "expectedAttendance",
+          oldValue: "60",
+          newValue: "50",
+        }),
+      ],
+    });
+  });
+
+  it("SCRUM-247 [AC2] TC-247-03: the registrations are counted after the event row is locked, inside the edit's transaction", async () => {
+    await updateEventDetails({ ...unchanged, expectedAttendance: "30" });
+
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    const [lock] = db.$queryRaw.mock.calls[0] as [TemplateStringsArray];
+    expect(lock.join("?")).toMatch(/FROM "Event" WHERE "id" = \? FOR UPDATE/);
+    expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      db.registration.count.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("SCRUM-247 [AC1] TC-247-04: an edit that leaves the attendance alone doesn't count registrations", async () => {
+    const result = await updateEventDetails({
+      ...unchanged,
+      expectedAttendance: "60",
+      name: "Annual Gala 2036",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(db.registration.count).not.toHaveBeenCalled();
+  });
+});
+
 describe("updateEventDetails — SCRUM-25", () => {
   it("SCRUM-25 [AC1, AC2] TC-25-01, TC-25-04: the assigned Coordinator saves routine fields; the status is untouched and each change is audited", async () => {
     const result = await updateEventDetails({
@@ -282,12 +370,12 @@ describe("updateEventDetails — SCRUM-25", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-25 [AC1] TC-25-17: a long answer the request form accepted still saves, and a capped field over its limit is refused", async () => {
+  it("SCRUM-25 [AC1] TC-25-17: a long answer within its limit still saves, and a field over its limit is refused", async () => {
     const long = "x".repeat(3000);
     const saved = await updateEventDetails({
       ...unchanged,
       accessibilityNeeds: long,
-      preferredLayout: long,
+      preferredLayout: "x".repeat(200),
       registrationNotes: long,
       venueRequirements: long,
       equipmentRequirements: long,
@@ -301,9 +389,35 @@ describe("updateEventDetails — SCRUM-25", () => {
     });
     expect(refused).toMatchObject({
       ok: false,
-      fieldErrors: { programme: ["String must contain at most 5000 character(s)"] },
+      fieldErrors: { programme: [expect.any(String)] },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  describe.each([
+    ["venueRequirements", 5000, "Keep venue requirements under 5000 characters."],
+    ["accessibilityNeeds", 5000, "Keep accessibility needs under 5000 characters."],
+    ["equipmentRequirements", 5000, "Keep equipment requirements under 5000 characters."],
+    ["registrationNotes", 5000, "Keep registration notes under 5000 characters."],
+    ["preferredLayout", 200, "Keep room layout under 200 characters."],
+  ] as const)("%s at its limit — SCRUM-263 AC3", (field, limit, message) => {
+    it(`SCRUM-263 [AC3] TC-263-09: the Coordinator's edit accepts exactly ${limit} characters of ${field}`, async () => {
+      expect(
+        await updateEventDetails({ ...unchanged, [field]: "x".repeat(limit) }),
+      ).toMatchObject({ ok: true });
+      expect(db.$transaction).toHaveBeenCalled();
+    });
+
+    it(`SCRUM-263 [AC3] TC-263-09: the Coordinator's edit refuses ${limit + 1} characters of ${field}, names the field, and writes nothing`, async () => {
+      expect(
+        await updateEventDetails({ ...unchanged, [field]: "x".repeat(limit + 1) }),
+      ).toEqual({
+        ok: false,
+        error: "Please fix the highlighted fields.",
+        fieldErrors: { [field]: [message] },
+      });
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
   });
 
   it("SCRUM-25 [AC1] TC-25-01: clearing an optional field stores it as empty", async () => {
@@ -707,7 +821,7 @@ describe("updateEventDetails — SCRUM-25", () => {
     expect(db.auditLog.createMany).not.toHaveBeenCalled();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-25: does not swallow an unexpected database error", async () => {
     const failure = new Error("connection reset");
     db.$transaction.mockRejectedValue(failure);
 
@@ -979,7 +1093,7 @@ describe("operational notes — SCRUM-25 AC6", () => {
     expect(await getOperationalNotes("evt_1")).toEqual({ ok: false, error: DENIED });
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-25 [AC6]: does not swallow an unexpected database error", async () => {
     const failure = new Error("connection reset");
     db.event.findUnique.mockRejectedValue(failure);
 

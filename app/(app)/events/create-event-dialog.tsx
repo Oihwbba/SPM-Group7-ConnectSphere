@@ -53,11 +53,14 @@ import {
   submitEventRequest,
   getFormCatalogues,
 } from "./actions";
+import { err, errorsByField, type ActionResult } from "@/lib/action-result";
 import {
   LAYOUT_OPTIONS,
   PAST_DRAFT_DATES_MESSAGE,
+  createDraftEventSchema,
   draftStartIsInPast,
   eventPeriodError,
+  submitEventRequestSchema,
 } from "@/lib/schemas/event";
 import {
   PREDEFINED_VENUE_OPTIONS,
@@ -171,6 +174,46 @@ export function storedAcrossTwoDays(draftEvent?: DraftEventData | null) {
   );
 }
 
+/** Each step's fields, as the actions report them. */
+const STEP_FIELDS = [
+  ["name", "purpose", "description"],
+  ["startAt", "endAt", "expectedAttendance"],
+  ["venueRequirements", "preferredLayout", "accessibilityNeeds"],
+  ["equipmentRequirements"],
+  ["registrationRequired", "registrationNotes", "programme", "specialRequests"],
+];
+
+/**
+ * SCRUM-263 AC2 — the step to open after a refusal. An error only shows on its
+ * field's step, so the form must leave Review for "highlighted" to be true.
+ */
+export function firstStepWithError(
+  fieldErrors: Record<string, string[]>,
+): number | null {
+  const index = STEP_FIELDS.findIndex((fields) =>
+    fields.some((field) => fieldErrors[field]?.length),
+  );
+  return index === -1 ? null : index + 1;
+}
+
+const NOT_SENT_MESSAGE =
+  "Your request couldn't be sent. Check your connection and try again.";
+
+/**
+ * A send that fails rejects instead of returning a result, which would close
+ * the form and lose what was typed. Text over a limit is refused before
+ * sending, so the limits never reach this.
+ */
+async function sendRequest(
+  send: () => Promise<ActionResult<{ id: string }>>,
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    return await send();
+  } catch {
+    return err(NOT_SENT_MESSAGE);
+  }
+}
+
 /** The form as a draft or rejected request reopens. Exported for its unit test. */
 export function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
   if (!draftEvent) return initialFormState;
@@ -235,6 +278,7 @@ export function CreateEventDialog({
       name: string;
       capacity: number;
       facilities: string[];
+      hours: string[];
     }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
     options: VenueOptions;
@@ -385,6 +429,12 @@ export function CreateEventDialog({
     }
   }
 
+  function showFieldErrors(errors: Record<string, string[]> = {}) {
+    setFieldErrors(errors);
+    const errorStep = firstStepWithError(errors);
+    if (errorStep) setStep(errorStep);
+  }
+
   async function handleSaveDraft() {
     setSavingDraft(true);
     startTransition(async () => {
@@ -403,7 +453,15 @@ export function CreateEventDialog({
         ...periodOf(formData),
       };
 
-      const result = await createDraftEvent(payload);
+      // SCRUM-263 AC1: the action's own check, so text over a limit is
+      // highlighted without sending the request.
+      const checked = createDraftEventSchema.safeParse(payload);
+      const result = checked.success
+        ? await sendRequest(() => createDraftEvent(payload))
+        : err<{ id: string }>(
+            "Please fix the highlighted fields.",
+            errorsByField(checked.error),
+          );
       setSavingDraft(false);
 
       if (result.ok) {
@@ -421,7 +479,7 @@ export function CreateEventDialog({
         return;
       }
 
-      setFieldErrors(result.fieldErrors ?? {});
+      showFieldErrors(result.fieldErrors);
       setFormError(result.error);
     });
   }
@@ -441,7 +499,13 @@ export function CreateEventDialog({
         endAt: periodOf(formData).endAt ?? "",
       };
 
-      const result = await submitEventRequest(payload);
+      const checked = submitEventRequestSchema.safeParse(payload);
+      const result = checked.success
+        ? await sendRequest(() => submitEventRequest(payload))
+        : err<{ id: string }>(
+            "Please fix the highlighted fields before submitting.",
+            errorsByField(checked.error),
+          );
 
       if (result.ok) {
         toast.success("Event request submitted for review successfully!");
@@ -450,7 +514,7 @@ export function CreateEventDialog({
         return;
       }
 
-      setFieldErrors(result.fieldErrors ?? {});
+      showFieldErrors(result.fieldErrors);
       setFormError(
         result.error ||
           "Please complete all mandatory fields before submitting.",
@@ -763,10 +827,22 @@ export function CreateEventDialog({
                 placeholder="Select venues"
                 options={catalogues.venues.map((v) => ({
                   value: v.name,
+                  // SCRUM-246 AC2: its hours too, so a closed day shows now
+                  // rather than as a refused booking in Planning.
                   label: (
-                    <span className="flex w-full items-center justify-between gap-3">
-                      {v.name}
-                      <CapacityTag capacity={v.capacity} />
+                    <span className="flex w-full flex-col gap-1">
+                      <span className="flex items-center justify-between gap-3">
+                        {v.name}
+                        <CapacityTag capacity={v.capacity} />
+                      </span>
+                      <span
+                        data-testid="venue-hours"
+                        className="grid gap-x-4 text-xs text-muted-foreground sm:grid-flow-col sm:grid-rows-4"
+                      >
+                        {v.hours.map((day) => (
+                          <span key={day}>{day}</span>
+                        ))}
+                      </span>
                     </span>
                   ),
                 }))}
@@ -870,13 +946,15 @@ export function CreateEventDialog({
               <PillSelect
                 id="equipmentRequirements"
                 placeholder="Select equipment"
+                // SCRUM-246 AC1: the total held, not what is free on the
+                // event's dates, which depends on reservations.
                 options={catalogues.equipment.map((eq) => ({
                   value: eq.type,
                   label: (
                     <span className="flex w-full items-center justify-between gap-3">
                       {eq.type}
                       <span className="text-xs text-muted-foreground">
-                        {eq.totalQuantity} available
+                        {eq.totalQuantity} in stock
                       </span>
                     </span>
                   ),
@@ -991,7 +1069,13 @@ export function CreateEventDialog({
                 rows={3}
                 value={formData.programme}
                 onChange={(e) => updateField("programme", e.target.value)}
+                aria-invalid={!!fieldErrors.programme}
               />
+              {fieldErrors.programme?.map((msg) => (
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
+              ))}
             </div>
 
             <div className="space-y-2">
@@ -1004,7 +1088,13 @@ export function CreateEventDialog({
                 rows={3}
                 value={formData.specialRequests}
                 onChange={(e) => updateField("specialRequests", e.target.value)}
+                aria-invalid={!!fieldErrors.specialRequests}
               />
+              {fieldErrors.specialRequests?.map((msg) => (
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
+              ))}
             </div>
           </div>
         )}

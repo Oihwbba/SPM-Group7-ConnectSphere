@@ -215,6 +215,7 @@ const arrangements: ConfirmedArrangements = {
   endAt: new Date("2031-06-02T09:00:00Z"),
   timezone: "Asia/Singapore",
   equipment: ["Projector × 2"],
+  flaggedEquipment: [],
 };
 
 describe("getEventReadiness — SCRUM-81 Confirm action", () => {
@@ -579,7 +580,8 @@ describe("getEventEquipment — SCRUM-209 AC2, AC4", () => {
   });
 
   it.each([
-    { status: "APPROVED" as const, offered: true },
+    // SCRUM-233: no event stays Approved, so SCRUM-27 no longer offers it.
+    { status: "APPROVED" as const, offered: false },
     { status: "PLANNING" as const, offered: true },
     { status: "UNDER_REVIEW" as const, offered: false },
     { status: "CONFIRMED" as const, offered: false },
