@@ -77,7 +77,7 @@ without one stands alone):
 | Test Data | — |
 | Expected Result | For every role, a group has a heading exactly when it has more than one link and the menu has more than one group. An Attendee's two links stand on their own, without "My work" (defect SCRUM-248, found in the SCRUM-216 epic check). |
 
-**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC1] TC-210-02, SCRUM-248: a group with a single link, or a menu that is one group, shows no heading; any other group has its heading" and "SCRUM-210 [AC1] TC-210-02, SCRUM-248: an Attendee's menu has no group heading; staff menus keep theirs"
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC1] TC-210-02: a group with a single link, or a menu that is one group, shows no heading; any other group has its heading" and "SCRUM-210 [AC1] TC-210-02: an Attendee's menu has no group heading; staff menus keep theirs"
 
 ### TC-210-03
 

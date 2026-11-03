@@ -81,7 +81,7 @@ criterion.
 | Test Data | `lead@test.local`, `coordinator@test.local` |
 | Expected Result | Each page reached from a menu page has a back link to the page it came from; menu pages have none. |
 
-**Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC1] TC-207-01, TC-207-02: …": every menu page has no back link; **Notifications** (for an Organiser and for Venue Staff), **an event's page** (for its Organiser, its Coordinator and an Attendee), **an event in All Events** and **a venue's page** each have one back link, worded "Back to" and the page's name ("Back to My Events", "Back to Events", "Back to Browse Events", "Back to All Events", "Back to Venue Catalogue", "Back to Bookings"), which leads back to that page. Notifications leads back to the page the user lands on. An event being re-planned leads "Back to My Registrations"; **Request a venue** and **Venue search**, opened from an event, lead "Back to the event".
+**Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC1] TC-207-01, TC-207-02: …": every menu page has no back link; **Notifications** (for an Organiser and for Venue Staff), **an event's page** (for its Organiser, its Coordinator and an Attendee), **an event in All Events** and **a venue's page** each have one back link, worded **Back to** and the page's name (**Back to My Events**, **Back to Events**, **Back to Browse Events**, **Back to All Events**, **Back to Venue Catalogue**, **Back to Bookings**), which leads back to that page. Notifications leads back to the page the user lands on. An event being re-planned leads **Back to My Registrations**; **Request a venue** and **Venue search**, opened from an event, lead **Back to the event**.
 
 ### TC-207-03
 
@@ -407,7 +407,7 @@ Not in the dialog, deliberately: Record unavailability, which already asks again
 | Test Data | One seeded account per role. |
 | Expected Result | Each page shows its title. Neither the page nor any table or box in it scrolls sideways (only a row of tabs scrolls within itself, by design, SCRUM-208 TC-208-14) (WCAG 2.2 1.4.10 Reflow; SCRUM-132 AC1): tables become one card per row, with every column's value and its name. |
 
-**Automated by:** `e2e/phone-layout.spec.ts` › "SCRUM-207 [AC1] TC-207-25: …'s pages scroll only up and down at phone width" (one test per role)
+**Automated by:** `e2e/phone-layout.spec.ts` › "SCRUM-207 [AC1] TC-207-26: …'s pages scroll only up and down at phone width" (one test per role)
 
 ### TC-207-27
 
