@@ -825,7 +825,7 @@ describe("decideBookingRequest on a hold — SCRUM-163 AC7", () => {
 
   beforeEach(() => mockAuth.mockResolvedValue(STAFF));
 
-  it("SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: Venue Staff can reject a live hold with a reason, withdrawing its notices still to come", async () => {
+  it("SCRUM-163 [AC5, AC7] TC-163-10, TC-163-12: Venue Staff can reject a live hold with a reason, withdrawing its notices still to come", async () => {
     db.booking.findUnique.mockResolvedValue(booking("HELD", fromNow(HOUR)));
 
     expect(

@@ -50,6 +50,7 @@ The seed (`prisma/seed.ts`) breaks rules the stories and ADRs set, so a database
     * The seeded non-draft events have no Venue Requirements, which submitting requires (SCRUM-13, SCRUM-14). A blank Registration needed is allowed for older requests (SCRUM-171 AC3).
     * The rejection notification `ntf_3` gives no reason or next step (SCRUM-45 AC3).
 
+
 **Decision taken here:** the seed follows SCRUM-81 and SCRUM-135. This overrules ADR 0012's choice to keep the seeded Approved event. Approved remains visible in each event's history, which is where SCRUM-23's "approved" now appears.
 
 ## Done when

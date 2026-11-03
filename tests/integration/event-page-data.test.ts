@@ -110,12 +110,31 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-208 — the event page's data, agains
       },
     });
     await event("discarded", { status: "DRAFT", discardedAt: new Date() });
+    // A Confirmed event whose only flag is on a reservation (SCRUM-258).
+    const confirmed = await event("confirmed", {
+      status: "CONFIRMED",
+      coordinatorId: "usr_coordinator",
+    });
+    await prisma.reservation.create({
+      data: {
+        eventId: confirmed,
+        equipmentId: "eqp_projector",
+        quantity: 1,
+        ...PERIOD,
+        status: "CONFIRMED",
+        reservedById: "usr_techsupport",
+        needsReconsideration: true,
+        reconsiderationFlaggedAt: new Date(),
+        reconsiderationReason: "One projector is damaged.",
+      },
+    });
   });
 
   afterAll(async () => {
     const eventIds = Object.values(ids);
     await prisma.auditLog.deleteMany({ where: { entityId: { in: eventIds } } });
     await prisma.clarificationRequest.deleteMany({ where: { eventId: { in: eventIds } } });
+    await prisma.reservation.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.booking.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
   });
@@ -129,6 +148,21 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-208 — the event page's data, agains
       coordinatorName: "Cody Coordinator",
       cancelledFrom: null,
       attention: { openClarification: false, pendingChangeRequests: 0, flaggedArrangements: 1 },
+      step: { kind: "yours", text: "Your turn: decide what happens to the flagged arrangements" },
+    });
+  });
+
+  it("SCRUM-258 [AC1] TC-258-08: a flagged reservation on a Confirmed event has the Organiser waiting on the Coordinator, on Changes, and the Coordinator asked to decide", async () => {
+    expect(await getEventPageData(organiser, ids.confirmed)).toMatchObject({
+      attention: { flaggedArrangements: 0, unresolvedFlags: 1 },
+      step: {
+        kind: "waiting",
+        text: "Waiting for Cody Coordinator to decide what happens to the flagged arrangements",
+        tab: "changes",
+      },
+    });
+    expect(await getEventPageData(coordinator, ids.confirmed)).toMatchObject({
+      attention: { flaggedArrangements: 1, unresolvedFlags: 1 },
       step: { kind: "yours", text: "Your turn: decide what happens to the flagged arrangements" },
     });
   });

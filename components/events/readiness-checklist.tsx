@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { confirmEvent, rejectPlanningEvent } from "@/app/(app)/events/actions";
 import {
@@ -171,6 +172,7 @@ export function ReadinessChecklist({
   // SCRUM-142 AC4: the pending venue request waiting to be confirmed withdrawn.
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [reasonErrors, setReasonErrors] = useState<string[]>();
   const [outcome, setOutcome] = useState<RejectionOutcome | null>(null);
   const router = useRouter();
 
@@ -276,6 +278,7 @@ export function ReadinessChecklist({
         rejectionOutcome: outcome,
       });
       if (!result.ok) {
+        setReasonErrors(result.fieldErrors?.decisionReason);
         toast.error(result.error);
         return;
       }
@@ -416,6 +419,7 @@ export function ReadinessChecklist({
                   className="border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
                   onClick={() => {
                     setReason("");
+                    setReasonErrors(undefined);
                     setOutcome(null);
                     setRejectOpen(true);
                   }}
@@ -824,10 +828,16 @@ export function ReadinessChecklist({
           </DialogHeader>
           <Textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setReasonErrors(undefined);
+            }}
             placeholder="Why can't it go ahead?"
             aria-label="Rejection reason"
+            aria-invalid={Boolean(reasonErrors)}
+            aria-describedby={reasonErrors ? "planning-rejection-reason-error" : undefined}
           />
+          <FieldError id="planning-rejection-reason-error" messages={reasonErrors} />
           {/* SCRUM-117 AC2: an outcome is chosen as for any rejection (SCRUM-126). */}
           <fieldset className="space-y-2 text-sm">
             <legend className="mb-1 font-medium">

@@ -2,6 +2,7 @@ import type { Event, EventStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { can, type SessionUser } from "@/lib/auth/can";
+import { isOverdue } from "@/lib/event-closing";
 import {
   getReadinessChecklist,
   withoutInternalReasons,
@@ -108,6 +109,7 @@ export async function getEventPageData(
     openClarification: openClarifications > 0,
     pendingChangeRequests,
     flaggedArrangements,
+    unresolvedFlags,
     // The Organiser isn't shown Venue Staff's internal reasons (SCRUM-110 AC6).
     checklist:
       checklist && (viewer === "coordinator" ? checklist : withoutInternalReasons(checklist)),
@@ -115,6 +117,7 @@ export async function getEventPageData(
     rejectionOutcome: event.rejectionOutcome,
     cancellationReason: event.cancellationReason,
     cancelledAt: event.cancelledAt?.toISOString() ?? null,
+    overdue: isOverdue(event, now),
   });
 
   return {

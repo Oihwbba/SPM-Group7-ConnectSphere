@@ -1,11 +1,18 @@
 import { z } from "zod";
 
+import { MAX_LIST_ITEMS } from "@/lib/schemas/limits";
+
 import type { EventStatus } from "@prisma/client";
 
 import {
   EVENT_END_REQUIRED_MESSAGE,
   EVENT_START_REQUIRED_MESSAGE,
+  accessibilityNeedsText,
+  equipmentRequirementsText,
   eventPeriodError,
+  preferredLayoutText,
+  registrationNotesText,
+  venueRequirementsText,
 } from "@/lib/schemas/event";
 
 /**
@@ -53,6 +60,19 @@ export function registrationStillNeededMessage(
       ? "1 active registration"
       : `${activeRegistrations} active registrations`;
   return `This event has ${people}, so Registration needed can't be changed to No.`;
+}
+
+/**
+ * SCRUM-247 AC1 — the expected attendance is the event's registration
+ * capacity (SCRUM-74), so an edit can't lower it below the people already
+ * registered; the message says how many, as SCRUM-128 AC7's refusal does.
+ * An attendance is at least 1 (SCRUM-13 AC7), so a refusal always means two
+ * or more registrations.
+ */
+export function attendanceBelowRegistrationsMessage(
+  activeRegistrations: number,
+): string {
+  return `This event has ${activeRegistrations} active registrations, so the expected attendance can't be lower than ${activeRegistrations}.`;
 }
 
 /** How each field is named in messages and the audit log. */
@@ -115,8 +135,6 @@ export const CONFIRMATION_OUT_OF_DATE_MESSAGE =
 export const PAST_START_MESSAGE = "The start can't be in the past.";
 
 const text = (max: number) => z.string().trim().max(max).optional();
-// The request form caps none of these, so an event it accepted always saves here.
-const uncapped = z.string().trim().optional();
 
 export const eventDetailsEditSchema = z
   .object({
@@ -128,9 +146,10 @@ export const eventDetailsEditSchema = z
       .max(200, "Keep the name under 200 characters."),
     purpose: text(1000),
     description: text(5000),
-    accessibilityNeeds: uncapped,
-    preferredLayout: uncapped,
-    registrationNotes: uncapped,
+    // SCRUM-263 AC3: the request form's limits.
+    accessibilityNeeds: accessibilityNeedsText.optional(),
+    preferredLayout: preferredLayoutText.optional(),
+    registrationNotes: registrationNotesText.optional(),
     // SCRUM-171 AC5: "yes" or "no" from the form; left out, it stays as it is.
     registrationRequired: z.preprocess(
       (value) => (value === "yes" ? true : value === "no" ? false : value),
@@ -142,14 +161,14 @@ export const eventDetailsEditSchema = z
     startAt: z.string().min(1, EVENT_START_REQUIRED_MESSAGE),
     endAt: z.string().min(1, EVENT_END_REQUIRED_MESSAGE),
     expectedAttendance: z.coerce
-      .number({ invalid_type_error: "Attendance must be a positive whole number." })
+      .number({ error: "Attendance must be a positive whole number." })
       .int("Attendance must be a positive whole number.")
       .positive("Attendance must be a positive whole number."),
-    venueRequirements: uncapped,
-    equipmentRequirements: uncapped,
+    venueRequirements: venueRequirementsText.optional(),
+    equipmentRequirements: equipmentRequirementsText.optional(),
     // SCRUM-26 AC1: the arrangements the Coordinator was warned about and
     // agreed to flag. Empty until they have seen the warning.
-    confirmedArrangements: z.array(z.string()).default([]),
+    confirmedArrangements: z.array(z.string()).max(MAX_LIST_ITEMS).default([]),
   })
   .superRefine((data, ctx) => {
     // SCRUM-190 AC3: the same one-day rule as the request form.
@@ -174,7 +193,7 @@ export const NOTE_REQUIRED_MESSAGE = "Write the note before adding it.";
 export const operationalNoteSchema = z.object({
   eventId: z.string().min(1),
   body: z
-    .string({ required_error: NOTE_REQUIRED_MESSAGE })
+    .string({ error: NOTE_REQUIRED_MESSAGE })
     .trim()
     .min(1, NOTE_REQUIRED_MESSAGE)
     .max(2000, "Keep the note under 2000 characters."),

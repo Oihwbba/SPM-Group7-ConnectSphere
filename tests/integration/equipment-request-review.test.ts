@@ -257,7 +257,7 @@ describe.skipIf(!usesLocalDatabase)(
       throw new Error(`Only some of the ${count} updates queued behind the held request.`);
     }
 
-    it("SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-12: two suggestions on the same request at once — the first is saved, the second is told, nothing is doubled", async () => {
+    it("SCRUM-227 [AC1, AC3], SCRUM-28 [AC7] TC-28-12: two suggestions on the same request at once — the first is saved, the second is told, nothing is doubled", async () => {
       await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
       await reserveLecterns(2);
 
@@ -287,7 +287,7 @@ describe.skipIf(!usesLocalDatabase)(
       ).toBe(2);
     });
 
-    it("SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-13: a suggestion and an approval at once — the suggestion is saved, the approval is told, the request stays In Review", async () => {
+    it("SCRUM-227 [AC1, AC3], SCRUM-28 [AC7] TC-28-13: a suggestion and an approval at once — the suggestion is saved, the approval is told, the request stays In Review", async () => {
       await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
       await reserveLecterns(2);
 

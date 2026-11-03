@@ -64,6 +64,8 @@ export type NextStepFacts = {
   pendingChangeRequests: number;
   /** Flagged arrangements (SCRUM-26), counted for the Coordinator only. */
   flaggedArrangements: number;
+  /** Flagged arrangements for any viewer: only ever shown as waiting. */
+  unresolvedFlags: number;
   /** The readiness checklist, for an event in Planning. */
   checklist: ReadinessChecklist | null;
   decisionReason: string | null;
@@ -71,6 +73,8 @@ export type NextStepFacts = {
   cancellationReason: string | null;
   cancelledAt: string | null;
   completedAt?: string | null;
+  /** SCRUM-82 AC10: its start passed before anyone decided or confirmed it. */
+  overdue: boolean;
 };
 
 const coordinator = (facts: NextStepFacts) =>
@@ -197,12 +201,36 @@ export function nextStep(facts: NextStepFacts): NextStep {
       };
   }
 
+  // SCRUM-249 AC4: it can no longer be approved or confirmed, so nothing else
+  // on the event matters until its Coordinator closes it.
+  if (mine && facts.overdue) {
+    return {
+      kind: "yours",
+      text: "Your turn: this event is overdue, so reject it or cancel it",
+      ...(facts.status === "PLANNING"
+        ? {
+            tab: "arrangements",
+            action: { kind: "tab", label: "Go to Arrangements", tab: "arrangements" },
+          }
+        : { tab: "request", action: { kind: "review" } }),
+    };
+  }
+
   if (mine && facts.flaggedArrangements > 0) {
     return {
       kind: "yours",
       text: "Your turn: decide what happens to the flagged arrangements",
       tab: "changes",
       action: { kind: "tab", label: "Go to Changes", tab: "changes" },
+    };
+  }
+  // SCRUM-258 AC1: no checklist names the flag on a Confirmed event, and its
+  // arrangements aren't secured while one stands.
+  if (facts.status === "CONFIRMED" && facts.unresolvedFlags > 0) {
+    return {
+      kind: "waiting",
+      text: `Waiting for ${coordinator(facts)} to decide what happens to the flagged arrangements`,
+      tab: "changes",
     };
   }
   if (facts.pendingChangeRequests > 0) {

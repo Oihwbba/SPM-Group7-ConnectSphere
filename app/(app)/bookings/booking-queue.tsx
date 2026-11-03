@@ -41,6 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimeField } from "@/components/app/date-time-field";
 import { SubmittedDialog } from "@/components/app/submitted-dialog";
@@ -119,6 +120,7 @@ export function BookingQueue({
   const [holdExpiry, setHoldExpiry] = useState("");
   const [holdNote, setHoldNote] = useState("");
   const [holdErrors, setHoldErrors] = useState<Record<string, string[]>>({});
+  const [reasonErrors, setReasonErrors] = useState<string[]>();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   // Change 13: the request open in its details pop-up, read from the queue so
@@ -180,6 +182,7 @@ export function BookingQueue({
         setRejecting(null);
         setReason("");
       } else {
+        setReasonErrors(result.fieldErrors?.reason);
         toast.error(result.error);
       }
       router.refresh();
@@ -360,10 +363,16 @@ export function BookingQueue({
           </DialogHeader>
           <Textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setReasonErrors(undefined);
+            }}
             placeholder="Reason for rejection"
             aria-label="Rejection reason"
+            aria-invalid={Boolean(reasonErrors)}
+            aria-describedby={reasonErrors ? "booking-rejection-reason-error" : undefined}
           />
+          <FieldError id="booking-rejection-reason-error" messages={reasonErrors} />
           <DialogFooter>
             <Button variant="secondary" onClick={() => setRejecting(null)}>
               Cancel

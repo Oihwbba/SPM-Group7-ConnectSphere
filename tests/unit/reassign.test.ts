@@ -303,7 +303,7 @@ describe("reassignCoordinator — SCRUM-21", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("an unexpected database error is not swallowed", async () => {
+  it("SCRUM-21: an unexpected database error is not swallowed", async () => {
     mockAuth.mockResolvedValue(lead());
     mockTransaction.mockRejectedValue(new Error("DB down"));
 

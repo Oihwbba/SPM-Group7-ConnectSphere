@@ -179,3 +179,24 @@ after its booking, equipment and safety check, dated in the order the actions
 allow. The completed Hackathon then shows the system's move to Completed after
 its end time, and the re-planned Jazz Night the approved change that brought it
 back to Planning.
+
+## Addendum (2026-10-31) — An overdue event can't be approved or confirmed (SCRUM-249)
+
+SCRUM-82 AC 10 shows an event as Overdue once its start passes while it is
+Submitted, Under Review or Planning, but nothing stopped its Coordinator
+approving or confirming it. A late Confirm then opened registration already
+closed, and the event read as Completed once its end passed, though it was
+never confirmed in time.
+
+Both actions now refuse with one message, `OVERDUE_REFUSAL`, using
+`isOverdue`, the rule the Overdue badge uses: the start is strictly before
+now. Rejecting and cancelling are unaffected.
+
+The check is under the event-row lock. `confirmEvent` already held it, and
+checks before readiness. `transitionEventStatus` didn't lock at all: its
+conditional update (ADR 0006) guards the status it read, not the start time, so
+approving now takes the lock first. Rejecting doesn't need it, because an
+overdue event can still be rejected.
+
+A Coordinator who still wants the event can move its start to a later time
+first (SCRUM-25); it is then no longer overdue.

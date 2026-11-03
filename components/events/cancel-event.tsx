@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { cancelEvent } from "@/app/(app)/events/cancel-actions";
 
@@ -24,6 +25,7 @@ import { cancelEvent } from "@/app/(app)/events/cancel-actions";
 export function CancelEvent({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [cancelling, startCancel] = useTransition();
   const router = useRouter();
 
@@ -31,6 +33,7 @@ export function CancelEvent({ eventId }: { eventId: string }) {
     startCancel(async () => {
       const result = await cancelEvent({ eventId, reason });
       if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
         toast.error(result.error);
         return;
       }
@@ -48,6 +51,7 @@ export function CancelEvent({ eventId }: { eventId: string }) {
         className="text-destructive"
         onClick={() => {
           setReason("");
+          setErrors({});
           setOpen(true);
         }}
       >
@@ -66,10 +70,16 @@ export function CancelEvent({ eventId }: { eventId: string }) {
           </DialogHeader>
           <Textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setErrors({});
+            }}
             placeholder="Why is it cancelled?"
             aria-label="Cancellation reason"
+            aria-invalid={Boolean(errors.reason)}
+            aria-describedby={errors.reason ? "cancellation-reason-error" : undefined}
           />
+          <FieldError id="cancellation-reason-error" messages={errors.reason} />
           <DialogFooter>
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Keep event

@@ -93,7 +93,7 @@ describe("equipmentRequestLineSchema — SCRUM-27", () => {
 
   // regression: the form adds a line by parsing it, then checks the whole
   // request again before sending it, so a parsed line must parse again.
-  it("regression: accepts a line it has already parsed, with no requirements", () => {
+  it("SCRUM-27: regression: accepts a line it has already parsed, with no requirements", () => {
     const once = equipmentRequestLineSchema.parse(
       line({ technicalRequirements: "" }),
     );
@@ -105,7 +105,7 @@ describe("equipmentRequestLineSchema — SCRUM-27", () => {
     });
   });
 
-  it("refuses technical requirements over 1,000 characters", () => {
+  it("SCRUM-27: refuses technical requirements over 1,000 characters", () => {
     const parsed = equipmentRequestLineSchema.safeParse(
       line({ technicalRequirements: "x".repeat(1001) }),
     );
@@ -166,7 +166,7 @@ describe("createEquipmentRequestSchema — SCRUM-27", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("regression: accepts a request built from lines the form has already parsed", () => {
+  it("SCRUM-27: regression: accepts a request built from lines the form has already parsed", () => {
     const parsed = createEquipmentRequestSchema.safeParse({
       eventId: "evt_approved",
       notes: null,
@@ -175,7 +175,7 @@ describe("createEquipmentRequestSchema — SCRUM-27", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("stores blank notes as none and trims the rest", () => {
+  it("SCRUM-27: stores blank notes as none and trims the rest", () => {
     const blank = createEquipmentRequestSchema.safeParse(
       request({ notes: "  " }),
     );
@@ -189,7 +189,7 @@ describe("createEquipmentRequestSchema — SCRUM-27", () => {
 });
 
 describe("fieldErrorsByPath", () => {
-  it("keys each message by its full path, so a form can place it on the right line", () => {
+  it("SCRUM-27: keys each message by its full path, so a form can place it on the right line", () => {
     const parsed = createEquipmentRequestSchema.safeParse({
       eventId: "",
       lines: [line({ quantity: "0" })],
