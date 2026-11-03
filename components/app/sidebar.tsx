@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -59,16 +59,6 @@ const ICON_BY_GROUP: Record<GroupId, LucideIcon> = {
   planning: LayoutList,
 };
 
-// SCRUM-210: the rail from `md` up, the phone's bar below it. The server
-// renders the rail; a phone switches once mounted.
-const DESKTOP = "(min-width: 768px)";
-function onWidthChange(notify: () => void) {
-  const query = window.matchMedia(DESKTOP);
-  query.addEventListener("change", notify);
-  return () => query.removeEventListener("change", notify);
-}
-const isDesktop = () => window.matchMedia(DESKTOP).matches;
-
 /**
  * The left navigation rail. Collapsed by default: a slim column with a toggle
  * at the top and the role's items as circular icon buttons stacked inside one
@@ -83,7 +73,7 @@ const isDesktop = () => window.matchMedia(DESKTOP).matches;
  *
  * SCRUM-210: the links are grouped by task. A group of more than one link is
  * one item, named for the task; selecting it opens its links beneath it,
- * indented (on a phone, in a panel above the bar). The group of the page
+ * indented. The group of the page
  * being viewed starts open. A group of one link is just that link.
  */
 export function Sidebar({ roles }: { roles: Role[] }) {
@@ -123,9 +113,6 @@ export function Sidebar({ roles }: { roles: Role[] }) {
   // A group opened or closed by hand; otherwise it is open while it holds
   // the page being viewed.
   const [opened, setOpened] = useState<Partial<Record<GroupId, boolean>>>({});
-  // On a phone, the group whose links show in the panel above the bar.
-  const [phoneGroup, setPhoneGroup] = useState<GroupId | null>(null);
-  const desktop = useSyncExternalStore(onWidthChange, isDesktop, () => true);
   const holdsActive = (links: NavItem[]) =>
     links.some((item) => item.href === activeHref);
 
@@ -160,31 +147,6 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         )}
       </button>
 
-      {/* SCRUM-210: on a phone, an opened group's links in a panel above the
-          bar. */}
-      {groups.map(
-        (group) =>
-          group.heading &&
-          phoneGroup === group.id && (
-            <div
-              key={group.id}
-              role="group"
-              aria-label={group.heading}
-              className="absolute inset-x-0 bottom-full mb-2 flex flex-col gap-1 rounded-3xl border border-border/50 bg-background p-2 shadow-glass md:hidden"
-            >
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.href}
-                  item={item}
-                  active={item.href === activeHref}
-                  inPanel
-                  onSelect={() => setPhoneGroup(null)}
-                />
-              ))}
-            </div>
-          ),
-      )}
-
       {/* Nav items: a spaced-out row across the bottom bar on mobile; the tall
           rounded pill container on desktop. */}
       <nav
@@ -211,11 +173,8 @@ export function Sidebar({ roles }: { roles: Role[] }) {
           }
           const open = opened[group.id] ?? holdsActive(group.items);
           const Icon = ICON_BY_GROUP[group.id];
-          // Whether its links are in view: in place on the rail, in the
-          // panel on a phone.
-          const shown = desktop ? open : phoneGroup === group.id;
           // Closed over the page being viewed, the group shows as active.
-          const lit = holdsActive(group.items) && !shown;
+          const lit = holdsActive(group.items) && !open;
           return (
             <div
               key={group.id}
@@ -228,17 +187,10 @@ export function Sidebar({ roles }: { roles: Role[] }) {
                 type="button"
                 title={group.heading}
                 aria-label={group.heading}
-                aria-expanded={shown}
-                onClick={() => {
-                  // The rail opens the group in place; a phone, in its panel.
-                  if (desktop) {
-                    setOpened((current) => ({ ...current, [group.id]: !open }));
-                  } else {
-                    setPhoneGroup((current) =>
-                      current === group.id ? null : group.id,
-                    );
-                  }
-                }}
+                aria-expanded={open}
+                onClick={() =>
+                  setOpened((current) => ({ ...current, [group.id]: !open }))
+                }
                 className={cn(
                   "group flex items-center justify-center gap-3 rounded-full transition-colors",
                   "flex-1 md:flex-none",
@@ -250,9 +202,7 @@ export function Sidebar({ roles }: { roles: Role[] }) {
                     "flex h-11 w-full shrink-0 items-center justify-center rounded-full transition-colors md:w-11",
                     lit
                       ? "bg-foreground text-background shadow-glass-sm"
-                      : phoneGroup === group.id
-                        ? "bg-secondary text-foreground md:bg-transparent md:text-muted-foreground"
-                        : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
+                      : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
                   )}
                 >
                   <Icon className="h-5 w-5" />
