@@ -40,7 +40,10 @@ import {
 import { FieldError } from "@/components/ui/field-error";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimeField } from "@/components/app/date-time-field";
-import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import {
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 import { SubmittedDialog } from "@/components/app/submitted-dialog";
 import {
   DECISION_BUTTON,
@@ -158,7 +161,7 @@ export function BookingDecision({
   async function decideNow(
     decision: "APPROVED" | "REJECTED",
     decisionReason?: string,
-  ) {
+  ): Promise<ConfirmOutcome> {
     const result = await decideBookingRequest({
       bookingId: booking.id,
       decision,
@@ -166,10 +169,11 @@ export function BookingDecision({
     });
     if (!result.ok) {
       // SCRUM-264: a refused reason keeps the dialog open, with the message
-      // at the box. Anything else is the request itself being refused.
+      // at the box, so the dialog does not repeat it; returning nothing would
+      // close it. Anything else is the request itself being refused.
       if (result.fieldErrors?.reason) {
         setReasonErrors(result.fieldErrors.reason);
-        return;
+        return { ok: false, error: "" };
       }
       setRejecting(false);
       setRefusal(result.error);
@@ -190,7 +194,9 @@ export function BookingDecision({
   }
 
   function decide(decision: "APPROVED" | "REJECTED") {
-    startTransition(() => decideNow(decision));
+    startTransition(async () => {
+      await decideNow(decision);
+    });
   }
 
   // SCRUM-163 AC7: a held request is approved here once, then confirmed by
