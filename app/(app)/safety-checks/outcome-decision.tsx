@@ -77,7 +77,9 @@ export function OutcomeDecision({
       // typed; the dialog stays open on it.
       if (result.fieldErrors?.note) {
         setNoteErrors(result.fieldErrors.note);
-        return result;
+        // SCRUM-264: the message belongs at the box, so the dialog does not
+        // repeat it; returning no error keeps the dialog open on it.
+        return { ok: false, error: "" };
       }
       // Shown in the dialog, and beside the decision once it is closed,
       // when the page is read again.

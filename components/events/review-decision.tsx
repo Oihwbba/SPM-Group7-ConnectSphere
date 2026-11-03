@@ -82,6 +82,9 @@ export function ReviewDecision({
     if (!result.ok) {
       // SCRUM-264: a reason refused for length is said at the box.
       setErrors(result.fieldErrors ?? {});
+      // SCRUM-264: the message belongs at the box, so the dialog does not
+      // repeat it; returning no error keeps the dialog open on it.
+      if (result.fieldErrors) return { ok: false, error: "" };
       return result;
     }
     toast.success(
@@ -111,9 +114,13 @@ export function ReviewDecision({
         editableFields: fields,
       });
       if (!result.ok) {
-        setAskError(result.error);
+        // SCRUM-264: a message refused for length is said at the box;
+        // anything else is shown for the dialog as a whole (SCRUM-207 AC4).
+        setErrors(result.fieldErrors ?? {});
+        setAskError(result.fieldErrors ? null : result.error);
         return;
       }
+      setErrors({});
       setAskError(null);
       toast.success("Clarification request sent to the organiser.");
       setAsking(false);
@@ -196,7 +203,9 @@ export function ReviewDecision({
           aria-label="Rejection reason"
           aria-invalid={Boolean(errors.decisionReason)}
           aria-describedby={
-            errors.decisionReason ? `rejection-reason-error-${event.id}` : undefined
+            errors.decisionReason
+              ? `rejection-reason-error-${event.id}`
+              : undefined
           }
         />
         <FieldError
@@ -231,8 +240,8 @@ export function ReviewDecision({
           <DialogHeader>
             <DialogTitle>Request clarification</DialogTitle>
             <DialogDescription>
-              Ask the organiser what you need before deciding. The event
-              stays under review while you wait for their response.
+              Ask the organiser what you need before deciding. The event stays
+              under review while you wait for their response.
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -245,7 +254,9 @@ export function ReviewDecision({
             aria-label="Clarification message"
             aria-invalid={Boolean(errors.message)}
             aria-describedby={
-              errors.message ? `clarification-message-error-${event.id}` : undefined
+              errors.message
+                ? `clarification-message-error-${event.id}`
+                : undefined
             }
           />
           <FieldError

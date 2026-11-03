@@ -12,7 +12,10 @@ import {
   getChangeDecision,
   type ChangeDecisionView,
 } from "@/app/(app)/events/change-decision-actions";
-import { changeFieldLabel, changeValueLabel } from "@/lib/schemas/change-request";
+import {
+  changeFieldLabel,
+  changeValueLabel,
+} from "@/lib/schemas/change-request";
 import {
   ConfirmDialog,
   type ConfirmOutcome,
@@ -20,7 +23,6 @@ import {
 
 const DECIDE_FAILED_MESSAGE =
   "The decision couldn't be sent. If the request above isn't decided, try again.";
-
 
 /**
  * SCRUM-128 — under a Submitted change request, for its event's assigned
@@ -97,7 +99,9 @@ export function ChangeRequestDecision({
       result = await decideChangeRequest({
         changeRequestId: view!.changeRequestId,
         decision,
-        reason,
+        // SCRUM-264 TC-264-05: text left behind by backing out of the reject
+        // dialog isn't part of an approval, so it can't refuse one.
+        reason: decision === "REJECTED" ? reason : undefined,
       });
     } catch {
       // A lost connection or an unexpected server error: the decision may
@@ -111,7 +115,10 @@ export function ChangeRequestDecision({
       // in another tab, the event reassigned or closed) may mean the list is
       // out of date, so it is read again once the dialog is closed.
       setErrors(result.fieldErrors ?? {});
-      if (!result.fieldErrors) setStale(true);
+      // SCRUM-264: the message belongs at the box, so the dialog does not
+      // repeat it; returning no error keeps the dialog open on it.
+      if (result.fieldErrors) return { ok: false, error: "" };
+      setStale(true);
       return result;
     }
     toast.success(
@@ -128,7 +135,10 @@ export function ChangeRequestDecision({
   }
 
   return (
-    <div className="space-y-3 border-t pt-3" data-testid="change-request-decision">
+    <div
+      className="space-y-3 border-t pt-3"
+      data-testid="change-request-decision"
+    >
       {!view.requestsCancellation && (
         <table className="w-full text-left">
           <thead className="text-muted-foreground">
@@ -141,8 +151,12 @@ export function ChangeRequestDecision({
           <tbody>
             {view.fields.map((field) => (
               <tr key={field.fieldName}>
-                <td className="pr-2 font-medium">{changeFieldLabel(field.fieldName)}</td>
-                <td className="pr-2">{changeValueLabel(field.fieldName, field.current)}</td>
+                <td className="pr-2 font-medium">
+                  {changeFieldLabel(field.fieldName)}
+                </td>
+                <td className="pr-2">
+                  {changeValueLabel(field.fieldName, field.current)}
+                </td>
                 <td>{changeValueLabel(field.fieldName, field.requested)}</td>
               </tr>
             ))}
@@ -222,7 +236,9 @@ export function ChangeRequestDecision({
             placeholder="Why can't this change be made?"
             aria-label="Reason for rejecting the change request"
             aria-invalid={Boolean(errors.reason)}
-            aria-describedby={errors.reason ? "change-rejection-reason-error" : undefined}
+            aria-describedby={
+              errors.reason ? "change-rejection-reason-error" : undefined
+            }
           />
           <FieldError
             id="change-rejection-reason-error"

@@ -200,7 +200,7 @@ test.describe("SCRUM-207 [AC5] irreversible actions ask in the shared dialog", (
     await page.goto("/events");
     const row = page
       .getByRole("row")
-      .filter({ hasText: "Draft — Annual Tech Summit" });
+      .filter({ hasText: "Annual Tech Summit" });
     await backOutOf(
       page,
       row.getByRole("button", { name: "Discard" }),
@@ -219,7 +219,7 @@ test.describe("SCRUM-207 [AC5] irreversible actions ask in the shared dialog", (
     await page.goto("/events");
     const row = page
       .getByRole("row")
-      .filter({ hasText: "Under Review — Career Fair" });
+      .filter({ hasText: "Career Fair" });
     await backOutOf(
       page,
       row.getByRole("button", { name: "Reject" }),

@@ -29,10 +29,17 @@ export function CancelEvent({ eventId }: { eventId: string }) {
   async function cancel(): Promise<ConfirmOutcome> {
     const result = await cancelEvent({ eventId, reason });
     if (!result.ok) {
-      if (result.fieldErrors?.reason) setReasonErrors(result.fieldErrors.reason);
+      if (result.fieldErrors?.reason) {
+        setReasonErrors(result.fieldErrors.reason);
+        // SCRUM-264: the message belongs at the box, so the dialog does not
+        // repeat it; returning no error keeps the dialog open on it.
+        return { ok: false, error: "" };
+      }
       return result;
     }
-    toast.success("Event cancelled. Its arrangements and registrations were released.");
+    toast.success(
+      "Event cancelled. Its arrangements and registrations were released.",
+    );
     router.refresh();
   }
 
@@ -70,7 +77,9 @@ export function CancelEvent({ eventId }: { eventId: string }) {
         placeholder="Why is it cancelled?"
         aria-label="Cancellation reason"
         aria-invalid={Boolean(reasonErrors)}
-        aria-describedby={reasonErrors ? "cancellation-reason-error" : undefined}
+        aria-describedby={
+          reasonErrors ? "cancellation-reason-error" : undefined
+        }
       />
       <FieldError id="cancellation-reason-error" messages={reasonErrors} />
     </ConfirmDialog>

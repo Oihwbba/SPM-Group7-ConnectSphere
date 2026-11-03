@@ -290,6 +290,9 @@ export function ReadinessChecklist({
       // SCRUM-264: a reason refused for length is said at the box.
       if (result.fieldErrors?.decisionReason) {
         setReasonErrors(result.fieldErrors.decisionReason);
+        // SCRUM-264: the message belongs at the box, so the dialog does not
+        // repeat it; returning no error keeps the dialog open on it.
+        return { ok: false, error: "" };
       }
       return result;
     }
@@ -852,7 +855,6 @@ export function ReadinessChecklist({
     </div>
   );
 }
-
 
 /**
  * One arrangement: its title with the checklist item's state beside it (for
