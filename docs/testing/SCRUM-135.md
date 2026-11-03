@@ -60,7 +60,7 @@ every action asks it.
 |---|---|
 | Test Case ID | TC-135-03 |
 | Test Scenario | [Negative] AC 3, AC 4, AC 11: a Submitted request can't be approved or rejected, not even by a Coordinator assigned to it |
-| Pre-conditions | "Submitted — Alumni Homecoming" (seeded) has no Coordinator; a second Submitted request is assigned to `coordinator@test.local`. |
+| Pre-conditions | "Submitted: Awaiting Lead — Alumni Homecoming" (seeded) has no Coordinator; a second Submitted request is assigned to `coordinator@test.local`. |
 | Test Steps | 1. As the Coordinator, open **Events**. <br> 2. Approve or reject each directly. |
 | Test Data | — |
 | Expected Result | 1. The unassigned request isn't in the list at all: it waits in the Lead's queue (SCRUM-165 AC8). 2. The unassigned one: "Event not found." The assigned one: "This event is Submitted, so it can't be approved." (or "rejected."). Nothing changes and no Coordinator is assigned. |

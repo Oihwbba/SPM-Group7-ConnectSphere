@@ -5,7 +5,7 @@ Format and conventions: [README.md](README.md). The registrations themselves
 come from SCRUM-73, 74 and 77.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
-and the app is running. "Confirmed — Charity Gala" (`evt_confirmed`) is owned
+and the app is running. "Confirmed: Registration Open — Charity Gala" (`evt_confirmed`) is owned
 by `organiser@test.local`, assigned to `coordinator@test.local`, with 120
 places: Aria (`attendee@`) and Amir (`attendee2@`) Registered, Ana
 (`attendee3@`) Withdrawn. Every account's password is `Password123!`.

@@ -36,8 +36,8 @@ unless the case says otherwise.
 | Test Scenario | [Negative] AC 1: an Organiser sees only their own requests |
 | Pre-conditions | Both seeded Organisers have requests. Signed in as `organiser2@test.local`. |
 | Test Steps | 1. Open **My Events**. |
-| Test Data | organiser2's seeded "Another Client's Event — Product Launch"; organiser@test.local's "Draft — Annual Tech Summit" |
-| Expected Result | "Another Client's Event — Product Launch" is listed. Nothing of organiser@test.local's, such as "Draft — Annual Tech Summit", appears anywhere on the page. |
+| Test Data | organiser2's seeded "Submitted: Other Organiser — Product Launch"; organiser@test.local's "Draft: Missing Details — Annual Tech Summit" |
+| Expected Result | "Submitted: Other Organiser — Product Launch" is listed. Nothing of organiser@test.local's, such as "Draft: Missing Details — Annual Tech Summit", appears anywhere on the page. |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events"
 
@@ -140,7 +140,7 @@ unless the case says otherwise.
 |---|---|
 | Test Case ID | TC-84-09 |
 | Test Scenario | [Positive] AC 3, AC 4 at phone width: each request is a card with its fields labelled, and its actions still work |
-| Pre-conditions | Signed in as the Organiser, at a 375 × 812 screen. The seeded "Draft — Annual Tech Summit" is a draft. |
+| Pre-conditions | Signed in as the Organiser, at a 375 × 812 screen. The seeded "Draft: Missing Details — Annual Tech Summit" is a draft. |
 | Test Steps | 1. Open **My Events**. <br> 2. Look at the first request and a draft. <br> 3. Tap a draft's **Resume Draft**. |
 | Test Data | Screen 375 × 812 |
 | Expected Result | Each request is a stacked card, not a table row, with **View Details** (an eye icon, named for screen readers) and its "Starts" and "Last Updated" labels shown as text. A draft keeps its 4 px left border. The page doesn't scroll sideways. **Resume Draft** opens "Resume Draft Event Request". |

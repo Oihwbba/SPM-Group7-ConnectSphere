@@ -86,7 +86,7 @@ test.describe("SCRUM-132 [AC1] core pages at 360 px", () => {
     const page = await onPhone(browser, "coordinator@test.local");
     await page.goto("/events");
     // SCRUM-208: the event is a page, so nothing on it may scroll sideways.
-    const details = await openDetails(page, "Planning — Freshman Orientation");
+    const details = await openDetails(page, "Planning: Venue Pending — Freshman Orientation");
     await expect(details.getByTestId("readiness-checklist")).toBeVisible();
     await expect(details.getByText("Checking arrangements…")).toHaveCount(0);
     expect(await overflow(page)).toBeLessThanOrEqual(0);
@@ -153,10 +153,10 @@ test.describe("SCRUM-132 [AC2] operations respond within 2 seconds", () => {
   }) => {
     const page = await signedIn(browser, "coordinator@test.local");
     await page.goto("/events");
-    await expect(page.getByRole("row", { name: /Planning — Freshman Orientation/ })).toBeVisible();
+    await expect(page.getByRole("row", { name: /Planning: Venue Pending — Freshman Orientation/ })).toBeVisible();
 
     await timed("view an event", async () => {
-      const details = await openDetails(page, "Planning — Freshman Orientation");
+      const details = await openDetails(page, "Planning: Venue Pending — Freshman Orientation");
       await expect(details.getByTestId("readiness-item-venue")).toBeVisible();
     });
     await page.keyboard.press("Escape");
@@ -240,7 +240,7 @@ test.describe("SCRUM-132 [AC3] the event detail on a desktop screen", () => {
     const page = await signedIn(browser, "coordinator@test.local");
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/events");
-    const details = await openDetails(page, "Planning — Freshman Orientation");
+    const details = await openDetails(page, "Planning: Venue Pending — Freshman Orientation");
 
     await expect(details.getByTestId("status-badge")).toBeInViewport();
     const checklist = details.getByTestId("readiness-checklist");
@@ -260,7 +260,7 @@ test.describe("SCRUM-132 [AC3] the event detail on a desktop screen", () => {
     const page = await signedIn(browser, "organiser@test.local");
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/events");
-    const details = await openDetails(page, "Confirmed — Charity Gala");
+    const details = await openDetails(page, "Confirmed: Registration Open — Charity Gala");
 
     await expect(details.getByTestId("status-badge")).toBeInViewport();
     await expect(details.getByTestId("confirmed-venue")).toBeInViewport();

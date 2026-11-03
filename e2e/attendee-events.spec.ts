@@ -46,7 +46,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     await page.waitForURL("**/events");
 
     const galaCard = page.getByTestId("browsable-event-card").filter({
-      hasText: "Confirmed — Charity Gala",
+      hasText: "Confirmed: Registration Open — Charity Gala",
     });
     await expect(galaCard).toBeVisible();
     await expect(galaCard.getByTestId("venue")).toContainText(
@@ -66,7 +66,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     // AC: "A full event remains visible and is shown as full rather than
     // disappearing from the browse list."
     const fullCard = page.getByTestId("browsable-event-card").filter({
-      hasText: "Full — Wine Tasting Evening",
+      hasText: "Confirmed: Registration Full — Wine Tasting Evening",
     });
     await expect(fullCard).toBeVisible();
     await expect(fullCard.getByTestId("remaining-capacity")).toHaveText(
@@ -78,7 +78,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
 
     // Boundary: exactly one place left is still OPEN, not FULL.
     const lastSeatCard = page.getByTestId("browsable-event-card").filter({
-      hasText: "One Place Left — Studio Masterclass",
+      hasText: "Confirmed: One Place Left — Studio Masterclass",
     });
     await expect(lastSeatCard.getByTestId("remaining-capacity")).toHaveText(
       "1 of 3 places remaining",
@@ -91,7 +91,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     // AC: "The registration period ... are shown" — not just the derived
     // state, the actual configured dates.
     const notOpenCard = page.getByTestId("browsable-event-card").filter({
-      hasText: "Registration Not Yet Open — Summer Camp",
+      hasText: "Confirmed: Registration Not Open — Summer Camp",
     });
     await expect(
       notOpenCard.getByTestId("registration-state-badge"),
@@ -101,7 +101,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     );
 
     const closedCard = page.getByTestId("browsable-event-card").filter({
-      hasText: "Registration Closed — Leadership Retreat",
+      hasText: "Confirmed: Registration Closed — Leadership Retreat",
     });
     await expect(closedCard.getByTestId("registration-state-badge")).toHaveText(
       "Closed",
@@ -113,7 +113,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     // AC: "An event that is Cancelled no longer appears in the attendee
     // browse list."
     await expect(
-      page.getByText("Cancelled — Winter Workshop"),
+      page.getByText("Cancelled: After Confirmation — Winter Workshop"),
     ).not.toBeVisible();
   });
 
@@ -135,12 +135,12 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     await page.waitForURL("**/events");
 
     const fullCard = page.getByTestId("browsable-event-card").filter({
-      hasText: "Full — Wine Tasting Evening",
+      hasText: "Confirmed: Registration Full — Wine Tasting Evening",
     });
     await fullCard.click();
 
     await expect(
-      page.getByRole("heading", { name: "Full — Wine Tasting Evening" }),
+      page.getByRole("heading", { name: "Confirmed: Registration Full — Wine Tasting Evening" }),
     ).toBeVisible();
     await expect(page.getByTestId("registration-state-badge")).toHaveText(
       "Full",
@@ -163,13 +163,13 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     page,
   }) => {
     const notOpenCard = page.getByTestId("browsable-event-card").filter({
-      hasText: "Registration Not Yet Open — Summer Camp",
+      hasText: "Confirmed: Registration Not Open — Summer Camp",
     });
     await notOpenCard.click();
 
     await expect(
       page.getByRole("heading", {
-        name: "Registration Not Yet Open — Summer Camp",
+        name: "Confirmed: Registration Not Open — Summer Camp",
       }),
     ).toBeVisible();
     await expect(page.getByTestId("registration-period")).toContainText(
@@ -231,10 +231,10 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
 
     await search.fill("WINE");
     await expect(
-      page.getByText("Full — Wine Tasting Evening", { exact: true }),
+      page.getByText("Confirmed: Registration Full — Wine Tasting Evening", { exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Registration Not Yet Open — Summer Camp", {
+      page.getByText("Confirmed: Registration Not Open — Summer Camp", {
         exact: true,
       }),
     ).not.toBeVisible();
@@ -244,7 +244,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
 
     await search.fill("");
     await expect(
-      page.getByText("Registration Not Yet Open — Summer Camp", {
+      page.getByText("Confirmed: Registration Not Open — Summer Camp", {
         exact: true,
       }),
     ).toBeVisible();

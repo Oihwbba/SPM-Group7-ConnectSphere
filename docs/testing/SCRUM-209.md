@@ -77,7 +77,7 @@ safety check" open the tab at that section.
 | Pre-conditions | The event has an approved venue. |
 | Test Steps | 1. In the Equipment section, select **Request equipment**. <br> 2. The form says "For <event name>." and has no event dropdown. Add one Projector and submit. |
 | Test Data | Projector × 1 |
-| Expected Result | The page stays open; the section shows the request, Pending Review, with its line. Request equipment is no longer offered. Only the assigned Coordinator is offered it, while the event is Approved or Planning (SCRUM-27). |
+| Expected Result | The page stays open; the section shows the request, Pending Review, with its line. Request equipment is no longer offered. Only the assigned Coordinator is offered it, while the event is Planning (SCRUM-27; Approved was dropped by SCRUM-233, since no event stays in it). |
 
 **Automated by:** `tests/unit/readiness-actions.test.ts` › every "SCRUM-209 [AC2] TC-209-03: …" test and "SCRUM-209 [AC2, AC4] TC-209-03: at $status, a new request offered is $offered (SCRUM-27's own rule)"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-209 [AC2] TC-209-03: lists one event's requests, newest first, read as the Equipment Requests page reads them"; `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10: …"
 

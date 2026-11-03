@@ -12,6 +12,10 @@ title format, so each case names them by their current titles.
 and the app is running. Signed in as `organiser@test.local` (`Password123!`),
 unless the case says otherwise.
 
+Since SCRUM-233 no seeded event is Approved: approval saves Planning
+(SCRUM-81 AC 1), so the Approved badge is seen in an event's history, not as
+its current status. TC-23-01 still checks that all nine statuses have a badge.
+
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
 | [TC-23-01](#tc-23-01) | Positive | AC 1 | Unit |

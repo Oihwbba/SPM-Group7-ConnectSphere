@@ -55,7 +55,7 @@ SCRUM-128 applies (TC-75-14).
 |---|---|
 | Test Case ID | TC-75-02 |
 | Test Scenario | [Negative] AC 2, AC 9: registration never opens before the event is Confirmed, and pauses when it returns to Planning |
-| Pre-conditions | An event in Planning whose seeded window is already open. |
+| Pre-conditions | An event in Planning with registration enabled and no closing time passed. |
 | Test Steps | 1. As an Attendee, send a registration for it. |
 | Test Data | `attendee4@test.local` |
 | Expected Result | Refused with "This event is not open for registration."; no registration is written, and existing ones are untouched. |

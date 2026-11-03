@@ -513,10 +513,11 @@ export function EventsClient({
               className="h-9 w-40 shrink-0 text-xs"
               options={[
                 { value: "ALL", label: "All Statuses" },
-                ...Object.entries(EVENT_STATUS_LABEL).map(([value, label]) => ({
-                  value,
-                  label,
-                })),
+                // SCRUM-233: no event stays Approved (SCRUM-81 AC1), so it
+                // isn't offered; history entries still show its label.
+                ...Object.entries(EVENT_STATUS_LABEL)
+                  .filter(([value]) => value !== "APPROVED")
+                  .map(([value, label]) => ({ value, label })),
               ]}
             />
             <input

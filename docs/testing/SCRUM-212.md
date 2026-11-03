@@ -6,9 +6,9 @@ Format and conventions: [README.md](README.md).
 **Shared pre-conditions for every case:** the database is migrated and seeded
 (`npm run db:deploy && npm run db:seed`), the app is running, and every seeded
 account signs in with `Password123!`. `attendee4@test.local` holds no
-registrations; `attendee@test.local` holds places at **Confirmed — Charity
-Gala**, **Full — Wine Tasting Evening** and **One Place Left — Studio
-Masterclass**, and a cancelled one at **Cancelled — Winter Workshop**.
+registrations; `attendee@test.local` holds places at **Confirmed: Registration Open — Charity
+Gala**, **Confirmed: Registration Full — Wine Tasting Evening** and **Confirmed: One Place Left — Studio
+Masterclass**, and a cancelled one at **Cancelled: After Confirmation — Winter Workshop**.
 
 The story is presentation only. The registration rules (SCRUM-73, 74, 75, 77),
 the actions, the permissions and the schema are unchanged: each state below
@@ -127,7 +127,7 @@ event as SCRUM-72 AC3 requires.
 | Test Scenario | [Positive] AC 1: Browse Events shows each event's one state, and the event's page says the same |
 | Pre-conditions | Signed in as an Attendee with no registrations. |
 | Test Steps | 1. Open **Browse Events**. <br> 2. Read the card of each seeded event below. <br> 3. Open each and read the badge and line on its page. |
-| Test Data | `attendee4@test.local`; Confirmed — Charity Gala; One Place Left — Studio Masterclass; Full — Wine Tasting Evening; Registration Not Yet Open — Summer Camp; Registration Closed — Leadership Retreat |
+| Test Data | `attendee4@test.local`; Confirmed: Registration Open — Charity Gala; Confirmed: One Place Left — Studio Masterclass; Confirmed: Registration Full — Wine Tasting Evening; Confirmed: Registration Not Open — Summer Camp; Confirmed: Registration Closed — Leadership Retreat |
 | Expected Result | Card and page agree: **Open** "118 places left"; **Open** "1 place left"; **Full** "No places left"; **Not open yet** "Opens <date>, <time> SGT"; **Closed** "Registration is closed". |
 
 **Automated by:** `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC1] TC-212-06: Browse Events shows open with places left, full, not open yet and closed, and the event page says the same"
