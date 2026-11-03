@@ -72,7 +72,14 @@ Copy this block for each case:
     `SCRUM-226 [AC2], SCRUM-155 [AC5, AC6] TC-155-17: …`.
   - A test that automates no documented case still carries its story's or
     chore's key, and its criterion where one applies: `SCRUM-178 [AC1]: …`.
-    A helper that belongs to no story or chore keeps a plain title.
+    The key may be on a `describe` around it instead (`… — SCRUM-31`). A
+    helper that belongs to no story or chore keeps a plain title: add it to
+    `PLAIN` in `tests/unit/test-titles.test.ts`, with the reason.
+  - A test cited by another story's case keeps its own story's title, rather
+    than collecting every case that reuses it.
+  - `tests/unit/test-titles.test.ts` checks these rules on every pull request
+    (SCRUM-273). It reads titles from the code, so a title built wholly at run
+    time, such as SCRUM-70's `${who} sees …`, is checked only by its citation.
 
 ## Execution records
 
@@ -213,7 +220,7 @@ SCRUM-236 the unit and integration tests, with every citation updated.
 | [SCRUM-225](SCRUM-225.md) | Jin Hong | 5 | A Chore task: the GLM review skipped with a passing check on its quota or rate limit; automated by unit tests except TC-225-05, a document check |
 | [SCRUM-233](SCRUM-233.md) | Felicia Or | 34 | A Chore task: the seed follows the event lifecycle; automated (integration for each seeded rule, unit and e2e for the status filters and requestable statuses, the whole suite for the rows other suites use) except TC-233-09, a document check, and TC-233-11, the shared database after the merge |
 | [SCRUM-234](SCRUM-234.md) | Jin Hong | 3 | A Chore task: the e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation; automated by e2e except TC-234-03, a document check |
-| [SCRUM-236](SCRUM-236.md) | Jin Hong | 6 | A Chore task: every unit and integration test titled after its story, criteria and case; checked by the audit in #313, TC-236-04 by SCRUM-196's citation check, and TC-236-05 by a unit test reading every document (SCRUM-271) |
+| [SCRUM-236](SCRUM-236.md) | Jin Hong | 6 | A Chore task: every unit and integration test titled after its story, criteria and case; automated except TC-236-06, the review of its own diff in #313: TC-236-01 to TC-236-03 by a unit test reading every title (SCRUM-273), TC-236-04 by SCRUM-196's citation check, and TC-236-05 by a unit test reading every document (SCRUM-271) |
 | [SCRUM-237](SCRUM-237.md) | Jin Hong | 4 | A Chore task: the development-environment notice on the sign-in page and every signed-in page; automated (unit, e2e for each role and at phone width) except TC-237-04, a document check |
 | [SCRUM-238](SCRUM-238.md) | Jin Hong | 5 | A Chore task: seed data for every role and status; automated (integration for statuses, notification types and each role's work; the whole suite for the records tests rely on) except TC-238-03's re-run and TC-238-05, the shared database |
 | [SCRUM-240](SCRUM-240.md) | Jun Bin | 9 | A Bug task: the database pool capped at 3 connections on Supabase, idle connections closed, and the 43-connection pooler recorded; automated by unit tests except TC-240-04, TC-240-08 and TC-240-09, checks on the live app, the Supabase setting and the real pooler |
