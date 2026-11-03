@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-236 - Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Medium |
 | **Story points** | 0 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-236 |
 

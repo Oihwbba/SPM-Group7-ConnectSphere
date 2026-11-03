@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-03. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-268 - Chore: Fix the docs that no longer match the code: product context, ADR index and Server Actions reference
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Medium |
 | **Story points** | 0 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-268 |
 
