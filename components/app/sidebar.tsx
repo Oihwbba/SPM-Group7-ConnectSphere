@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -268,6 +268,17 @@ export function MobileNav({ roles }: { roles: Role[] }) {
     .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
     .sort((a, b) => b.length - a.length)[0];
 
+  // As a dialog does: focus goes into the panel when it opens, and back to
+  // the button that opened it when it closes, but not on first render.
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open) closeButton.current?.focus();
+    else if (wasOpen.current) menuButton.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+
   // Escape closes the panel, as it closes a dialog.
   useEffect(() => {
     if (!open) return;
@@ -281,6 +292,7 @@ export function MobileNav({ roles }: { roles: Role[] }) {
   return (
     <div className="md:hidden">
       <button
+        ref={menuButton}
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
@@ -312,6 +324,7 @@ export function MobileNav({ roles }: { roles: Role[] }) {
             >
               <div className="flex items-center justify-end pb-1">
                 <button
+                  ref={closeButton}
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="Close menu"
