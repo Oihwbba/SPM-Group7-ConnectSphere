@@ -58,7 +58,7 @@ venue requests; the suite removes them.
 | Test Data | — |
 | Expected Result | The Microphone and Lectern reservations are Cancelled; the unchanged Projector reservation stays Reserved. |
 
-**Automated by:** as TC-142-01 (integration and e2e).
+**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC1, AC2, AC7] TC-142-01, TC-142-02: …"; `e2e/change-or-withdraw.spec.ts` › "SCRUM-142 [AC1, AC2] TC-142-01, TC-142-02: …"
 
 ### TC-142-03
 
