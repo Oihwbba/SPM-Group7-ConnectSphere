@@ -15,7 +15,7 @@ async function openGala(page: Page, email: string) {
   await page.waitForURL("**/events");
 
   // SCRUM-208: the list is on the event page's Registrations tab.
-  const event = await openEvent(page, "Confirmed — Charity Gala", "Registrations");
+  const event = await openEvent(page, "Confirmed: Registration Open — Charity Gala", "Registrations");
   return event.getByTestId("registration-list");
 }
 

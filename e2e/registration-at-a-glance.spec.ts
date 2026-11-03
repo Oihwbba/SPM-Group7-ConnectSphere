@@ -42,27 +42,27 @@ const overflow = (page: Page) =>
 test.describe("SCRUM-212 [AC1] each event shows one clear registration state", () => {
   const states: { name: string; badge: string; line: string | RegExp }[] = [
     {
-      name: "Confirmed — Charity Gala",
+      name: "Confirmed: Registration Open — Charity Gala",
       badge: "Open",
       line: "118 places left",
     },
     {
-      name: "One Place Left — Studio Masterclass",
+      name: "Confirmed: One Place Left — Studio Masterclass",
       badge: "Open",
       line: "1 place left",
     },
     {
-      name: "Full — Wine Tasting Evening",
+      name: "Confirmed: Registration Full — Wine Tasting Evening",
       badge: "Full",
       line: "No places left",
     },
     {
-      name: "Registration Not Yet Open — Summer Camp",
+      name: "Confirmed: Registration Not Open — Summer Camp",
       badge: "Not open yet",
       line: /^Opens \d{1,2} \w{3,4} \d{4}, \d{1,2}:\d{2}\s[ap]m SGT$/,
     },
     {
-      name: "Registration Closed — Leadership Retreat",
+      name: "Confirmed: Registration Closed — Leadership Retreat",
       badge: "Closed",
       line: "Registration is closed",
     },
@@ -93,8 +93,8 @@ test.describe("SCRUM-212 [AC1] each event shows one clear registration state", (
     await page.goto("/events");
 
     for (const name of [
-      "Confirmed — Charity Gala",
-      "Full — Wine Tasting Evening",
+      "Confirmed: Registration Open — Charity Gala",
+      "Confirmed: Registration Full — Wine Tasting Evening",
     ]) {
       await expectState(
         card(page, name),
@@ -104,16 +104,16 @@ test.describe("SCRUM-212 [AC1] each event shows one clear registration state", (
     }
     // Not registered here, so the event's own state shows.
     await expectState(
-      card(page, "Registration Closed — Leadership Retreat"),
+      card(page, "Confirmed: Registration Closed — Leadership Retreat"),
       "Closed",
       "Registration is closed",
     );
 
-    await card(page, "Full — Wine Tasting Evening").click();
+    await card(page, "Confirmed: Registration Full — Wine Tasting Evening").click();
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Full — Wine Tasting Evening",
+        name: "Confirmed: Registration Full — Wine Tasting Evening",
       }),
     ).toBeVisible();
     await expectState(
@@ -133,9 +133,9 @@ test.describe("SCRUM-212 [AC2] My Registrations", () => {
     const page = await signedIn(browser, "attendee@test.local");
     await page.goto("/registrations");
 
-    const gala = row(page, "Confirmed — Charity Gala");
+    const gala = row(page, "Confirmed: Registration Open — Charity Gala");
     await expect(
-      gala.getByRole("heading", { name: "Confirmed — Charity Gala" }),
+      gala.getByRole("heading", { name: "Confirmed: Registration Open — Charity Gala" }),
     ).toBeVisible();
     await expect(gala.getByTestId("event-date")).toHaveText(
       /^\d{1,2} \w{3,4} \d{4}, \d{1,2}:\d{2}\s[ap]m SGT – \d{1,2}:\d{2}\s[ap]m SGT$/,
@@ -147,7 +147,7 @@ test.describe("SCRUM-212 [AC2] My Registrations", () => {
     await expect(gala.getByTestId("withdraw-button")).toBeVisible();
 
     // A cancelled event: its status, no Withdraw, and no page to go to.
-    const cancelled = row(page, "Cancelled — Winter Workshop");
+    const cancelled = row(page, "Cancelled: After Confirmation — Winter Workshop");
     await expect(cancelled.getByTestId("registration-status")).toHaveText(
       "Cancelled",
     );
@@ -158,7 +158,7 @@ test.describe("SCRUM-212 [AC2] My Registrations", () => {
 
     await gala.getByRole("link", { name: "View event" }).click();
     await expect(
-      page.getByRole("heading", { level: 1, name: "Confirmed — Charity Gala" }),
+      page.getByRole("heading", { level: 1, name: "Confirmed: Registration Open — Charity Gala" }),
     ).toBeVisible();
   });
 
@@ -292,7 +292,7 @@ test.describe("SCRUM-212 [AC3] the pages work on a phone", () => {
     await page.setViewportSize(PHONE);
 
     await page.goto("/events");
-    const gala = card(page, "Confirmed — Charity Gala");
+    const gala = card(page, "Confirmed: Registration Open — Charity Gala");
     await expect(gala.getByTestId("registration-state-badge")).toBeInViewport();
     await expect(gala.getByTestId("registration-state-line")).toBeInViewport();
     await page.waitForLoadState("networkidle");
@@ -300,7 +300,7 @@ test.describe("SCRUM-212 [AC3] the pages work on a phone", () => {
 
     await gala.click();
     await expect(
-      page.getByRole("heading", { level: 1, name: "Confirmed — Charity Gala" }),
+      page.getByRole("heading", { level: 1, name: "Confirmed: Registration Open — Charity Gala" }),
     ).toBeVisible();
     await expect(page.getByTestId("registration-state-badge")).toBeInViewport();
     await expect(page.getByTestId("registration-state-line")).toBeInViewport();
@@ -330,7 +330,7 @@ test.describe("SCRUM-212 [AC3] the pages work on a phone", () => {
     await expect(dialog).toHaveCount(0);
 
     await page.goto("/registrations");
-    const mine = row(page, "Confirmed — Charity Gala");
+    const mine = row(page, "Confirmed: Registration Open — Charity Gala");
     await expect(mine.getByTestId("registration-status")).toBeVisible();
     expect(
       await height(mine.getByRole("link", { name: "View event" })),

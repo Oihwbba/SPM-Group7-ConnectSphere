@@ -9,6 +9,7 @@ import { completeFinishedEvents } from "@/lib/event-closing";
 import {
   getAllEvents,
   getEventForPlanning,
+  LISTED_STATUSES,
   parseAllEventsFilters,
 } from "@/app/(app)/all-events/queries";
 
@@ -81,6 +82,21 @@ describe("parseAllEventsFilters — SCRUM-141 AC2", () => {
       coordinatorId: undefined,
       unassigned: false,
     });
+  });
+});
+
+describe("the status filter — SCRUM-233 AC3", () => {
+  it("SCRUM-233 [AC3] TC-233-03: offers every status an event can rest in, and not Approved, which approval never leaves an event in", () => {
+    expect([...LISTED_STATUSES]).toEqual([
+      "SUBMITTED",
+      "UNDER_REVIEW",
+      "PLANNING",
+      "CONFIRMED",
+      "COMPLETED",
+      "CANCELLED",
+      "REJECTED",
+    ]);
+    expect(parseAllEventsFilters({ status: "APPROVED" }).status).toBeUndefined();
   });
 });
 

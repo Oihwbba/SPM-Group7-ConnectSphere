@@ -73,7 +73,10 @@ stateDiagram-v2
     CONFIRMED --> CANCELLED: assigned Coordinator cancels (SCRUM-82)
 ```
 
-There are exactly nine statuses (SCRUM-23). Each change is its own action, and
+There are exactly nine statuses (SCRUM-23). Eight are statuses an event rests
+in; Approved is passed straight through to Planning and appears only in the
+history, so no event, seeded or real, is ever stored in it and the status
+filters don't offer it (SCRUM-81, SCRUM-233). Each change is its own action, and
 each one refuses a change based on a stale status, by a conditional write or a
 row lock (ADR 0006 for the Coordinator's decision).
 

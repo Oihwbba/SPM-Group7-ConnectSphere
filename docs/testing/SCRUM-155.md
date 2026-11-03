@@ -42,7 +42,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Item            | Content                                                                                                                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Test Case ID    | TC-155-01                                                                                                                                                                             |
-| Test Scenario   | [Positive] AC 1: only approved requests for an Approved or Planning event that hasn't started, with nothing reserved for it yet, are offered                                          |
+| Test Scenario   | [Positive] AC 1: only approved requests for a Planning event that hasn't started, with nothing reserved for it yet, are offered (AC 1's Approved event no longer occurs: SCRUM-233)                                          |
 | Pre-conditions  | One Approved request for a Planning event, one In Review request, one Approved request for a Confirmed event, and one Approved request for a Planning event that has already started. |
 | Test Steps      | 1. Open the **Approved request** list.                                                                                                                                                |
 | Test Data       | —                                                                                                                                                                                     |

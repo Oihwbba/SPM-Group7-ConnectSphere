@@ -7,7 +7,7 @@ column came with SCRUM-172 AC12; the Lead role and its account with SCRUM-164.
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. The Lead is `lead@test.local`; the Coordinators are
 `coordinator@test.local` (Cody) and `coordinator2@test.local` (Cara); the
-Organiser is `organiser@test.local`. "Submitted — Alumni Homecoming" waits in
+Organiser is `organiser@test.local`. "Submitted: Awaiting Lead — Alumni Homecoming" waits in
 the queue unassigned. Every account's password is `Password123!`.
 
 **Covered with other stories:**
@@ -171,7 +171,7 @@ the queue unassigned. Every account's password is `Password123!`.
 |---|---|
 | Test Case ID | TC-165-11 |
 | Test Scenario | [Negative] AC 8: Coordinators can't see, open or decide an unassigned request |
-| Pre-conditions | Signed in as Cody; "Submitted — Alumni Homecoming" is unassigned. |
+| Pre-conditions | Signed in as Cody; "Submitted: Awaiting Lead — Alumni Homecoming" is unassigned. |
 | Test Steps | 1. Open Events. <br> 2. Approve, reject or raise a change request on it directly. |
 | Test Data | — |
 | Expected Result | 1. It isn't listed; only Cody's own events are. 2. "Event not found." and nothing changes. |

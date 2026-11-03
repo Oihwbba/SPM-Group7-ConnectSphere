@@ -342,7 +342,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     );
   });
 
-  it("SCRUM-155 [AC1, AC6] TC-155-01: accepts only an approved request for an Approved or Planning event that hasn't started, read with its lines and the event's confirmed reservations", async () => {
+  it("SCRUM-155 [AC1, AC6] TC-155-01: accepts only an approved request for a Planning event that hasn't started, read with its lines and the event's confirmed reservations", async () => {
     approvedRequestWithStock();
 
     await reserveEquipmentRequest(validInput);

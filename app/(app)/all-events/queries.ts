@@ -7,11 +7,14 @@ import { getCoordinatorLoads } from "@/lib/coordinator-assignment";
 import { completeFinishedEvents } from "@/lib/event-closing";
 import { parseSingaporeDateTime } from "@/lib/datetime";
 
-/** Every status the list can show: all but Draft (SCRUM-141 AC1). */
+/**
+ * Every status the list can show: all but Draft (SCRUM-141 AC1), and all but
+ * Approved, which no event stays in: approval saves Planning (SCRUM-81 AC1,
+ * SCRUM-233).
+ */
 export const LISTED_STATUSES = [
   "SUBMITTED",
   "UNDER_REVIEW",
-  "APPROVED",
   "PLANNING",
   "CONFIRMED",
   "COMPLETED",

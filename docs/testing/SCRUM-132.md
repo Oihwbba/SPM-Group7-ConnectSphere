@@ -27,7 +27,7 @@ e2e run serves it). Every account's password is `Password123!`.
 |---|---|
 | Test Case ID | TC-132-01 |
 | Test Scenario | [Boundary] AC 1: each listed page is usable at 360 px with no horizontal scrolling |
-| Pre-conditions | A window 360 px wide. For the safety review page, a safety check awaiting review on "Planning — Freshman Orientation". |
+| Pre-conditions | A window 360 px wide. For the safety review page, a safety check awaiting review on "Planning: Venue Pending — Freshman Orientation". |
 | Test Steps | 1. Open each page as its role, and wait for its content. <br> 2. Try to scroll sideways; for a dialog, check nothing in it reaches past the window's edge. |
 | Test Data | Sign-in (signed out); My Event Requests, request form (`organiser@test.local`); event detail, venue search (`?event=evt_planning`), venue availability (`?venue=ven_hall`) (`coordinator@test.local`); booking review (`venuestaff@test.local`); equipment review (`techsupport@test.local`); all-events list, Unassigned queue (`lead@test.local`); event browse, my registrations (`attendee@test.local`); notifications (`organiser@test.local`); safety checks list and review page (`safety@test.local`). |
 | Expected Result | No page is wider than the window, and no open dialog reaches past its edge. The request form's step bar wraps onto a second line instead of scrolling sideways. |
@@ -41,7 +41,7 @@ e2e run serves it). Every account's password is `Password123!`.
 | Test Case ID | TC-132-02 |
 | Test Scenario | [Boundary] AC 2: viewing an event, searching venues and opening a venue's availability each respond within 2 seconds |
 | Pre-conditions | Signed in as the Coordinator, on My Events. |
-| Test Steps | 1. Open "Planning — Freshman Orientation"; time until its readiness checklist shows. <br> 2. Open venue search for that event; time until the first result shows. <br> 3. Open Exhibition Hall's availability; time until the calendar shows. |
+| Test Steps | 1. Open "Planning: Venue Pending — Freshman Orientation"; time until its readiness checklist shows. <br> 2. Open venue search for that event; time until the first result shows. <br> 3. Open Exhibition Hall's availability; time until the calendar shows. |
 | Test Data | `coordinator@test.local`; `evt_planning`; `ven_hall` |
 | Expected Result | Each takes 2,000 ms or less. Each timing is attached to the run's report. |
 
@@ -80,7 +80,7 @@ e2e run serves it). Every account's password is `Password123!`.
 | Test Case ID | TC-132-05 |
 | Test Scenario | [Positive] AC 3: a Planning event's status and outstanding actions are visible without scrolling on a desktop screen |
 | Pre-conditions | A 1280 × 720 window; signed in as the Coordinator. |
-| Test Steps | 1. Open "Planning — Freshman Orientation" from My Events, without scrolling. |
+| Test Steps | 1. Open "Planning: Venue Pending — Freshman Orientation" from My Events, without scrolling. |
 | Test Data | `coordinator@test.local` |
 | Expected Result | The status badge, the readiness checklist's Venue booking, Equipment and Safety check items, and Confirm event are all on screen. The checklist comes right under the header, before the event's details. |
 
@@ -93,7 +93,7 @@ e2e run serves it). Every account's password is `Password123!`.
 | Test Case ID | TC-132-06 |
 | Test Scenario | [Positive] AC 3: a Confirmed event's status and confirmed arrangements are visible without scrolling on a desktop screen |
 | Pre-conditions | A 1280 × 720 window; signed in as the Organiser. |
-| Test Steps | 1. Open "Confirmed — Charity Gala" from My Events, without scrolling. |
+| Test Steps | 1. Open "Confirmed: Registration Open — Charity Gala" from My Events, without scrolling. |
 | Test Data | `organiser@test.local` |
 | Expected Result | The status badge and the confirmed venue and equipment are on screen. |
 
