@@ -15,6 +15,7 @@ import {
   ArrowUp,
   ArrowDown,
   Search,
+  Inbox,
   Trash2,
   MessagesSquare,
 } from "lucide-react";
@@ -253,8 +254,8 @@ export function EventsClient({
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  // A coordinator's second tab is their review queue; an organiser's is
-  // everything they have sent. Both the filter and the count follow this.
+  // A coordinator's Awaiting review view is their review queue. The
+  // organiser has no such view (SCRUM-131 AC1), so theirs is never asked for.
   const submittedMeans = isCoordinator ? "awaiting-review" : "non-draft";
 
   const awaitingAnswer = new Set(awaitingAnswerIds);
@@ -270,6 +271,9 @@ export function EventsClient({
     needsAction: (evt) => needsAction(evt as Event),
   });
   const actionCount = events.filter(needsAction).length;
+  const awaitingReviewCount = events.filter((evt) =>
+    AWAITING_REVIEW.includes(evt.status),
+  ).length;
 
   // Row actions. The row is a single element (table row on desktop, stacked
   // card on mobile — see events-list.module.css), so each control renders once
@@ -412,11 +416,31 @@ export function EventsClient({
       <ActionError message={listError} />
 
       {/* The status picker and the search box filter the list (SCRUM-84
-          AC6-AC9); each carries its own icon. "Actions required" stays beside
-          them as its own view (SCRUM-207 AC7) and toggles off again. */}
+          AC6-AC9); each carries its own icon. Beside them, one view that
+          toggles off again: the Organiser's "Actions required" (SCRUM-207
+          AC7), or the Coordinator's "Awaiting review", Submitted and Under
+          Review together, which the PO kept (2 Nov 2026). Only the
+          Coordinator's list may group statuses (SCRUM-131 AC1). */}
       {events.length > 0 && (
         <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
-          {!isCoordinator && (
+          {isCoordinator ? (
+            <Button
+              variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
+              size="sm"
+              aria-pressed={activeTab === "SUBMITTED"}
+              className={cn(
+                "h-11 shrink-0 gap-1.5 self-start text-sm font-medium md:h-9 md:text-xs",
+                activeTab === "SUBMITTED" && "font-semibold",
+              )}
+              onClick={() => {
+                setActiveTab(activeTab === "SUBMITTED" ? "ALL" : "SUBMITTED");
+                setStatusFilter("ALL");
+              }}
+            >
+              <Inbox className="h-3.5 w-3.5" />
+              Awaiting review ({awaitingReviewCount})
+            </Button>
+          ) : (
             <Button
               variant={activeTab === "ACTION" ? "secondary" : "ghost"}
               size="sm"

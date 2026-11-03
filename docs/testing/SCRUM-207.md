@@ -50,6 +50,7 @@ action that can't be undone asking in the shared confirmation dialog
 | [TC-207-27](#tc-207-27) | Positive, Boundary | AC 1 | e2e |
 | [TC-207-28](#tc-207-28) | Positive, Boundary | AC 5 | e2e |
 | [TC-207-29](#tc-207-29) | Positive, Boundary | AC 4 | e2e |
+| [TC-207-30](#tc-207-30) | Positive, Negative | AC 2 | e2e |
 
 "User story" cases check the customer's page-by-page changes that make pages
 look and behave the same; each supports the story as a whole rather than one
@@ -447,3 +448,18 @@ Not in the dialog, deliberately: Record unavailability, which already asks again
 | Expected Result | Every text field uses 16 px type, so an iPhone doesn't zoom when one is tapped; each day's **closed** checkbox is at least 20 × 20 px; the pop-up's close button is at least 44 px tall. |
 
 **Automated by:** `e2e/phone-layout.spec.ts` › "SCRUM-207 [AC4] TC-207-29: a form's text fields use 16px type, and its checkboxes and close button are big enough to tap, at phone width"
+
+### TC-207-30
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-30 |
+| Test Scenario | [Positive, Negative] AC 2: the Coordinator's Awaiting review option lists Submitted and Under Review together, each row keeping its own status, and the Organiser's list has no such option |
+| Pre-conditions | Seed data, plus three requests assigned to `coordinator@test.local`: one Submitted (as an amended request is when resubmitted, SCRUM-108), one Under Review, one Planning. |
+| Test Steps | 1. As the Coordinator, open **Events**. <br> 2. Choose **Awaiting review** beside the status filter. <br> 3. Choose it again. <br> 4. As the Organiser, open **My Events**. |
+| Test Data | `coordinator@test.local`, `organiser@test.local` |
+| Expected Result | 1: **Awaiting review (n)**, n being the Coordinator's Submitted and Under Review requests, beside the unchanged status filter. 2: exactly those n rows, the Submitted one badged Submitted and the Under Review one Under Review; the Planning one is not listed. 3: the whole list again. 4: no Awaiting review option (SCRUM-131 AC1). |
+
+**Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC2] TC-207-30: the Coordinator's Awaiting review option lists Submitted and Under Review together"
+
+The PO (Hann Qian) kept this view on 2 Nov 2026 when the event list's tabs became one status filter. It filters the list already loaded; what the Coordinator may see is unchanged.

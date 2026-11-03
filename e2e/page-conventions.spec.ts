@@ -6,9 +6,10 @@ import { NAV_BY_ROLE } from "@/lib/nav";
 import { signedIn, usesLocalDatabase } from "./helpers";
 
 /**
- * SCRUM-207 AC1, AC4, AC5 — every page's title, description and back link;
- * errors inline; every irreversible action asking in the shared dialog.
- * Test cases: docs/testing/SCRUM-207.md (TC-207-01, -02, -09, -10).
+ * SCRUM-207 AC1, AC2, AC4, AC5 — every page's title, description and back
+ * link; the Coordinator's Awaiting review view; errors inline; every
+ * irreversible action asking in the shared dialog.
+ * Test cases: docs/testing/SCRUM-207.md (TC-207-01, -02, -09, -10, -30).
  */
 
 const ACCOUNTS: { role: Role; email: string }[] = [
@@ -163,6 +164,97 @@ test.describe("SCRUM-207 [AC4] messages in one place", () => {
     // Not a toast: Sonner's region holds no error.
     await expect(
       page.locator("[data-sonner-toast][data-type='error']"),
+    ).toHaveCount(0);
+  });
+});
+
+/**
+ * SCRUM-207 AC2 — the Coordinator's one-click Awaiting review view, kept by
+ * the PO (2 Nov 2026) when the tabs became the status filter. Each row still
+ * shows its own status; only the Organiser's list may not group statuses
+ * (SCRUM-131 AC1). Writes three requests of its own, so local database only.
+ */
+test.describe("SCRUM-207 [AC2] the Coordinator's Awaiting review view", () => {
+  test.skip(!usesLocalDatabase, "writes its own events; local database only");
+
+  const prefix = "SCRUM-207 Awaiting review";
+  const remove = () =>
+    prisma.event.deleteMany({ where: { name: { startsWith: prefix } } });
+  test.beforeAll(remove);
+  test.afterAll(remove);
+
+  test("SCRUM-207 [AC2] TC-207-30: the Coordinator's Awaiting review option lists Submitted and Under Review together", async ({
+    browser,
+  }) => {
+    const request = (status: "SUBMITTED" | "UNDER_REVIEW" | "PLANNING") => ({
+      name: `${prefix} ${status} ${Date.now()}`,
+      purpose: "SCRUM-207 e2e",
+      description: "Owned by the SCRUM-207 page-conventions spec.",
+      status,
+      organiserId: "usr_organiser",
+      coordinatorId: "usr_coordinator",
+      startAt: new Date("2031-09-01T02:00:00Z"),
+      endAt: new Date("2031-09-01T10:00:00Z"),
+      expectedAttendance: 50,
+      requiredFacilities: [],
+      submittedAt: new Date(),
+    });
+    // A resubmitted amendment is Submitted and keeps its Coordinator
+    // (SCRUM-108), so their list can hold both statuses, and others besides.
+    const submitted = await prisma.event.create({ data: request("SUBMITTED") });
+    const underReview = await prisma.event.create({
+      data: request("UNDER_REVIEW"),
+    });
+    const planning = await prisma.event.create({ data: request("PLANNING") });
+    const rowOf = (page: Page, name: string) =>
+      page.getByRole("row").filter({ hasText: name });
+
+    const page = await signedIn(browser, "coordinator@test.local");
+    await page.goto("/events");
+    await expect(rowOf(page, planning.name)).toBeVisible();
+
+    // The count is every Submitted and Under Review request in their list.
+    const awaiting = await prisma.event.count({
+      where: {
+        coordinatorId: "usr_coordinator",
+        status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
+      },
+    });
+    const option = page.getByRole("button", { name: /^Awaiting review \(/ });
+    await expect(option).toHaveText(`Awaiting review (${awaiting})`);
+    await expect(option).toHaveAttribute("aria-pressed", "false");
+    // The status dropdown stays beside it, unchanged.
+    await expect(
+      page.getByRole("combobox", { name: "Filter by status" }),
+    ).toHaveText(/All Statuses/);
+
+    await option.click();
+    await expect(option).toHaveAttribute("aria-pressed", "true");
+    await expect(rowOf(page, planning.name)).toHaveCount(0);
+    await expect(
+      rowOf(page, submitted.name).getByText("Submitted", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      rowOf(page, underReview.name).getByText("Under Review", { exact: true }),
+    ).toBeVisible();
+    const rows = page.locator("tr[data-status]");
+    await expect(rows).toHaveCount(awaiting);
+    expect(
+      new Set(await rows.evaluateAll((els) => els.map((el) => el.dataset.status))),
+    ).toEqual(new Set(["SUBMITTED", "UNDER_REVIEW"]));
+
+    // One more click shows the whole list again.
+    await option.click();
+    await expect(rowOf(page, planning.name)).toBeVisible();
+
+    // SCRUM-131 AC1: the Organiser's list has no such view.
+    const organiser = await signedIn(browser, "organiser@test.local");
+    await organiser.goto("/events");
+    await expect(
+      organiser.getByRole("combobox", { name: "Filter by status" }),
+    ).toBeVisible();
+    await expect(
+      organiser.getByRole("button", { name: /Awaiting review/ }),
     ).toHaveCount(0);
   });
 });
