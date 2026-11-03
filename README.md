@@ -18,8 +18,8 @@ system, where every event has one status, one assigned Coordinator, and
 arrangements that can't clash:
 
 1. An **Event Organiser** drafts an event request and submits it.
-2. An **Event Coordinator** is assigned automatically, reviews it, asks
-   questions if needed, and approves or rejects it.
+2. An **Event Coordinator Lead** assigns it to an **Event Coordinator**, who
+   reviews it, asks questions if needed, and approves or rejects it.
 3. In planning, the Coordinator books a venue and requests equipment.
    **Venue Staff** and **Technical Support** decide those requests, and the
    system refuses a double-booked venue or over-reserved equipment.
@@ -30,8 +30,8 @@ Week 7 added two more roles:
 
 - The **Event Coordinator Lead** assigns each new request to a Coordinator
   from the Unassigned Queue, which replaced automatic assignment (SCRUM-165),
-  and sees every event and every Coordinator's assignments (SCRUM-141).
-  Reassigning an event comes with SCRUM-21.
+  sees every event and every Coordinator's assignments (SCRUM-141), and
+  reassigns an event to another Coordinator from All Events (SCRUM-21).
 - The **Safety Officer** reviews an event's venue and equipment on the Safety
   Checks page before it can be confirmed, and records Approved, Changes
   requested or Rejected (SCRUM-166). Their approval doesn't confirm the

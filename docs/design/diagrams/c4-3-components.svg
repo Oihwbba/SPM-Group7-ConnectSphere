@@ -8,7 +8,7 @@
 <title>G</title>
 <polygon fill="white" stroke="transparent" points="-28.8,28.8 -28.8,-1513.55 2652.8,-1513.55 2652.8,28.8 -28.8,28.8"/>
 <text text-anchor="start" x="1082" y="-1465.75" font-family="Inter" font-weight="bold" font-size="20.00">C4 Level 3: Components of the web application</text>
-<text text-anchor="start" x="1022" y="-1452.95" font-family="Inter" font-size="11.00" fill="#555555">Next.js server. Solid = built on main; dashed orange = open pull request; dashed grey = planned Sprint 3 story</text>
+<text text-anchor="start" x="1022" y="-1452.95" font-family="Inter" font-size="11.00" fill="#555555">Next.js server. Every component shown is built on main</text>
 <text text-anchor="start" x="1310" y="-1441.15" font-family="Inter" font-size="12.00"> </text>
 <g id="clust1" class="cluster">
 <title>cluster_app</title>
@@ -120,7 +120,7 @@
 <path fill="#85bbf0" stroke="#3c7fc0" stroke-width="1.2" d="M2520,-913.75C2520,-913.75 2242,-913.75 2242,-913.75 2236,-913.75 2230,-907.75 2230,-901.75 2230,-901.75 2230,-821.75 2230,-821.75 2230,-815.75 2236,-809.75 2242,-809.75 2242,-809.75 2520,-809.75 2520,-809.75 2526,-809.75 2532,-815.75 2532,-821.75 2532,-821.75 2532,-901.75 2532,-901.75 2532,-907.75 2526,-913.75 2520,-913.75"/>
 <text text-anchor="start" x="2329.5" y="-894.55" font-family="Inter" font-weight="bold" font-size="14.00" fill="#0b2540">Venue booking</text>
 <text text-anchor="start" x="2243" y="-884.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: app/(app)/bookings/actions.ts, &#160;lib/booking&#45;holds.ts]</text>
-<text text-anchor="start" x="2324" y="-875.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built; holds in review #154</text>
+<text text-anchor="middle" x="2375" y="-875.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built</text>
 <text text-anchor="start" x="2320" y="-853.35" font-family="Inter" font-size="8.00" fill="#0b2540">Request one or more venues per</text>
 <text text-anchor="start" x="2328" y="-845.35" font-family="Inter" font-size="8.00" fill="#0b2540">event; Venue Staff approve,</text>
 <text text-anchor="start" x="2329.5" y="-837.35" font-family="Inter" font-size="8.00" fill="#0b2540">hold or reject. Holds expire</text>
@@ -264,16 +264,16 @@
 <!-- assign -->
 <g id="node11" class="node">
 <title>assign</title>
-<path fill="#c9ddf2" stroke="#6e7f91" stroke-width="1.8" stroke-dasharray="5,2" d="M1046,-709.75C1046,-709.75 860,-709.75 860,-709.75 854,-709.75 848,-703.75 848,-697.75 848,-697.75 848,-609.75 848,-609.75 848,-603.75 854,-597.75 860,-597.75 860,-597.75 1046,-597.75 1046,-597.75 1052,-597.75 1058,-603.75 1058,-609.75 1058,-609.75 1058,-697.75 1058,-697.75 1058,-703.75 1052,-709.75 1046,-709.75"/>
+<path fill="#85bbf0" stroke="#3c7fc0" stroke-width="1.2" d="M1046,-709.75C1046,-709.75 860,-709.75 860,-709.75 854,-709.75 848,-703.75 848,-697.75 848,-697.75 848,-609.75 848,-609.75 848,-603.75 854,-597.75 860,-597.75 860,-597.75 1046,-597.75 1046,-597.75 1052,-597.75 1058,-603.75 1058,-609.75 1058,-609.75 1058,-697.75 1058,-697.75 1058,-703.75 1052,-709.75 1046,-709.75"/>
 <text text-anchor="start" x="870" y="-690.55" font-family="Inter" font-weight="bold" font-size="14.00" fill="#0b2540">Coordinator assignment</text>
 <text text-anchor="start" x="861" y="-680.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: lib/coordinator&#45;assignment.ts]</text>
-<text text-anchor="start" x="913" y="-671.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Planned (Sprint 3)</text>
-<text text-anchor="start" x="903.5" y="-649.35" font-family="Inter" font-size="8.00" fill="#0b2540">Today: least&#45;loaded auto&#45;</text>
-<text text-anchor="start" x="895.5" y="-641.35" font-family="Inter" font-size="8.00" fill="#0b2540">assignment under an advisory</text>
-<text text-anchor="start" x="894.5" y="-633.35" font-family="Inter" font-size="8.00" fill="#0b2540">lock (SCRUM&#45;20). Week 7: the</text>
-<text text-anchor="start" x="903" y="-625.35" font-family="Inter" font-size="8.00" fill="#0b2540">Lead&#39;s unassigned queue,</text>
-<text text-anchor="start" x="896" y="-617.35" font-family="Inter" font-size="8.00" fill="#0b2540">assignment and reassignment</text>
-<text text-anchor="start" x="902" y="-609.35" font-family="Inter" font-size="8.00" fill="#0b2540">(SCRUM&#45;165, SCRUM&#45;21).</text>
+<text text-anchor="middle" x="947" y="-671.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built</text>
+<text text-anchor="middle" x="947" y="-649.35" font-family="Inter" font-size="8.00" fill="#0b2540">Each Coordinator&#39;s load; the</text>
+<text text-anchor="middle" x="947" y="-641.35" font-family="Inter" font-size="8.00" fill="#0b2540">least&#45;loaded is suggested to</text>
+<text text-anchor="middle" x="947" y="-633.35" font-family="Inter" font-size="8.00" fill="#0b2540">the Lead, who assigns from the</text>
+<text text-anchor="middle" x="947" y="-625.35" font-family="Inter" font-size="8.00" fill="#0b2540">unassigned queue and reassigns</text>
+<text text-anchor="middle" x="947" y="-617.35" font-family="Inter" font-size="8.00" fill="#0b2540">from All Events (SCRUM&#45;165,</text>
+<text text-anchor="middle" x="947" y="-609.35" font-family="Inter" font-size="8.00" fill="#0b2540">SCRUM&#45;21).</text>
 </g>
 <!-- events&#45;&gt;assign -->
 <g id="edge16" class="edge">
@@ -285,10 +285,10 @@
 <!-- notify -->
 <g id="node21" class="node">
 <title>notify</title>
-<path fill="#85bbf0" stroke="#e8890c" stroke-width="2.6" stroke-dasharray="5,2" d="M2015.5,-501.75C2015.5,-501.75 1664.5,-501.75 1664.5,-501.75 1658.5,-501.75 1652.5,-495.75 1652.5,-489.75 1652.5,-489.75 1652.5,-401.75 1652.5,-401.75 1652.5,-395.75 1658.5,-389.75 1664.5,-389.75 1664.5,-389.75 2015.5,-389.75 2015.5,-389.75 2021.5,-389.75 2027.5,-395.75 2027.5,-401.75 2027.5,-401.75 2027.5,-489.75 2027.5,-489.75 2027.5,-495.75 2021.5,-501.75 2015.5,-501.75"/>
+<path fill="#85bbf0" stroke="#3c7fc0" stroke-width="1.2" d="M2015.5,-501.75C2015.5,-501.75 1664.5,-501.75 1664.5,-501.75 1658.5,-501.75 1652.5,-495.75 1652.5,-489.75 1652.5,-489.75 1652.5,-401.75 1652.5,-401.75 1652.5,-395.75 1658.5,-389.75 1664.5,-389.75 1664.5,-389.75 2015.5,-389.75 2015.5,-389.75 2021.5,-389.75 2027.5,-395.75 2027.5,-401.75 2027.5,-401.75 2027.5,-489.75 2027.5,-489.75 2027.5,-495.75 2021.5,-501.75 2015.5,-501.75"/>
 <text text-anchor="start" x="1796" y="-482.55" font-family="Inter" font-weight="bold" font-size="14.00" fill="#0b2540">Notifications</text>
 <text text-anchor="start" x="1665.5" y="-472.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: lib/notifications.ts, &#160;lib/event&#45;notifications.ts, &#160;lib/staff&#45;notifications.ts]</text>
-<text text-anchor="start" x="1784" y="-463.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">In review #153 #155 #156</text>
+<text text-anchor="middle" x="1834" y="-463.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built</text>
 <text text-anchor="start" x="1792.5" y="-441.35" font-family="Inter" font-size="8.00" fill="#0b2540">Writes notifications in the</text>
 <text text-anchor="start" x="1795.5" y="-433.35" font-family="Inter" font-size="8.00" fill="#0b2540">same transaction as the</text>
 <text text-anchor="start" x="1791.5" y="-425.35" font-family="Inter" font-size="8.00" fill="#0b2540">change; show&#45;from times</text>
@@ -318,10 +318,10 @@
 <!-- changes -->
 <g id="node12" class="node">
 <title>changes</title>
-<path fill="#85bbf0" stroke="#e8890c" stroke-width="2.6" stroke-dasharray="5,2" d="M1606,-913.75C1606,-913.75 1356,-913.75 1356,-913.75 1350,-913.75 1344,-907.75 1344,-901.75 1344,-901.75 1344,-821.75 1344,-821.75 1344,-815.75 1350,-809.75 1356,-809.75 1356,-809.75 1606,-809.75 1606,-809.75 1612,-809.75 1618,-815.75 1618,-821.75 1618,-821.75 1618,-901.75 1618,-901.75 1618,-907.75 1612,-913.75 1606,-913.75"/>
+<path fill="#85bbf0" stroke="#3c7fc0" stroke-width="1.2" d="M1606,-913.75C1606,-913.75 1356,-913.75 1356,-913.75 1350,-913.75 1344,-907.75 1344,-901.75 1344,-901.75 1344,-821.75 1344,-821.75 1344,-815.75 1350,-809.75 1356,-809.75 1356,-809.75 1606,-809.75 1606,-809.75 1612,-809.75 1618,-815.75 1618,-821.75 1618,-821.75 1618,-901.75 1618,-901.75 1618,-907.75 1612,-913.75 1606,-913.75"/>
 <text text-anchor="start" x="1422" y="-894.55" font-family="Inter" font-weight="bold" font-size="14.00" fill="#0b2540">Change requests</text>
-<text text-anchor="start" x="1357" y="-884.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: app/(app)/events/change&#45;request&#45;actions.ts]</text>
-<text text-anchor="start" x="1449" y="-875.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">In review #162</text>
+<text text-anchor="middle" x="1475" y="-884.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: app/(app)/events/change&#45;*&#45;actions.ts]</text>
+<text text-anchor="middle" x="1475" y="-875.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built</text>
 <text text-anchor="start" x="1426.5" y="-853.35" font-family="Inter" font-size="8.00" fill="#0b2540">Organiser (or Coordinator on</text>
 <text text-anchor="start" x="1429.5" y="-845.35" font-family="Inter" font-size="8.00" fill="#0b2540">their behalf) raises one; the</text>
 <text text-anchor="start" x="1434" y="-837.35" font-family="Inter" font-size="8.00" fill="#0b2540">Coordinator decides and</text>
@@ -331,10 +331,10 @@
 <!-- safetycheck -->
 <g id="node13" class="node">
 <title>safetycheck</title>
-<path fill="#c9ddf2" stroke="#6e7f91" stroke-width="1.8" stroke-dasharray="5,2" d="M1492,-705.75C1492,-705.75 1276,-705.75 1276,-705.75 1270,-705.75 1264,-699.75 1264,-693.75 1264,-693.75 1264,-613.75 1264,-613.75 1264,-607.75 1270,-601.75 1276,-601.75 1276,-601.75 1492,-601.75 1492,-601.75 1498,-601.75 1504,-607.75 1504,-613.75 1504,-613.75 1504,-693.75 1504,-693.75 1504,-699.75 1498,-705.75 1492,-705.75"/>
+<path fill="#85bbf0" stroke="#3c7fc0" stroke-width="1.2" d="M1492,-705.75C1492,-705.75 1276,-705.75 1276,-705.75 1270,-705.75 1264,-699.75 1264,-693.75 1264,-693.75 1264,-613.75 1264,-613.75 1264,-607.75 1270,-601.75 1276,-601.75 1276,-601.75 1492,-601.75 1492,-601.75 1498,-601.75 1504,-607.75 1504,-613.75 1504,-613.75 1504,-693.75 1504,-693.75 1504,-699.75 1498,-705.75 1492,-705.75"/>
 <text text-anchor="start" x="1339" y="-686.55" font-family="Inter" font-weight="bold" font-size="14.00" fill="#0b2540">Safety check</text>
-<text text-anchor="start" x="1277" y="-676.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: lib/safety&#45;checks.ts (started in #156)]</text>
-<text text-anchor="start" x="1344" y="-667.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Planned (Sprint 3)</text>
+<text text-anchor="middle" x="1378" y="-676.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: lib/safety&#45;checks.ts]</text>
+<text text-anchor="middle" x="1378" y="-667.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built</text>
 <text text-anchor="start" x="1321.5" y="-645.35" font-family="Inter" font-size="8.00" fill="#0b2540">Request a check once Venue and</text>
 <text text-anchor="start" x="1323.5" y="-637.35" font-family="Inter" font-size="8.00" fill="#0b2540">Equipment are complete; Safety</text>
 <text text-anchor="start" x="1330" y="-629.35" font-family="Inter" font-size="8.00" fill="#0b2540">Officer records the outcome;</text>
@@ -352,10 +352,10 @@
 <!-- flags -->
 <g id="node19" class="node">
 <title>flags</title>
-<path fill="#c9ddf2" stroke="#6e7f91" stroke-width="1.8" stroke-dasharray="5,2" d="M1887.5,-705.75C1887.5,-705.75 1756.5,-705.75 1756.5,-705.75 1750.5,-705.75 1744.5,-699.75 1744.5,-693.75 1744.5,-693.75 1744.5,-613.75 1744.5,-613.75 1744.5,-607.75 1750.5,-601.75 1756.5,-601.75 1756.5,-601.75 1887.5,-601.75 1887.5,-601.75 1893.5,-601.75 1899.5,-607.75 1899.5,-613.75 1899.5,-613.75 1899.5,-693.75 1899.5,-693.75 1899.5,-699.75 1893.5,-705.75 1887.5,-705.75"/>
+<path fill="#85bbf0" stroke="#3c7fc0" stroke-width="1.2" d="M1887.5,-705.75C1887.5,-705.75 1756.5,-705.75 1756.5,-705.75 1750.5,-705.75 1744.5,-699.75 1744.5,-693.75 1744.5,-693.75 1744.5,-613.75 1744.5,-613.75 1744.5,-607.75 1750.5,-601.75 1756.5,-601.75 1756.5,-601.75 1887.5,-601.75 1887.5,-601.75 1893.5,-601.75 1899.5,-607.75 1899.5,-613.75 1899.5,-613.75 1899.5,-693.75 1899.5,-693.75 1899.5,-699.75 1893.5,-705.75 1887.5,-705.75"/>
 <text text-anchor="start" x="1757.5" y="-686.55" font-family="Inter" font-weight="bold" font-size="14.00" fill="#0b2540">Arrangement flags</text>
-<text text-anchor="start" x="1764.5" y="-676.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: (SCRUM&#45;26)]</text>
-<text text-anchor="start" x="1782" y="-667.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Planned (Sprint 3)</text>
+<text text-anchor="middle" x="1816" y="-676.55" textLength="135" lengthAdjust="spacingAndGlyphs" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: lib/reconsideration.ts]</text>
+<text text-anchor="middle" x="1816" y="-667.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built</text>
 <text text-anchor="start" x="1772" y="-645.35" font-family="Inter" font-size="8.00" fill="#0b2540">Needs Reconsideration on</text>
 <text text-anchor="start" x="1770.5" y="-637.35" font-family="Inter" font-size="8.00" fill="#0b2540">bookings and reservations;</text>
 <text text-anchor="start" x="1773.5" y="-629.35" font-family="Inter" font-size="8.00" fill="#0b2540">Coordinator resolves with</text>
@@ -553,12 +553,6 @@
 <polygon fill="#85bbf0" stroke="transparent" points="1769,-1389.75 1769,-1403.75 1795,-1403.75 1795,-1389.75 1769,-1389.75"/>
 <polygon fill="none" stroke="#3c7fc0" points="1769,-1389.75 1769,-1403.75 1795,-1403.75 1795,-1389.75 1769,-1389.75"/>
 <text text-anchor="start" x="1800" y="-1394.55" font-family="Inter" font-size="9.00">Built (on main)</text>
-<polygon fill="#85bbf0" stroke="transparent" points="1769,-1372.75 1769,-1386.75 1795,-1386.75 1795,-1372.75 1769,-1372.75"/>
-<polygon fill="none" stroke="#e8890c" stroke-dasharray="5,2" points="1769,-1372.75 1769,-1386.75 1795,-1386.75 1795,-1372.75 1769,-1372.75"/>
-<text text-anchor="start" x="1800" y="-1377.55" font-family="Inter" font-size="9.00">In review (open pull request)</text>
-<polygon fill="#c9ddf2" stroke="transparent" stroke-dasharray="5,2" points="1769,-1355.75 1769,-1369.75 1795,-1369.75 1795,-1355.75 1769,-1355.75"/>
-<polygon fill="none" stroke="#6e7f91" stroke-dasharray="5,2" points="1769,-1355.75 1769,-1369.75 1795,-1369.75 1795,-1355.75 1769,-1355.75"/>
-<text text-anchor="start" x="1800" y="-1360.55" font-family="Inter" font-size="9.00">Planned (Sprint 3 story, not merged)</text>
 </g>
 </g>
 </svg>

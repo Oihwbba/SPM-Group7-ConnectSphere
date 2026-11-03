@@ -302,3 +302,4 @@ _5 stories, 9 points_
 | [SCRUM-272](SCRUM-272.md) | Chore: Sync docs/backlog for SCRUM-269 and SCRUM-270 | SCRUM Sprint 4 | In Review |
 | [SCRUM-273](SCRUM-273.md) | Chore: Check every test title against its story, criteria and case in the test suite | SCRUM Sprint 4 | In Review |
 | [SCRUM-274](SCRUM-274.md) | Chore: Sync docs/backlog for SCRUM-271 and SCRUM-273 | SCRUM Sprint 4 | In Review |
+| [SCRUM-275](SCRUM-275.md) | Chore: Fix the docs that no longer match the code: design reference, evidence, README, ADR 0006 and reviewer memory | SCRUM Sprint 4 | In Review |

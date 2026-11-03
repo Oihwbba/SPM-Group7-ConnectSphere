@@ -37,3 +37,7 @@ earlier specs had written to it, so it was not freshly seeded.
 
 These times are for the app, its database and the browser on one machine. They
 do not include the network or the deployed site.
+
+The seeded event timed as "Planning — Freshman Orientation" has been named
+"Planning: Venue Pending — Freshman Orientation" since SCRUM-233 (3 Nov), after
+these timings were taken.
