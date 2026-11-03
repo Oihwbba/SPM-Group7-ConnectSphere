@@ -444,6 +444,7 @@ export function EventsClient({
             <Button
               variant={activeTab === "ACTION" ? "secondary" : "ghost"}
               size="sm"
+              aria-pressed={activeTab === "ACTION"}
               className={cn(
                 "h-11 shrink-0 gap-1.5 self-start text-sm font-medium md:h-9 md:text-xs",
                 activeTab === "ACTION" && "font-semibold",
