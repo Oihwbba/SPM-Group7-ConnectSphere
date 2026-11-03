@@ -1,8 +1,7 @@
 # SCRUM-270 — Automate TC-132-09's confirmation audit: test cases
 
 SCRUM-270 is a Chore task in Jira. Its acceptance criteria are in
-[docs/backlog/SCRUM-270.md](../backlog/SCRUM-270.md) once the backlog is next
-synced; until then, in [Jira](https://smu-spm-group7.atlassian.net/browse/SCRUM-270).
+[docs/backlog/SCRUM-270.md](../backlog/SCRUM-270.md).
 
 Format and conventions: [README.md](README.md).
 
