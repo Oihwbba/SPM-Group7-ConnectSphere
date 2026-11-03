@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-11-03. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-156 - Make the one-type equipment form availability-only (follow-up to SCRUM-31 and SCRUM-155)
@@ -33,7 +33,7 @@
 
 * **Option (b), PO, 2026-10-05:** the one-type form only checks availability, and SCRUM-155's approved-request card is the only way to reserve. This covers the original feedback by design and leaves a single way to reserve.
 * **"Reserved" is judged per line (AC 5),** refining SCRUM-155 AC 6. With the one-type form gone, judging by the event would leave a second request, or a changed line, with no way to be reserved.
-* **The seed is unchanged.** SCRUM-27's tests rely on "Approved — Research Symposium" having no request; to demo reserving, approve the pending "Planning — Freshman Orientation" request in the queue first.
+* **The seed is unchanged.** SCRUM-27's tests rely on `evt_approved` ("Planning: Venue Booked — Research Symposium" since SCRUM-233) having no request; to demo reserving, approve the pending "Planning: Venue Pending — Freshman Orientation" request in the queue first.
 
 ## Impact to plan for
 
@@ -46,5 +46,6 @@
 * 2026-10-05: PO chose option (b). Title, user story and ACs rewritten for an availability-only form; the decision section replaced.
 * 2026-10-05 (PR #135): AC 3 places the request card at the top and checking availability below it (team feedback). AC 5 added: reserve the rest of a partly reserved request, or a second request for the same event, which option (b) would otherwise block. AC 6 added: the availability check refreshes after reserving. Seed decision recorded.
 * 2026-10-16 (PO decision): AC 5's "second approved request" case is withdrawn by SCRUM-186: an event has one active equipment request, and more equipment is added by changing its lines (SCRUM-142), which didn't exist on 5 Oct. AC 5 still covers a partly reserved request. This story stays Done; the change is built and tested under SCRUM-186.
+* 2026-11-03: the seed decision names the events as SCRUM-233 renamed them (no seeded event stays Approved; `evt_approved` is now Planning and still has no equipment request). Wording only: the ACs and the decision are unchanged, and the story stays Done.
 
-**Related:** SCRUM-31 (reserve equipment), SCRUM-155 (reserve an approved request in one step), SCRUM-28 (approve a request), SCRUM-29/30 (availability and commitments), SCRUM-142 (changing lines before confirmation), SCRUM-186 (one active equipment request per event).
+**Related:** SCRUM-31 (reserve equipment), SCRUM-155 (reserve an approved request in one step), SCRUM-28 (approve a request), SCRUM-29/30 (availability and commitments), SCRUM-142 (changing lines before confirmation), SCRUM-186 (one active equipment request per event), SCRUM-233 (the seed's event names).

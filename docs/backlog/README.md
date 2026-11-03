@@ -292,4 +292,6 @@ _5 stories, 9 points_
 | [SCRUM-263](SCRUM-263.md) | Bug: The event request form says to fix the highlighted fields but highlights none | SCRUM Sprint 4 | In Review |
 | [SCRUM-264](SCRUM-264.md) | Bug: Seven text boxes over 2,000 characters are refused with no error at the field | SCRUM Sprint 4 | In Progress |
 | [SCRUM-265](SCRUM-265.md) | Chore: Record the Sprint 4 response times for SCRUM-132 AC2 | SCRUM Sprint 4 | In Progress |
+| [SCRUM-266](SCRUM-266.md) | Chore: Make every step of the demo script match the seed | SCRUM Sprint 4 | In Review |
+| [SCRUM-267](SCRUM-267.md) | Chore: Re-sync docs/backlog for SCRUM-156 after its seed names were updated | SCRUM Sprint 4 | In Review |
 | [SCRUM-268](SCRUM-268.md) | Chore: Fix the docs that no longer match the code: product context, ADR index and Server Actions reference | SCRUM Sprint 4 | In Progress |

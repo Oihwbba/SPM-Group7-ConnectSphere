@@ -83,8 +83,13 @@ so they never clash with the steps below.
 4. Open the request again and click **Approve**. The Seminar Room is booked
    for the event.
 5. Open **Availability**, pick **Seminar Room 2.1** and go to the event's
-   week. The booking is shown, with any setup and turnaround time hatched on
-   either side (SCRUM-36, SCRUM-159 AC7).
+   week. The booking is shown (SCRUM-36). Seminar Room 2.1 has no setup or
+   turnaround time, so nothing is hatched beside it.
+6. Pick **Black Box Studio** and go to the week of **Confirmed: Change
+   Pending — Open Mic Night**, about 16 weeks out. Its booking has 30 minutes
+   of setup before and 45 minutes of turnaround after, hatched on either side
+   (SCRUM-159 AC7). It is the only seeded venue with setup and turnaround
+   times.
 
 ## 3. Equipment
 
@@ -139,15 +144,17 @@ so they never clash with the steps below.
 1. As **`attendee4@test.local`**, open **Confirmed: One Place Left — Studio
    Masterclass** and register ("You're registered for this event."). It is
    now full.
-2. **Conflict:** as **`attendee@test.local`**, open **Confirmed: Registration Full — Wine Tasting
-   Evening**. It is full, so there is no **Register** button, and a direct
-   request is refused (SCRUM-74).
+2. **Conflict:** still as **`attendee4@test.local`**, open **Confirmed:
+   Registration Full — Wine Tasting Evening**. Its three places are taken by
+   `attendee@test.local`, `attendee2@test.local` and `attendee3@test.local`,
+   so there is no **Register** button, and a direct request is refused
+   (SCRUM-74). (Signed in as one of those three, you would see your own
+   registration instead.)
 3. **Failure:** open **Confirmed: Registration Not Open — Summer Camp** and
    **Confirmed: Registration Closed — Leadership Retreat**: neither has a **Register**
    button (SCRUM-75).
-4. Switch back to **`attendee4@test.local`** and withdraw from the
-   Masterclass ("You've withdrawn from this event."). The place is free again
-   (SCRUM-77).
+4. Withdraw from the Masterclass ("You've withdrawn from this event."). The
+   place is free again (SCRUM-77).
 
 ## 6. Changes: change requests and flagged arrangements
 
@@ -227,23 +234,26 @@ so they never clash with the steps below.
 
 ## After the demo
 
-`npm run db:seed` puts the seeded events, bookings, equipment requests and
-registrations back, but not everything the demo changes:
+`npm run db:seed` puts every seeded row back, including the Freshman
+Orientation, its seeded change request (Pending review again) and the Grand
+Auditorium's turnaround time from section 7. It leaves what the demo created
+through the app:
 
-- **The seeded change request** stays Approved: the seed creates it but never
-  resets it.
-- **The Grand Auditorium's turnaround time** stays as you set it in section 7:
-  of the seeded venues only the Black Box Studio has setup and turnaround times. Set it back in
-  **Edit venue**.
-- **What the demo created** stays: the new request from section 1, the safety
-  check, reservations and second Seminar Room request on the Freshman
-  Orientation, and the recorded unavailability. They are Cancelled or
-  Outdated, but a second run would show the safety check as **Outdated**
-  rather than **Not requested**.
+- the new request from section 1;
+- on the Freshman Orientation, the safety check, its two equipment
+  reservations and the second Seminar Room 2.1 request, by the end Outdated
+  or Cancelled;
+- the unavailability recorded on Seminar Room 2.1 in section 7.
 
-So a second run on the same database needs those cleared first.
+Two of these change a second run. The safety check is the event's latest, so
+section 4 shows it **Outdated** rather than **Not requested**. The
+unavailability refuses section 7's new Seminar Room 2.1 request on that day,
+and a re-seed on a later day stops on `booking_overlaps_unavailability` if the
+Freshman Orientation's seeded request moves onto it. So clear those first, or
+run the demo on a freshly reset local database.
 
 Last run end to end on 27 Oct 2026, on a freshly seeded database, with every
 step above checked in the app and in the database (SCRUM-198 AC3). SCRUM-233
-then renamed the seeded events. The seeded details named here were checked
-against the new seed, but the steps haven't been run in the app since.
+then renamed the seeded events. On 3 Nov, SCRUM-266 checked every step's
+seeded events, accounts, venues, values and states against `prisma/seed.ts`,
+and every message, button and label it quotes against the app's code.
