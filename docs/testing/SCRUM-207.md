@@ -52,6 +52,7 @@ action that can't be undone asking in the shared confirmation dialog
 | [TC-207-29](#tc-207-29) | Positive, Boundary | AC 4 | e2e |
 | [TC-207-30](#tc-207-30) | Positive, Negative | AC 2 | e2e |
 | [TC-207-31](#tc-207-31) | Negative | AC 4, AC 5 | e2e |
+| [TC-207-32](#tc-207-32) | Negative | AC 4, AC 5 | e2e |
 
 "User story" cases check the customer's page-by-page changes that make pages
 look and behave the same; each supports the story as a whole rather than one
@@ -479,3 +480,18 @@ The PO (Hann Qian) kept this view on 2 Nov 2026 when the event list's tabs becam
 **Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC4, AC5] TC-207-31: a too-long Approve note is refused inside its confirmation dialog, saying what to do next, and nothing is recorded"
 
 The note box used to be on the page behind Approve's dialog, so a refused note left the dialog open with no visible message (GLM, #331).
+
+### TC-207-32
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-32 |
+| Test Scenario | [Negative] AC 4, AC 5: a refused cancellation reason is gone once the dialog is closed and opened again |
+| Pre-conditions | Seed data: a Planning event (`evt_planning`) and a pending booking (`bkg_pending`). |
+| Test Steps | 1. As its Coordinator, open the event and choose **Cancel event**; write a 2,001-character reason and confirm. <br> 2. Choose **Keep event**, then **Cancel event** again. <br> 3. As Venue Staff, do the same with **Reject** on the booking. |
+| Test Data | `coordinator@test.local`, `venuestaff@test.local` |
+| Expected Result | 1: the dialog stays open, with "Keep the cancellation reason under 2000 characters." at the box. 2: the dialog opens with an empty box, no error and the box not marked. 3: the same, for "Keep the rejection reason under 2000 characters.". The event is still Planning with no cancellation, and the booking still Pending. |
+
+**Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC4, AC5] TC-207-32: a refused cancellation reason is gone once the dialog is closed and opened again"
+
+Each dialog clears its old error when it opens, as the Coordinator's Reject on a request already did. The field errors belong to each form, not to the shared dialog, so each opener clears its own; the change-request Reject does too. The booking Reject also used to close on a refused reason, taking the message at the box with it; it now stays open, as the others do.

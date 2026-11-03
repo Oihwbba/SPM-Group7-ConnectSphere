@@ -54,7 +54,10 @@ export function CancelEvent({ eventId }: { eventId: string }) {
           aria-label="Cancel event"
           title="Cancel event"
           className="h-9 w-9 p-0 text-destructive"
-          onClick={() => setReason("")}
+          onClick={() => {
+            setReason("");
+            setReasonErrors(undefined);
+          }}
         >
           <X className="h-4 w-4" />
         </Button>

@@ -253,6 +253,7 @@ export function BookingDecision({
           onClick={() => {
             setRejecting(true);
             setReason("");
+            setReasonErrors(undefined);
           }}
         >
           <XCircle className="h-4 w-4" /> Reject

@@ -213,7 +213,10 @@ export function ChangeRequestDecision({
               size="sm"
               variant="ghost"
               className="border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
-              onClick={() => setReason("")}
+              onClick={() => {
+                setReason("");
+                setErrors({});
+              }}
             >
               Reject
             </Button>

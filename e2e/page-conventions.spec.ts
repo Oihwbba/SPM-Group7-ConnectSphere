@@ -9,7 +9,7 @@ import { signedIn, usesLocalDatabase } from "./helpers";
  * SCRUM-207 AC1, AC2, AC4, AC5 — every page's title, description and back
  * link; the Coordinator's Awaiting review view; errors inline; every
  * irreversible action asking in the shared dialog.
- * Test cases: docs/testing/SCRUM-207.md (TC-207-01, -02, -09, -10, -30, -31).
+ * Test cases: docs/testing/SCRUM-207.md (TC-207-01, -02, -09, -10, -30 to -32).
  */
 
 const ACCOUNTS: { role: Role; email: string }[] = [
@@ -494,5 +494,64 @@ test.describe("SCRUM-207 [AC5] irreversible actions ask in the shared dialog", (
       }),
     ).toMatchObject({ status: "AWAITING_REVIEW", note: null, decidedAt: null });
     expect(await prisma.auditLog.count(history)).toBe(historyBefore);
+  });
+
+  test("SCRUM-207 [AC4, AC5] TC-207-32: a refused cancellation reason is gone once the dialog is closed and opened again", async ({
+    browser,
+  }) => {
+    /** Refused at the box, then backed out of and opened again: no error. */
+    async function noOldErrorOnReopen(
+      page: Page,
+      open: Locator,
+      title: string,
+      box: string,
+      message: string,
+    ) {
+      await open.click();
+      const dialog = page.getByRole("dialog", { name: title });
+      const reason = dialog.getByLabel(box);
+      await reason.fill("x".repeat(2001));
+      await dialog.getByTestId("confirm-dialog-confirm").click();
+      await expect(dialog.getByText(message)).toBeVisible();
+      await dialog.getByTestId("confirm-dialog-cancel").click();
+      await expect(dialog).toHaveCount(0);
+
+      await open.click();
+      await expect(dialog).toBeVisible();
+      await expect(reason).toHaveValue("");
+      await expect(dialog.getByText(message)).toHaveCount(0);
+      await expect(reason).toHaveAttribute("aria-invalid", "false");
+      await dialog.getByTestId("confirm-dialog-cancel").click();
+    }
+
+    const page = await signedIn(browser, "coordinator@test.local");
+    await page.goto("/events/evt_planning?tab=arrangements");
+    await noOldErrorOnReopen(
+      page,
+      page.getByRole("button", { name: "Cancel event" }),
+      "Cancel this event",
+      "Cancellation reason",
+      "Keep the cancellation reason under 2000 characters.",
+    );
+    expect(
+      await prisma.event.findUniqueOrThrow({ where: { id: "evt_planning" } }),
+    ).toMatchObject({
+      status: "PLANNING",
+      cancelledAt: null,
+      cancellationReason: null,
+    });
+
+    // The booking queue's Reject had the same gap, and closed on a refused
+    // reason, so backing out of it is also what shows it stays open.
+    const staff = await signedIn(browser, "venuestaff@test.local");
+    await staff.goto("/bookings?status=all&open=bkg_pending");
+    await noOldErrorOnReopen(
+      staff,
+      staff.getByRole("button", { name: "Reject" }),
+      "Reject booking request",
+      "Rejection reason",
+      "Keep the rejection reason under 2000 characters.",
+    );
+    expect(await bookingStatus("bkg_pending")).toBe("PENDING");
   });
 });
