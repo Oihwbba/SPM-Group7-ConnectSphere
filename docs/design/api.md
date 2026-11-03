@@ -120,6 +120,7 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `getFlaggedArrangements` | An event's bookings and reservations flagged Needs Reconsideration, with each reason, for its assigned Coordinator (SCRUM-26 AC7). | `arrangement:reconsider` | an event id | nothing (read only) | — |
+| `getEventFlags` | The event's unresolved flags for its Changes tab, read-only, at any status (SCRUM-208). The reason is internal (SCRUM-131 AC3), so only a user who may resolve the flags gets it. | `event:read`; the reason only with `arrangement:reconsider` | an event id | nothing (read only) | — |
 | `resolveReconsiderationFlag` | The assigned Coordinator decides a flagged arrangement: Still stands, if it still fits the event, or Cancel arrangement, which releases it and returns a Confirmed event to Planning (SCRUM-26 AC7–AC10). Venue Staff, for a booking, or Technical Support, for a reservation, are told (SCRUM-124 AC9). | `arrangement:reconsider` | `resolveSchema` (same file) | AuditLog, Booking, Event, Notification, Reservation, SafetyCheck | Event row |
 
 ## `app/(app)/events/readiness-actions.ts`
@@ -130,6 +131,7 @@ request.
 | `getEventArrangements` | A Confirmed event's secured venues, time and equipment, and its flagged equipment (SCRUM-81 AC6, SCRUM-162 AC7, SCRUM-258 AC2). | `event:read` | an event id | nothing (read only) | — |
 | `getEventBookings` | Every venue booking of the event, with its venue, attendance, status and whether it is flagged (SCRUM-162 AC7, SCRUM-258 AC2). | `event:read` | an event id | nothing (read only) | — |
 | `getEventCoordinator` | The name of the event's current Coordinator, or none (SCRUM-21 AC8). | `event:read` | an event id | nothing (read only) | — |
+| `getEventEquipment` | The event page's Equipment section: the event's requests, newest first, and whether this user may raise or change one (SCRUM-209 AC2). The Organiser sees the lines and status, without Technical Support's notes or the history. | `event:read`; the buttons follow `equipment-request:create` and `equipment-request:change` | an event id | nothing (read only) | — |
 | `isEventStillVisible` | Whether the signed-in user can still see the event, asked before the open event page refreshes, so a reassignment or removal shows a notice instead of "not found" (SCRUM-24, SCRUM-208). | `event:read`; any other user gets `false`, the same as a missing event | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/registration-list-actions.ts`

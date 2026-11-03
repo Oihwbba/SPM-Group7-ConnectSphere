@@ -93,7 +93,7 @@ listed as Not suitable with every reason" covers AC1–AC4 there.
 | Test Data | — |
 | Expected Result | "Capacity 100 < attendance 150", "Missing facility: livestream", "Missing facility: stage", "No wheelchair access; event needs wheelchair access", "Banquet layout not supported". |
 
-**Automated by:** `tests/unit/venue-suitability.test.ts` › "SCRUM-40 [AC6] TC-40-06: …"; `tests/unit/suitability-panel.test.tsx` › "SCRUM-40 [AC6] TC-40-06: …"
+**Automated by:** `tests/unit/venue-suitability.test.ts` › "SCRUM-40 [AC6] TC-40-06: …"; `tests/unit/suitability-panel.test.tsx` › "SCRUM-40 [AC6] TC-40-06: …"; `e2e/venue-suitability.spec.ts` › "SCRUM-40 [AC2, AC3, AC6, AC8, AC9, AC10] TC-40-02, TC-40-03, TC-40-06, TC-40-08, TC-40-09, TC-40-10, TC-40-11: a Not suitable venue shows why, …"
 
 ### TC-40-07
 
