@@ -32,6 +32,6 @@ On 3 Nov every case in `docs/testing/` whose **Automated by** says Manual was re
 4. No test-case document is left stale: the summary rows and the `docs/testing/README.md` index describe these cases as they now are, and the documents the new test finds out of date are fixed.
 5. Each new test fails when the thing it checks is broken, and `npm run verify`, `npm run test:coverage` and `e2e/top-bar.spec.ts` pass on a local database.
 
-**Out of scope:** manual cases that need a person, the live app or the shared database (e.g. TC-36-06's screen reader, TC-240-04); one-off checks of a past state, already recorded with their evidence (e.g. TC-189-02, TC-193-02, TC-216-02, TC-234-03); TC-238-03's re-run, which the team keeps manual; TC-207-01, -02 and -09 (still to do in SCRUM-207); TC-132-09's confirmation audit; and checking test titles (TC-236-01, -02, -03), which needs a team decision on cross-story citations first.
+**Out of scope:** manual cases that need a person, the live app or the shared database (e.g. TC-36-06's screen reader, TC-240-04); one-off checks of a past state, already recorded with their evidence (e.g. TC-189-02, TC-193-02, TC-216-02, TC-234-03); TC-238-03's re-run, which the team keeps manual; TC-207-01, -02 and -09 (still to do in SCRUM-207); TC-132-09's confirmation audit; and checking test titles (TC-236-01, -02, -03), which is SCRUM-273.
 
-**Related:** SCRUM-168, SCRUM-197, SCRUM-236.
+**Related:** SCRUM-168, SCRUM-197, SCRUM-236, SCRUM-273.
