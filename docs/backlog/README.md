@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-02. Jira is the source of truth.
+     Synced from Jira on 2026-11-03. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # Product backlog - acceptance criteria for every story
@@ -26,7 +26,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 ## Staleness - read this
 
-**Jira is the source of truth. These files are a snapshot, last synced on 2026-11-02.**
+**Jira is the source of truth. These files are a snapshot, last synced on 2026-11-03.**
 
 - Never edit these files by hand. Edit the story in Jira, then re-sync.
 - Re-sync after every backlog refinement, and before each sprint review.
@@ -44,7 +44,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | Points committed to Sprint 2 | **56** |
 | Points committed to Sprint 3 | **126** |
 | Points committed to Sprint 4 | **15** |
-| Last synced from Jira | **2026-11-02** |
+| Last synced from Jira | **2026-11-03** (SCRUM-131 and SCRUM-84 only; the sweep before it was 2 Nov) |
 
 ## SCRUM-6 - Event Request Lifecycle
 
