@@ -5,8 +5,9 @@ Format and conventions: [README.md](README.md).
 
 SCRUM-197 is a Chore task whose deliverables are two documents,
 [`docs/ai-usage.md`](../ai-usage.md) and [`docs/ownership.md`](../ownership.md).
-Its cases are checks a reviewer runs by reading them and re-running the
-commands they quote; no test automates them.
+Most of its cases are checks a reviewer runs by reading them and re-running
+the commands they quote. TC-197-04, the README's links to both, is
+automated (SCRUM-271).
 
 **Shared pre-conditions:** this branch checked out, with `main` fetched.
 
@@ -15,7 +16,7 @@ commands they quote; no test automates them.
 | [TC-197-01](#tc-197-01) | Positive | AC 1 | Manual (a document check) |
 | [TC-197-02](#tc-197-02) | Positive | AC 2 | Manual (re-running the commands) |
 | [TC-197-03](#tc-197-03) | Positive | AC 3 | Manual (each teammate confirms their rows) |
-| [TC-197-04](#tc-197-04) | Positive | AC 4 | Manual (a document check) |
+| [TC-197-04](#tc-197-04) | Positive | AC 4 | Unit |
 | [TC-197-05](#tc-197-05) | Positive | AC 5, AC 6 | Manual (a document check) |
 | [TC-197-06](#tc-197-06) | Negative | AC 6 | Manual (opening every link) |
 | [TC-197-07](#tc-197-07) | Positive | AC 7 | Manual (the deck and the demo) |
@@ -72,7 +73,7 @@ commands they quote; no test automates them.
 | Test Data | `README.md` |
 | Expected Result | Both sections link or list `docs/ai-usage.md` and `docs/ownership.md`. |
 
-**Automated by:** Manual (a document check, in review).
+**Automated by:** `tests/unit/readme.test.ts` › "SCRUM-271 [AC2], SCRUM-197 [AC4] TC-197-04: Start here links docs/ai-usage.md and docs/ownership.md, and both exist" and "SCRUM-271 [AC2], SCRUM-197 [AC4] TC-197-04: Project layout lists ai-usage.md and ownership.md under docs/"
 
 ### TC-197-05
 

@@ -25,7 +25,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | [TC-36-03](#tc-36-03) | Boundary | AC 5 | Unit, e2e |
 | [TC-36-04](#tc-36-04) | Positive | AC 6 | Unit, e2e |
 | [TC-36-05](#tc-36-05) | Positive, Boundary | AC 1 | Unit, e2e |
-| [TC-36-06](#tc-36-06) | Positive | Screen readers and phones | e2e |
+| [TC-36-06](#tc-36-06) | Positive | Screen readers and phones | e2e; a real screen reader is Manual |
 | [TC-36-07](#tc-36-07) | Negative | AC 7 (Coordinators and Venue Staff only) | Unit, e2e |
 | [TC-36-08](#tc-36-08) | Positive | Details on hover | Unit, e2e |
 | [TC-36-09](#tc-36-09) | Positive | AC 2 (a newly approved booking, also on an open calendar) | Unit, e2e |
