@@ -203,11 +203,16 @@ test.describe("SCRUM-264 — text over 2,000 characters is refused at the box", 
     const decision = details.getByTestId("change-request-decision");
     await decision.getByRole("button", { name: "Reject", exact: true }).click();
 
-    const box = decision.getByLabel("Reason for rejecting the change request");
+    // SCRUM-207 AC5: the reason is written inside the shared dialog, which
+    // renders outside the event page, so it is reached from the page root.
+    const dialog = page.getByRole("dialog", {
+      name: "Reject this change request?",
+    });
+    const box = dialog.getByLabel("Reason for rejecting the change request");
     await expectRefusedAtTheBox(
       box,
-      decision.getByRole("button", { name: "Reject change request" }),
-      decision,
+      dialog.getByRole("button", { name: "Reject change request" }),
+      dialog,
       REJECTION,
     );
     expect(await prisma.eventChangeRequest.findUniqueOrThrow({ where: { id } })).toMatchObject({
@@ -216,8 +221,15 @@ test.describe("SCRUM-264 — text over 2,000 characters is refused at the box", 
     });
 
     await box.fill(OVER_LIMIT);
-    await decision.getByRole("button", { name: "Back" }).click();
+    // TC-264-05: backing out of the dialog leaves the text behind, and it
+    // doesn't stop the approval. The dialog's way back is Cancel (SCRUM-207).
+    await dialog.getByRole("button", { name: "Cancel" }).click();
     await decision.getByRole("button", { name: "Approve" }).click();
+    // SCRUM-207 AC5: approving asks first, in the shared dialog.
+    await page
+      .getByRole("dialog", { name: "Approve this change request?" })
+      .getByRole("button", { name: "Approve" })
+      .click();
     await expect(page.getByText("Change request approved and applied.")).toBeVisible();
     expect(await prisma.eventChangeRequest.findUniqueOrThrow({ where: { id } })).toMatchObject({
       status: "APPROVED",

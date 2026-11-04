@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye, Users } from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
@@ -15,18 +16,22 @@ import {
 } from "@/components/ui/table";
 import { getVenueCatalogue, getVenueOptions } from "../queries";
 import { VenueFormDialog } from "../venue-form-dialog";
+import { PageHeader } from "@/components/app/page-header";
 
 type Venue = Awaited<ReturnType<typeof getVenueCatalogue>>[number];
 
 function VenueTable({ venues, caption }: { venues: Venue[]; caption: string }) {
   return (
     <div className="overflow-x-auto rounded-md border">
-      <Table aria-label={caption}>
+      <Table aria-label={caption} className="table-stack">
         <TableHeader>
           <TableRow>
             <TableHead>Venue</TableHead>
             <TableHead>Location</TableHead>
             <TableHead className="text-right">Capacity</TableHead>
+            <TableHead className="w-24 text-right">
+              <span className="sr-only">Open</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -42,8 +47,23 @@ function VenueTable({ venues, caption }: { venues: Venue[]; caption: string }) {
                   </Badge>
                 )}
               </TableCell>
-              <TableCell>{venue.location}</TableCell>
-              <TableCell className="text-right">{venue.capacity}</TableCell>
+              <TableCell data-label="Location">{venue.location}</TableCell>
+              <TableCell className="text-right" data-label="Capacity">
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  {venue.capacity}
+                </span>
+              </TableCell>
+              <TableCell className="text-right">
+                <Link
+                  href={`/venues/${venue.id}`}
+                  aria-label={`View ${venue.name}`}
+                  className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary hover:underline md:min-h-0"
+                >
+                  <Eye className="h-4 w-4" aria-hidden />
+                  View
+                </Link>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -70,15 +90,11 @@ export default async function VenuesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Venue Catalogue</h1>
-          <p className="text-sm text-muted-foreground">
-            Each venue&apos;s capacity, facilities, opening hours and restrictions.
-          </p>
-        </div>
-        {options && <VenueFormDialog options={options} />}
-      </div>
+      <PageHeader
+        title="Venue Catalogue"
+        description="Each venue's capacity, facilities, opening hours and restrictions."
+        actions={options && <VenueFormDialog options={options} />}
+      />
 
       {active.length === 0 ? (
         <Card>

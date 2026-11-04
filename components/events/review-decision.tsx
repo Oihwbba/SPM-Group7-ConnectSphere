@@ -27,6 +27,11 @@ import {
 import { cn } from "@/lib/utils";
 import { transitionEventStatus } from "@/app/(app)/events/actions";
 import { requestClarification } from "@/app/(app)/events/clarification-actions";
+import { ActionError } from "@/components/app/action-error";
+import {
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 
 /**
  * SCRUM-18, SCRUM-19, SCRUM-126 — the assigned Coordinator's decision on a
@@ -44,6 +49,9 @@ export function ReviewDecision({
   buttonClassName?: string;
 }) {
   const [rejecting, setRejecting] = useState(false);
+  // SCRUM-207 AC4: errors beside the buttons, and inside the ask dialog.
+  const [error, setError] = useState<string | null>(null);
+  const [askError, setAskError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [outcome, setOutcome] = useState<RejectionOutcome | null>(null);
   const [asking, setAsking] = useState(false);
@@ -58,30 +66,41 @@ export function ReviewDecision({
     return null;
   }
 
-  function changeStatus(
+  // Awaited by the reject dialog (SCRUM-207 AC5), which shows a refusal
+  // inside itself; an approval's refusal is shown beside the buttons (AC4).
+  async function changeStatusNow(
     nextStatus: "APPROVED" | "REJECTED",
     decisionReason?: string,
     rejectionOutcome?: RejectionOutcome,
-  ) {
+  ): Promise<ConfirmOutcome> {
+    const result = await transitionEventStatus({
+      eventId: event.id,
+      nextStatus,
+      decisionReason,
+      rejectionOutcome,
+    });
+    if (!result.ok) {
+      // SCRUM-264: a reason refused for length is said at the box.
+      setErrors(result.fieldErrors ?? {});
+      // SCRUM-264: the message belongs at the box, so the dialog does not
+      // repeat it; returning no error keeps the dialog open on it.
+      if (result.fieldErrors) return { ok: false, error: "" };
+      return result;
+    }
+    toast.success(
+      `Event status updated to ${EVENT_STATUS_LABEL[result.data.status]}.`,
+    );
+    setError(null);
+    setRejecting(false);
+    setReason("");
+    setOutcome(null);
+    router.refresh();
+  }
+
+  function approve() {
     startTransition(async () => {
-      const result = await transitionEventStatus({
-        eventId: event.id,
-        nextStatus,
-        decisionReason,
-        rejectionOutcome,
-      });
-      if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.error);
-        return;
-      }
-      toast.success(
-        `Event status updated to ${EVENT_STATUS_LABEL[result.data.status]}.`,
-      );
-      setRejecting(false);
-      setReason("");
-      setOutcome(null);
-      router.refresh();
+      const result = await changeStatusNow("APPROVED");
+      if (result && !result.ok) setError(result.error);
     });
   }
 
@@ -95,10 +114,14 @@ export function ReviewDecision({
         editableFields: fields,
       });
       if (!result.ok) {
+        // SCRUM-264: a message refused for length is said at the box;
+        // anything else is shown for the dialog as a whole (SCRUM-207 AC4).
         setErrors(result.fieldErrors ?? {});
-        toast.error(result.error);
+        setAskError(result.fieldErrors ? null : result.error);
         return;
       }
+      setErrors({});
+      setAskError(null);
       toast.success("Clarification request sent to the organiser.");
       setAsking(false);
       setMessage("");
@@ -133,7 +156,7 @@ export function ReviewDecision({
             "border border-success/40 bg-success/10 text-success hover:bg-success/20 hover:text-success",
           )}
           disabled={isPending}
-          onClick={() => changeStatus("APPROVED")}
+          onClick={approve}
         >
           <CheckCircle2 className="h-3.5 w-3.5" /> Approve
         </Button>
@@ -157,76 +180,68 @@ export function ReviewDecision({
           <XCircle className="h-3.5 w-3.5" /> Reject
         </Button>
       )}
+      <ActionError message={error} />
 
-      <Dialog open={rejecting} onOpenChange={setRejecting}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject event request</DialogTitle>
-            <DialogDescription>
-              Give the organiser a clear reason, and choose whether they amend
-              this request or start a new one.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={reason}
-            onChange={(e) => {
-              setReason(e.target.value);
-              setErrors({});
-            }}
-            placeholder="Reason for rejection"
-            aria-label="Rejection reason"
-            aria-invalid={Boolean(errors.decisionReason)}
-            aria-describedby={
-              errors.decisionReason ? `rejection-reason-error-${event.id}` : undefined
-            }
-          />
-          <FieldError
-            id={`rejection-reason-error-${event.id}`}
-            messages={errors.decisionReason}
-          />
-          {/* SCRUM-126 AC1: one outcome must be chosen with the reason. */}
-          <fieldset className="space-y-2 text-sm">
-            <legend className="mb-1 font-medium">
-              What can the organiser do next?
-            </legend>
-            {(Object.keys(REJECTION_OUTCOME_LABEL) as RejectionOutcome[]).map(
-              (choice) => (
-                <label key={choice} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={`rejection-outcome-${event.id}`}
-                    value={choice}
-                    checked={outcome === choice}
-                    onChange={() => setOutcome(choice)}
-                    className="accent-primary"
-                  />
-                  {REJECTION_OUTCOME_LABEL[choice]}
-                </label>
-              ),
-            )}
-          </fieldset>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setRejecting(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isPending || !reason.trim() || !outcome}
-              onClick={() => outcome && changeStatus("REJECTED", reason, outcome)}
-            >
-              {isPending ? "Rejecting…" : "Reject request"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={rejecting}
+        onOpenChange={setRejecting}
+        title="Reject event request"
+        message="Give the organiser a clear reason, and choose whether they amend this request or start a new one."
+        confirmLabel="Reject request"
+        pendingLabel="Rejecting…"
+        destructive
+        ready={Boolean(reason.trim() && outcome)}
+        onConfirm={() => changeStatusNow("REJECTED", reason, outcome!)}
+      >
+        <Textarea
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setErrors({});
+          }}
+          placeholder="Reason for rejection"
+          aria-label="Rejection reason"
+          aria-invalid={Boolean(errors.decisionReason)}
+          aria-describedby={
+            errors.decisionReason
+              ? `rejection-reason-error-${event.id}`
+              : undefined
+          }
+        />
+        <FieldError
+          id={`rejection-reason-error-${event.id}`}
+          messages={errors.decisionReason}
+        />
+        {/* SCRUM-126 AC1: one outcome must be chosen with the reason. */}
+        <fieldset className="space-y-2 text-sm">
+          <legend className="mb-1 font-medium">
+            What can the organiser do next?
+          </legend>
+          {(Object.keys(REJECTION_OUTCOME_LABEL) as RejectionOutcome[]).map(
+            (choice) => (
+              <label key={choice} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name={`rejection-outcome-${event.id}`}
+                  value={choice}
+                  checked={outcome === choice}
+                  onChange={() => setOutcome(choice)}
+                  className="accent-primary"
+                />
+                {REJECTION_OUTCOME_LABEL[choice]}
+              </label>
+            ),
+          )}
+        </fieldset>
+      </ConfirmDialog>
 
       <Dialog open={asking} onOpenChange={setAsking}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Request clarification</DialogTitle>
             <DialogDescription>
-              Ask the organiser what you need before deciding. The event
-              stays under review while you wait for their response.
+              Ask the organiser what you need before deciding. The event stays
+              under review while you wait for their response.
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -239,7 +254,9 @@ export function ReviewDecision({
             aria-label="Clarification message"
             aria-invalid={Boolean(errors.message)}
             aria-describedby={
-              errors.message ? `clarification-message-error-${event.id}` : undefined
+              errors.message
+                ? `clarification-message-error-${event.id}`
+                : undefined
             }
           />
           <FieldError
@@ -274,6 +291,7 @@ export function ReviewDecision({
               )}
             </div>
           </fieldset>
+          <ActionError message={askError} />
           <DialogFooter>
             <Button variant="secondary" onClick={() => setAsking(false)}>
               Cancel

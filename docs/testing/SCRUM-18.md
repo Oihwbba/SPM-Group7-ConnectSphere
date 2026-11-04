@@ -176,6 +176,6 @@ with `coordinator@test.local` (both `Password123!`).
 | Pre-conditions | Signed in as the assigned Coordinator, at a 375 × 812 screen. A request is Under Review. |
 | Test Steps | 1. Open **Events** and find the request's card. <br> 2. Look at **View Details**, **Approve**, **Ask** and **Reject**. <br> 3. Tap **Ask**. |
 | Test Data | Screen 375 × 812 |
-| Expected Result | The four buttons are the same width, two to a row (**Reject** beside **Ask**, not alone on a line), and the page doesn't scroll sideways. In the clarification dialog, **Send request** and **Cancel** are stacked with at least 6 px between them. |
+| Expected Result | The four buttons sit on one line in the order **View Details**, **Ask**, **Approve**, **Reject** (**Reject** beside **Approve**, not alone on a line), the row ends within the screen, and the page doesn't scroll sideways. In the clarification dialog, **Send request** and **Cancel** are stacked with at least 6 px between them. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-18 [AC1] TC-18-11: the four review buttons form an even two-column grid and stacked dialog buttons are separated"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-18 [AC1] TC-18-11: the four review buttons sit on one line and stacked dialog buttons are separated"

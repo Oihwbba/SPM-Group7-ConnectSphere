@@ -9,15 +9,14 @@ import {
   Eye,
   CalendarPlus,
   BellRing,
-  FileEdit,
   Filter,
   CopyPlus,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Trash2,
-  Send,
+  Search,
   Inbox,
+  Trash2,
   MessagesSquare,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -44,14 +43,12 @@ import { ReviewDecision } from "@/components/events/review-decision";
 import { AppSelect } from "@/components/app/app-select";
 import { SubmittedDialog } from "@/components/app/submitted-dialog";
 import { discardDraftEvent, startRequestFromRejected } from "./actions";
+import { PageHeader } from "@/components/app/page-header";
+import { ActionError } from "@/components/app/action-error";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 
 interface EventsClientProps {
   events: Event[];
@@ -186,6 +183,8 @@ export function EventsClient({
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   // Which row's Start New Request is in flight, so only that button says so.
   const [startingFrom, setStartingFrom] = useState<string | null>(null);
+  // SCRUM-207 AC4: an action on a row that failed, shown under the title.
+  const [listError, setListError] = useState<string | null>(null);
   // The draft just started from a rejection, opened once the refreshed list
   // has it. A request already submitted from it can't be edited, only found.
   const [draftToOpen, setDraftToOpen] = useState<string | null>(null);
@@ -225,17 +224,16 @@ export function EventsClient({
     startTransition(async () => {
       try {
         const result = await startRequestFromRejected({ eventId: event.id });
-        if (!result.ok) {
-          toast.error(result.error);
-          return;
-        }
+        setListError(result.ok ? null : result.error);
+        if (!result.ok) return;
         toast.success(
           result.data.created
             ? "A new draft was started from this request."
             : "A new request was already started from this one. Find it in your events list.",
         );
-        // As the Drafts tab button does, so a leftover status filter can't hide it.
-        setActiveTab("DRAFT");
+        // Show the whole list, so a leftover filter can't hide the new draft.
+        // It used to narrow to Drafts, which now has no control to leave by.
+        setActiveTab("ALL");
         setStatusFilter("ALL");
         setDraftToOpen(result.data.id);
         router.refresh();
@@ -245,24 +243,19 @@ export function EventsClient({
     });
   }
 
-  // SCRUM-130 AC1: runs only after the confirmation dialog's Discard Draft.
-  function discardDraft(event: Event) {
-    startTransition(async () => {
-      const result = await discardDraftEvent({ eventId: event.id });
-      setDiscardingEvent(null);
-      if (result.ok) {
-        toast.success(`"${event.name}" was discarded.`);
-      } else {
-        toast.error(result.error);
-      }
-      router.refresh();
-    });
+  // SCRUM-130 AC1: runs only after the shared dialog's Discard Draft
+  // (SCRUM-207 AC5), which shows a refusal inside itself.
+  async function discardDraft(event: Event): Promise<ConfirmOutcome> {
+    const result = await discardDraftEvent({ eventId: event.id });
+    if (!result.ok) return result;
+    toast.success(`"${event.name}" was discarded.`);
+    router.refresh();
   }
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  // A coordinator's second tab is their review queue; an organiser's is
-  // everything they have sent. Both the filter and the count follow this.
+  // A coordinator's Awaiting review view is their review queue. The
+  // organiser has no such view (SCRUM-131 AC1), so theirs is never asked for.
   const submittedMeans = isCoordinator ? "awaiting-review" : "non-draft";
 
   const awaitingAnswer = new Set(awaitingAnswerIds);
@@ -278,12 +271,8 @@ export function EventsClient({
     needsAction: (evt) => needsAction(evt as Event),
   });
   const actionCount = events.filter(needsAction).length;
-
-  const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
-  const submittedCount = events.filter((evt) =>
-    submittedMeans === "awaiting-review"
-      ? AWAITING_REVIEW.includes(evt.status)
-      : evt.status !== "DRAFT",
+  const awaitingReviewCount = events.filter((evt) =>
+    AWAITING_REVIEW.includes(evt.status),
   ).length;
 
   // Row actions. The row is a single element (table row on desktop, stacked
@@ -295,15 +284,14 @@ export function EventsClient({
     // SCRUM-126 AC2/AC3: the Coordinator's choice decides which way back the
     // Organiser is offered.
     const startsAgain = event.rejectionOutcome === "NEW_REQUEST";
-    // On a phone the actions are a two-column grid of full-width, thumb-sized
-    // buttons, so a fourth button no longer wraps alone onto a second line; from
-    // md up they are the compact inline row the desktop table has always had.
-    const actionButton = "h-10 w-full gap-1.5 text-xs md:h-8 md:w-auto";
+    // On a card the actions gather on one line at the bottom right, so they
+    // are kept narrow enough that four of them still fit a 320px screen.
+    const actionButton = "h-9 gap-1 px-2 text-[11px] sm:text-xs lg:h-8";
     // Change 3: actions whose icon says it all are icon-only, named for
     // screen readers and with a tooltip.
-    const iconButton = "h-10 w-full md:h-8 md:w-8 md:p-0";
+    const iconButton = "h-9 w-9 p-0 lg:h-8 lg:w-8";
     return (
-      <div className="grid grid-cols-2 gap-2 md:flex md:flex-nowrap md:items-center md:justify-end md:gap-1.5 [&>*:only-child]:col-span-2 md:[&>*:only-child]:col-span-1">
+      <div className="flex flex-nowrap items-center justify-end gap-1.5">
         {isDraft && (
           <Button
             variant="ghost"
@@ -406,128 +394,106 @@ export function EventsClient({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-            {isCoordinator ? "Submitted Event Requests" : "My Events"}
-          </h1>
-          {/* Onboarding subtitle — hidden on phones to keep the header compact
-              and leave more room for the list. */}
-          <p className="hidden text-sm text-muted-foreground sm:block">
-            {isCoordinator
-              ? "Review submitted event requests requiring coordinator review and planning."
-              : "Create and track your event requests through their lifecycle."}
-          </p>
-        </div>
-        {!isCoordinator && (
-          <Button
-            className="h-8 gap-1.5 px-3 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm"
-            onClick={() => setCreateDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Create Event Request
-          </Button>
-        )}
-      </div>
-
-      {/* Filter Tabs & Interactive Search Bar for SCRUM-84 AC6-AC9 */}
-      {events.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          {/* Horizontal scroll below md keeps the phone layout free of overflow
-              (SCRUM-84 mobile e2e), wrapping normally from md up. */}
-          <div className="flex w-full flex-nowrap items-center gap-1.5 overflow-x-auto md:w-auto md:flex-wrap md:gap-2 md:overflow-visible">
-            <Filter className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground md:mr-1" />
+      <PageHeader
+        title={isCoordinator ? "Submitted Event Requests" : "My Events"}
+        description={
+          isCoordinator
+            ? "Review submitted event requests requiring coordinator review and planning."
+            : "Create and track your event requests through their lifecycle."
+        }
+        actions={
+          !isCoordinator && (
             <Button
-              variant={activeTab === "ALL" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-8 shrink-0 text-xs font-medium"
-              onClick={() => {
-                setActiveTab("ALL");
-                setStatusFilter("ALL");
-              }}
+              className="h-11 gap-2 px-4 text-sm md:h-10"
+              onClick={() => setCreateDialogOpen(true)}
             >
-              All ({events.length})
+              <Plus className="h-4 w-4" />
+              Create Event Request
             </Button>
-            {!isCoordinator && (
-              <Button
-                variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-8 shrink-0 gap-1.5 text-xs font-medium",
-                  activeTab === "DRAFT" && "font-semibold",
-                )}
-                onClick={() => {
-                  setActiveTab("DRAFT");
-                  setStatusFilter("ALL");
-                }}
-              >
-                <FileEdit className="h-3.5 w-3.5" />
-                Drafts ({draftCount})
-              </Button>
-            )}
+          )
+        }
+      />
+      <ActionError message={listError} />
+
+      {/* The status picker and the search box filter the list (SCRUM-84
+          AC6-AC9); each carries its own icon. Beside them, one view that
+          toggles off again: the Organiser's "Actions required" (SCRUM-207
+          AC7), or the Coordinator's "Awaiting review", Submitted and Under
+          Review together, which the PO kept (2 Nov 2026). Only the
+          Coordinator's list may group statuses (SCRUM-131 AC1). */}
+      {events.length > 0 && (
+        <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
+          {isCoordinator ? (
             <Button
               variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
               size="sm"
+              aria-pressed={activeTab === "SUBMITTED"}
               className={cn(
-                "h-8 shrink-0 gap-1.5 text-xs font-medium",
+                "h-11 shrink-0 gap-1.5 self-start text-sm font-medium md:h-9 md:text-xs",
                 activeTab === "SUBMITTED" && "font-semibold",
               )}
               onClick={() => {
-                setActiveTab("SUBMITTED");
+                setActiveTab(activeTab === "SUBMITTED" ? "ALL" : "SUBMITTED");
                 setStatusFilter("ALL");
               }}
             >
-              {isCoordinator ? (
-                <Inbox className="h-3.5 w-3.5" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              {/* SCRUM-131 AC1: "Sent", since the tab lists every request
-                  that isn't a draft, not only the Submitted ones. */}
-              {isCoordinator ? "Awaiting review" : "Sent"} ({submittedCount})
+              <Inbox className="h-3.5 w-3.5" />
+              Awaiting review ({awaitingReviewCount})
             </Button>
-            {!isCoordinator && (
-              <Button
-                variant={activeTab === "ACTION" ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-8 shrink-0 gap-1.5 text-xs font-medium",
-                  activeTab === "ACTION" && "font-semibold",
-                )}
-                onClick={() => {
-                  setActiveTab("ACTION");
-                  setStatusFilter("ALL");
-                }}
-              >
-                <BellRing className="h-3.5 w-3.5" />
-                Actions required ({actionCount})
-              </Button>
-            )}
-          </div>
+          ) : (
+            <Button
+              variant={activeTab === "ACTION" ? "secondary" : "ghost"}
+              size="sm"
+              aria-pressed={activeTab === "ACTION"}
+              className={cn(
+                "h-11 shrink-0 gap-1.5 self-start text-sm font-medium md:h-9 md:text-xs",
+                activeTab === "ACTION" && "font-semibold",
+              )}
+              onClick={() => {
+                setActiveTab(activeTab === "ACTION" ? "ALL" : "ACTION");
+                setStatusFilter("ALL");
+              }}
+            >
+              <BellRing className="h-3.5 w-3.5" />
+              Actions required ({actionCount})
+            </Button>
+          )}
 
-          <div className="flex items-center gap-2 w-full max-w-sm">
-            <AppSelect
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-              aria-label="Filter by status"
-              className="h-9 w-40 shrink-0 text-xs"
-              options={[
-                { value: "ALL", label: "All Statuses" },
-                // SCRUM-233: no event stays Approved (SCRUM-81 AC1), so it
-                // isn't offered; history entries still show its label.
-                ...Object.entries(EVENT_STATUS_LABEL)
-                  .filter(([value]) => value !== "APPROVED")
-                  .map(([value, label]) => ({ value, label })),
-              ]}
-            />
-            <input
-              type="text"
-              aria-label="Search by name or purpose"
-              placeholder="Search by name or purpose..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
+          <div className="flex w-full flex-col gap-2 sm:max-w-sm sm:flex-row sm:items-center md:ml-auto">
+            <div className="relative w-full sm:w-40 sm:shrink-0">
+              <Filter
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <AppSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                aria-label="Filter by status"
+                className="h-11 w-full pl-9 text-base sm:h-9 sm:text-xs"
+                options={[
+                  { value: "ALL", label: "All Statuses" },
+                  // SCRUM-233: no event stays Approved (SCRUM-81 AC1), so it
+                  // isn't offered; history entries still show its label.
+                  ...Object.entries(EVENT_STATUS_LABEL)
+                    .filter(([value]) => value !== "APPROVED")
+                    .map(([value, label]) => ({ value, label })),
+                ]}
+              />
+            </div>
+            <div className="relative w-full">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="text"
+                aria-label="Search by name or purpose"
+                placeholder="Search by name or purpose..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9 sm:text-xs"
+              />
+            </div>
           </div>
         </div>
       )}
@@ -580,10 +546,10 @@ export function EventsClient({
           </CardContent>
         </Card>
       ) : (
-        <Card className="max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:shadow-none max-md:backdrop-blur-none">
+        <Card className="max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:shadow-none max-lg:backdrop-blur-none">
           <CardContent className="p-0">
             {/* A single table that restyles into a stacked card per row below
-                the `md` breakpoint (events-list.module.css). Each event — and
+                the `lg` breakpoint (events-list.module.css). Each event — and
                 each action control — exists exactly once in the DOM; there is
                 no hidden duplicate list and no "mobile-" testid split.
 
@@ -729,7 +695,7 @@ export function EventsClient({
                         data-col="name"
                         // Change 6: the name takes the room left and is cut
                         // short, so the other columns never wrap or shift.
-                        className="font-medium md:w-full md:max-w-0"
+                        className="font-medium lg:w-full lg:max-w-0"
                       >
                         <div className="flex items-center gap-2">
                           <Link
@@ -764,7 +730,7 @@ export function EventsClient({
                         {/* On mobile the column header is gone, so carry a real
                             (screen-reader-announced) label; hidden on desktop
                             where the table header supplies it. */}
-                        <span className="mb-0.5 block text-xs md:hidden">
+                        <span className="mb-0.5 block text-xs lg:hidden">
                           Starts
                         </span>
                         {event.startAt
@@ -776,7 +742,7 @@ export function EventsClient({
                         data-col="created"
                         className="text-muted-foreground"
                       >
-                        <span className="mb-0.5 block text-xs md:hidden">
+                        <span className="mb-0.5 block text-xs lg:hidden">
                           Last Updated
                         </span>
                         {formatDate(event.updatedAt || event.createdAt)}
@@ -841,35 +807,24 @@ export function EventsClient({
       </SubmittedDialog>
 
       {/* SCRUM-130 AC1/AC2: nothing is discarded until this is confirmed. */}
-      <Dialog
+      <ConfirmDialog
         open={!!discardingEvent}
         onOpenChange={(open) => !open && setDiscardingEvent(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Discard this draft?</DialogTitle>
-            <DialogDescription>
-              &ldquo;{discardingEvent?.name}&rdquo; will be removed from your
-              events. A discarded draft can&rsquo;t be reopened.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setDiscardingEvent(null)}
-            >
-              Keep Draft
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isPending}
-              onClick={() => discardingEvent && discardDraft(discardingEvent)}
-            >
-              {isPending ? "Discarding…" : "Discard Draft"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Discard this draft?"
+        message={
+          <>
+            &ldquo;{discardingEvent?.name}&rdquo; will be removed from your
+            events. A discarded draft can&rsquo;t be reopened.
+          </>
+        }
+        confirmLabel="Discard Draft"
+        pendingLabel="Discarding…"
+        cancelLabel="Keep Draft"
+        destructive
+        onConfirm={async () =>
+          discardingEvent ? discardDraft(discardingEvent) : undefined
+        }
+      />
     </div>
   );
 }

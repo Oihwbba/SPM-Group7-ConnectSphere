@@ -1,21 +1,22 @@
 /*
  * One events table, two layouts. On tablet and up it is an ordinary aligned
- * table (unchanged). Below the `md` breakpoint (768px) the same rows restyle
+ * table (unchanged). Below the `lg` breakpoint (1024px) the same rows restyle
  * into stacked cards, so every event — and every action control — exists
  * exactly once in the DOM. No hidden duplicate list, no "mobile-" testid split.
  *
- * `md` here matches Tailwind's default 768px breakpoint used elsewhere.
+ * `lg` matches Tailwind's 1024px breakpoint: below it, the five columns need
+ * more room than a tablet has (SCRUM-207).
  */
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   /* Collapse the table wrapper so rows can stack. */
   .list,
   .list tbody {
     display: block;
   }
 
-  /* The column header only reads correctly in the aligned table; on a card the
-     per-field labels below replace it. */
+  /* A card is not a table, so the column headings go: each value carries its
+     own label inside the card instead (see events-client.tsx). */
   .list thead {
     display: none;
   }
@@ -66,6 +67,16 @@
   .list td[data-col="name"] {
     grid-area: name;
   }
+
+  /* A long name gets two lines on a card before it is cut short. */
+  .list td[data-col="name"] a {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    white-space: normal;
+    padding-block: 0.375rem;
+  }
   .list td[data-col="status"] {
     grid-area: status;
     justify-self: end;
@@ -76,8 +87,10 @@
   .list td[data-col="created"] {
     grid-area: created;
   }
+  /* Every action sits at the bottom right of the card. */
   .list td[data-col="actions"] {
     grid-area: actions;
+    justify-self: end;
   }
 
   /* The "Starts"/"Created" field labels are real elements in the cells (see

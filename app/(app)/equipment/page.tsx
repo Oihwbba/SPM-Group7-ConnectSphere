@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
+import { PageHeader } from "@/components/app/page-header";
 import { prisma } from "@/lib/db";
 import { getReservableRequests } from "@/lib/equipment/request-queries";
 import { EquipmentClient } from "./equipment-client";
@@ -25,14 +26,21 @@ export default async function EquipmentPage() {
   ]);
 
   return (
-    <>
-      <h1 className="sr-only">Equipment</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Equipment"
+        description={
+          canReserve
+            ? "What equipment is free for a period, and reserving it for approved requests."
+            : "What equipment is free for a period, and what it is committed to."
+        }
+      />
       <EquipmentClient
         equipment={equipment}
         requests={requests}
         canReserve={canReserve}
         canReport={canReport}
       />
-    </>
+    </div>
   );
 }

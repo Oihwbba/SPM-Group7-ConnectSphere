@@ -29,13 +29,13 @@ and the app is running. Every account's password is `Password123!`.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-131-01 |
-| Test Scenario | [Positive] AC 1: event statuses use the nine agreed names, and the Organiser's tab of every non-draft request is named Sent |
+| Test Scenario | [Positive] AC 1: event statuses use the nine agreed names, and no control on the Organiser's list groups several of them under another name |
 | Pre-conditions | Signed in as the Organiser, who owns seeded events in several statuses. |
-| Test Steps | 1. Open My Events. <br> 2. Read the filter tabs. <br> 3. Open the status filter. |
+| Test Steps | 1. Open My Events. <br> 2. Look for a control grouping several statuses under one name. <br> 3. Open the status filter. |
 | Test Data | `organiser@test.local` |
-| Expected Result | The tabs read "All (n)", "Drafts (n)" and "Sent (n)"; no tab reads "Submitted". The filter offers All Statuses, then Draft, Submitted, Under Review, Planning, Confirmed, Completed, Cancelled, Rejected: every agreed name but Approved, which no event stays in (SCRUM-233). Every status badge uses one of the nine names. |
+| Expected Result | No All, Drafts or Sent control is offered: they were replaced by the status filter (SCRUM-207, PO approved 2026-11-02), so "Submitted" can only mean the Submitted status. The filter offers All Statuses, then Draft, Submitted, Under Review, Planning, Confirmed, Completed, Cancelled, Rejected: every agreed name but Approved, which no event stays in (SCRUM-233). Every status badge uses one of the nine names. |
 
-**Automated by:** `tests/unit/status-labels.test.ts` › "SCRUM-131 [AC1] TC-131-01: event statuses are shown exactly as the nine agreed names, in lifecycle order"; `e2e/status-names.spec.ts` › "SCRUM-131 [AC1] TC-131-01: the Organiser's tab of every request that isn't a draft reads Sent, and the status filter offers the agreed names an event can rest in"
+**Automated by:** `tests/unit/status-labels.test.ts` › "SCRUM-131 [AC1] TC-131-01: event statuses are shown exactly as the nine agreed names, in lifecycle order"; `e2e/status-names.spec.ts` › "SCRUM-131 [AC1] TC-131-01: the Organiser's list filters by the agreed names an event can rest in, and groups none of them under another name"
 
 ### TC-131-02
 

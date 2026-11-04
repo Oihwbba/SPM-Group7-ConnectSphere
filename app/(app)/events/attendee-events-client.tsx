@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CalendarDays, Clock, MapPin, Users } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Search, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RegistrationStateBadge } from "@/components/events/registration-state-badge";
@@ -82,14 +82,21 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
 
   return (
     <div className="space-y-4">
-      <input
-        type="search"
-        aria-label="Search events by name or description"
-        placeholder="Search events by name or description..."
-        value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
-        className="flex h-11 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9"
-      />
+      {/* The search icon sits in the box, as it does on My Events. */}
+      <div className="relative w-full max-w-sm">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <input
+          type="search"
+          aria-label="Search events by name or description"
+          placeholder="Search events by name or description..."
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          className="flex h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9"
+        />
+      </div>
       {shown.length === 0 ? (
         <p
           className="py-8 text-center text-sm text-muted-foreground"

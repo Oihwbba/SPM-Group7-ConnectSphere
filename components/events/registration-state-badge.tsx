@@ -52,7 +52,9 @@ export function RegistrationStateBadge({
   return (
     <Badge
       variant={variant}
-      className="inline-flex shrink-0 items-center gap-1"
+      // max-w-full: a long label ("registration paused") wraps inside the
+      // badge on a phone instead of pushing past the card's edge.
+      className="inline-flex max-w-full shrink-0 items-center gap-1"
       data-state={kind}
       data-testid={testId}
     >

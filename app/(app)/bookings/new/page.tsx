@@ -6,9 +6,8 @@ import {
   getRequestableVenues,
   getSuitabilityJudgements,
 } from "../queries";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { RequestForm } from "./request-form";
+import { PageHeader } from "@/components/app/page-header";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const one = (value: string | string[] | undefined) =>
@@ -55,23 +54,15 @@ export default async function RequestVenuePage({
 
   return (
     <div className="space-y-6">
-      {fromEvent && (
-        <Link
-          href={`/events/${initialEventId}?tab=arrangements`}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to event
-        </Link>
-      )}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Request a venue
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Ask Venue Staff to book a venue for one of your approved events. Times
-          are Singapore time.
-        </p>
-      </div>
+      <PageHeader
+        title="Request a venue"
+        description="Ask Venue Staff to book a venue for one of your approved events."
+        back={
+          fromEvent
+            ? { href: `/events/${initialEventId}?tab=arrangements`, to: "the event" }
+            : undefined
+        }
+      />
       <RequestForm
         events={events}
         venues={venues}

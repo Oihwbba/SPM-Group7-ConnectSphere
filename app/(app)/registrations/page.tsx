@@ -5,6 +5,7 @@ import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
 import { getMyRegistrations } from "./queries";
 import { RegistrationsList } from "./registrations-list";
+import { PageHeader } from "@/components/app/page-header";
 
 // SCRUM-76 — an Attendee's own registrations and the status of each. Access
 // is decided by lib/auth/can.ts (the single gate), not a role list here
@@ -21,14 +22,10 @@ export default async function RegistrationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          My Registrations
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          The events you&apos;ve registered for, and the status of each.
-        </p>
-      </div>
+      <PageHeader
+        title="My Registrations"
+        description="The events you've registered for, and the status of each."
+      />
       <RegistrationsList registrations={registrations} />
     </div>
   );

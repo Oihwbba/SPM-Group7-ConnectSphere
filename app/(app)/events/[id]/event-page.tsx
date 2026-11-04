@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
-  ArrowLeft,
   Building2,
   Calendar,
   CheckCircle2,
@@ -54,6 +53,7 @@ import { CreateEventDialog } from "../create-event-dialog";
 import { isEventStillVisible } from "../readiness-actions";
 import type { EventPageData } from "./event-page-data";
 import { EventProgress } from "./event-progress";
+import { PageHeader } from "@/components/app/page-header";
 
 
 /**
@@ -247,13 +247,25 @@ export function EventPage({
 
   return (
     <div className="space-y-5" data-testid="event-page">
-      <Link
-        href="/events"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        {isCoordinator ? "Back to Events" : "Back to My Events"}
-      </Link>
+      <PageHeader
+        title={event.name}
+        description={
+          isCoordinator
+            ? "The event you coordinate: what's next, its arrangements, changes and notes."
+            : "Your event request: what's next, its arrangements and changes."
+        }
+        back={{ href: "/events", to: isCoordinator ? "Events" : "My Events" }}
+        actions={
+          isCoordinator && (
+            <>
+              {/* SCRUM-25: the assigned Coordinator edits details. */}
+              <EditDetailsDialog event={event} onSaved={() => setReloads((n) => n + 1)} />
+              {/* SCRUM-82 AC1: the server checks the event is theirs. */}
+              {CANCELLABLE.includes(event.status) && <CancelEvent eventId={event.id} />}
+            </>
+          )
+        }
+      />
 
       {gone && (
         <div
@@ -268,22 +280,7 @@ export function EventPage({
         </div>
       )}
 
-      <header className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          {/* AC2: the name only; the status is the progress below. */}
-          <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight">
-            {event.name}
-          </h1>
-          {isCoordinator && (
-            <div className="flex flex-wrap items-center gap-2">
-              {/* SCRUM-25: the assigned Coordinator edits details. */}
-              <EditDetailsDialog event={event} onSaved={() => setReloads((n) => n + 1)} />
-              {/* SCRUM-82 AC1: the server checks the event is theirs. */}
-              {CANCELLABLE.includes(event.status) && <CancelEvent eventId={event.id} />}
-            </div>
-          )}
-        </div>
-
+      <div className="space-y-4">
         {/* AC2: the state, as the event's place on the way to taking place. */}
         <EventProgress status={event.status} cancelledFrom={cancelledFrom} />
 
@@ -294,7 +291,7 @@ export function EventPage({
           onTab={openSection}
           onResume={() => setResuming(true)}
         />
-      </header>
+      </div>
 
       {/* Lazy: opening an event loads only the tab shown, not all six. */}
       <Tabs label="Event" tabs={tabs} value={tab} onChange={openTab} lazy />
@@ -414,10 +411,12 @@ function NextStepBanner({
   }
 
   const mine = step.kind === "yours";
+  // Small enough to sit beside the words rather than under them.
+  const NEXT_STEP_BUTTON = "h-8 gap-1 px-2.5 text-[11px] sm:text-xs";
   // AC2: who is handling the event, beside what happens next.
   const handledBy = (
     <span
-      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+      className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground sm:text-xs"
       data-testid="current-coordinator"
     >
       Handled by{" "}
@@ -434,11 +433,13 @@ function NextStepBanner({
       data-testid="next-step"
       data-kind={step.kind}
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3 rounded-xl border-l-4 px-4 py-3 text-sm",
+        // The words stay on the left and the button on the right, both set
+        // small, so the card is no taller than it needs to be on a phone.
+        "flex items-center justify-between gap-2 rounded-xl border-l-4 px-3 py-2 text-xs sm:text-sm",
         mine ? "border-primary bg-primary/5" : "border-muted-foreground/40 bg-muted/40",
       )}
     >
-      <div className="space-y-1">
+      <div className="min-w-0 space-y-0.5">
         <p className="flex items-center gap-2 font-medium">
           <Info className={cn("h-4 w-4 shrink-0", mine ? "text-primary" : "text-muted-foreground")} aria-hidden />
           {step.text}
@@ -446,10 +447,11 @@ function NextStepBanner({
         {handledBy}
       </div>
       {step.kind === "yours" && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
           {step.action.kind === "tab" && (
             <Button
               size="sm"
+              className={NEXT_STEP_BUTTON}
               onClick={() => {
                 const action = step.action as { tab: EventTab; section?: ArrangementSection };
                 onTab(action.tab, action.section);
@@ -459,18 +461,18 @@ function NextStepBanner({
             </Button>
           )}
           {step.action.kind === "link" && (
-            <Button asChild size="sm">
+            <Button asChild size="sm" className={NEXT_STEP_BUTTON}>
               <Link href={step.action.href}>{step.action.label}</Link>
             </Button>
           )}
           {step.action.kind === "resume" && (
-            <Button size="sm" onClick={onResume}>
+            <Button size="sm" className={NEXT_STEP_BUTTON} onClick={onResume}>
               Resume draft
             </Button>
           )}
           {/* SCRUM-18, SCRUM-19: the Coordinator decides right here. */}
           {step.action.kind === "review" && (
-            <ReviewDecision event={event} buttonClassName="h-8 gap-1.5 text-xs" />
+            <ReviewDecision event={event} buttonClassName={NEXT_STEP_BUTTON} />
           )}
         </div>
       )}

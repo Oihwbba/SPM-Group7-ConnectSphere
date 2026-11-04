@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ListChecks, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
   DECISION_ROW,
 } from "@/components/queues/decision-button";
 import { recordSafetyCheckOutcome } from "./actions";
+import { ActionError } from "@/components/app/action-error";
 
 type Outcome = "APPROVED" | "CHANGES_REQUESTED" | "REJECTED";
 type Arrangement = {
@@ -25,10 +26,10 @@ type Arrangement = {
 
 /**
  * SCRUM-166 AC3, SCRUM-211 AC3, AC4 — record the outcome, in the order every
- * queue uses: Approve, Request changes, Reject. Approve records at once, with
- * the optional note. Request changes asks for a note and at least one picked
- * arrangement; Reject asks for a note: both confirm first, since neither can
- * be undone. The server enforces the same rules; once recorded, the next
+ * queue uses: Approve, Request changes, Reject. Each confirms first in the
+ * shared dialog, with its note inside it: optional for Approve; Request
+ * changes also needs at least one picked arrangement, and Reject a note.
+ * The server enforces the same rules; once recorded, the next
  * waiting check opens, and a refusal is shown here with nothing changed.
  */
 export function OutcomeDecision({
@@ -40,16 +41,14 @@ export function OutcomeDecision({
   arrangements: Arrangement[];
   nextHref: string;
 }) {
-  const [asking, setAsking] = useState<Exclude<Outcome, "APPROVED"> | null>(
-    null,
-  );
+  // SCRUM-207 AC5: every outcome is asked about first, Approve included.
+  const [asking, setAsking] = useState<Outcome | null>(null);
   const [note, setNote] = useState("");
   // SCRUM-264: a note the server refuses by length is said at the box. The
   // fix was on the page this panel replaced, so it is carried over here.
   const [noteErrors, setNoteErrors] = useState<string[]>();
   const [picked, setPicked] = useState<string[]>([]);
   const [refusal, setRefusal] = useState<string | null>(null);
-  const [saving, startSave] = useTransition();
   const router = useRouter();
 
   function toggle(id: string) {
@@ -58,8 +57,8 @@ export function OutcomeDecision({
     );
   }
 
-  // The confirmation dialogs (SCRUM-207 AC5) await this. A refusal is shown
-  // here, beside the decision, so the dialog closes either way.
+  // The confirmation dialogs (SCRUM-207 AC5) await this. A refusal stays in
+  // the dialog until it is closed; then the page is read again.
   async function saveNow(outcome: Outcome) {
     const chosen = outcome === "CHANGES_REQUESTED" ? picked : [];
     const result = await recordSafetyCheckOutcome({
@@ -73,24 +72,29 @@ export function OutcomeDecision({
         .filter((a) => a.kind === "reservation" && chosen.includes(a.id))
         .map((a) => a.id),
     });
-    setAsking(null);
     if (!result.ok) {
-      // SCRUM-264: a refused note is said at the box, keeping what was typed.
+      // SCRUM-264: a refused note is said at the box, keeping what was
+      // typed; the dialog stays open on it.
       if (result.fieldErrors?.note) {
         setNoteErrors(result.fieldErrors.note);
-        return;
+        // SCRUM-264: the message belongs at the box, so the dialog does not
+        // repeat it; returning no error keeps the dialog open on it.
+        return { ok: false, error: "" };
       }
+      // Shown in the dialog, and beside the decision once it is closed,
+      // when the page is read again.
       setRefusal(result.error);
-      toast.error(result.error);
-      router.refresh();
-      return;
+      return result;
     }
+    setAsking(null);
     toast.success("Outcome recorded. The Coordinator has been notified.");
     router.push(nextHref);
   }
 
-  function save(outcome: Outcome) {
-    startSave(() => saveNow(outcome));
+  function closeUnlessOpen(open: boolean) {
+    if (open) return;
+    setAsking(null);
+    if (refusal) router.refresh();
   }
 
   const noteField = (id: string, required: boolean) => (
@@ -116,28 +120,17 @@ export function OutcomeDecision({
   return (
     <div className={DECISION_PANEL} data-testid="safety-check-outcome">
       <h2 className="text-sm font-semibold">Record the outcome</h2>
-      {refusal && (
-        <p
-          role="alert"
-          className="text-sm text-destructive"
-          data-testid="decision-refused"
-        >
-          {refusal}
-        </p>
-      )}
-      {noteField("safety-note", false)}
+      <ActionError message={refusal} testId="decision-refused" />
       <div className={DECISION_ROW}>
         <Button
           variant="outline"
-          disabled={saving}
           className={DECISION_BUTTON.positive}
-          onClick={() => save("APPROVED")}
+          onClick={() => setAsking("APPROVED")}
         >
           <CheckCircle2 className="h-4 w-4" /> Approve
         </Button>
         <Button
           variant="outline"
-          disabled={saving}
           className={DECISION_BUTTON.middle}
           onClick={() => setAsking("CHANGES_REQUESTED")}
         >
@@ -145,7 +138,6 @@ export function OutcomeDecision({
         </Button>
         <Button
           variant="outline"
-          disabled={saving}
           className={DECISION_BUTTON.negative}
           onClick={() => setAsking("REJECTED")}
         >
@@ -154,8 +146,20 @@ export function OutcomeDecision({
       </div>
 
       <ConfirmDialog
+        open={asking === "APPROVED"}
+        onOpenChange={closeUnlessOpen}
+        title="Approve this safety check?"
+        message="The Coordinator is told, and can confirm the event once everything else is ready. Any note you add goes with it."
+        confirmLabel="Approve"
+        pendingLabel="Approving…"
+        onConfirm={() => saveNow("APPROVED")}
+      >
+        {noteField("safety-approve-note", false)}
+      </ConfirmDialog>
+
+      <ConfirmDialog
         open={asking === "CHANGES_REQUESTED"}
-        onOpenChange={(open) => !open && setAsking(null)}
+        onOpenChange={closeUnlessOpen}
         title="Request changes"
         message="The arrangements you pick are flagged for the Coordinator to revisit."
         confirmLabel="Request changes"
@@ -184,7 +188,7 @@ export function OutcomeDecision({
 
       <ConfirmDialog
         open={asking === "REJECTED"}
-        onOpenChange={(open) => !open && setAsking(null)}
+        onOpenChange={closeUnlessOpen}
         title="Reject this safety check?"
         message="Every arrangement is flagged; the event stays in Planning."
         confirmLabel="Reject"

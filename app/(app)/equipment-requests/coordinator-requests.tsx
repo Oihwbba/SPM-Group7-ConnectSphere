@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, PackagePlus, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -45,6 +44,11 @@ import {
   type EquipmentOption,
   type EventOption,
 } from "./new-request-dialog";
+import { PageHeader } from "@/components/app/page-header";
+import {
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 
 /**
  * SCRUM-27 — the coordinator's equipment requests and the form to raise one.
@@ -74,7 +78,6 @@ export function CoordinatorRequests({
   );
   const [withdrawing, setWithdrawing] =
     useState<CoordinatorEquipmentRequest | null>(null);
-  const [isWithdrawing, startWithdraw] = useTransition();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -88,17 +91,14 @@ export function CoordinatorRequests({
       (!q || request.event.name.toLowerCase().includes(q)),
   );
 
-  function withdraw(request: CoordinatorEquipmentRequest) {
-    startWithdraw(async () => {
-      const result = await withdrawEquipmentRequest({ requestId: request.id });
-      if (result.ok) {
-        toast.success("Request withdrawn. Its reserved equipment is released.");
-        setWithdrawing(null);
-      } else {
-        toast.error(result.error);
-      }
-      router.refresh();
-    });
+  // SCRUM-207 AC5: awaited by the shared dialog, which shows a refusal.
+  async function withdraw(
+    request: CoordinatorEquipmentRequest,
+  ): Promise<ConfirmOutcome> {
+    const result = await withdrawEquipmentRequest({ requestId: request.id });
+    router.refresh();
+    if (!result.ok) return result;
+    toast.success("Request withdrawn. Its reserved equipment is released.");
   }
 
   useEffect(() => {
@@ -122,18 +122,11 @@ export function CoordinatorRequests({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-            Equipment requests
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Tell Technical Support what your events need, and follow each
-            request&apos;s status.
-          </p>
-        </div>
-        {newRequestButton}
-      </div>
+      <PageHeader
+        title="Equipment requests"
+        description="Tell Technical Support what your events need, and follow each request's status."
+        actions={newRequestButton}
+      />
 
       {canCreate && !hasEvents && (
         <p
@@ -214,7 +207,7 @@ export function CoordinatorRequests({
           ) : (
             <Card>
               <CardContent className="p-0">
-                <Table aria-label="Your equipment requests">
+                <Table aria-label="Your equipment requests" className="table-stack">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Event</TableHead>
@@ -247,21 +240,21 @@ export function CoordinatorRequests({
                             {formatEventPeriod(request.event)}
                           </p>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground" data-label="Items">
                           {request.lines.length}{" "}
                           {request.lines.length === 1 ? "item" : "items"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell data-label="Status">
                           <RequestStatusBadge status={request.status} />
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground" data-label="Submitted">
                           {formatDate(request.createdAt)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="h-11 w-11 p-0 md:h-8 md:w-8"
                             aria-label={`View details of ${request.event.name}`}
                             title="View details"
                             data-testid="view-request-button"
@@ -372,32 +365,17 @@ export function CoordinatorRequests({
         />
       )}
 
-      <Dialog
+      <ConfirmDialog
         open={!!withdrawing}
         onOpenChange={(open) => !open && setWithdrawing(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Withdraw this equipment request?</DialogTitle>
-            <DialogDescription>
-              It becomes Cancelled and any equipment reserved for it is
-              released. You can raise a new request later.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setWithdrawing(null)}>
-              Keep it
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isWithdrawing}
-              onClick={() => withdrawing && withdraw(withdrawing)}
-            >
-              Withdraw request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Withdraw this equipment request?"
+        message="It becomes Cancelled and any equipment reserved for it is released. You can raise a new request later."
+        confirmLabel="Withdraw request"
+        pendingLabel="Withdrawing…"
+        cancelLabel="Keep it"
+        destructive
+        onConfirm={async () => (withdrawing ? withdraw(withdrawing) : undefined)}
+      />
 
       {canCreate && (
         <NewRequestDialog

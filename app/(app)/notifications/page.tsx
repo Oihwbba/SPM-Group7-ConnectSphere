@@ -1,6 +1,8 @@
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
+import { PageHeader } from "@/components/app/page-header";
+import { LANDING_ROUTE_BY_ROLE, NAV_BY_ROLE } from "@/lib/nav";
 import { getMyNotifications } from "./queries";
 import { NotificationsList } from "./notifications-list";
 
@@ -13,16 +15,20 @@ export default async function NotificationsPage() {
   }
 
   const notifications = await getMyNotifications();
+  // SCRUM-207 AC1: reached from the bell, not the menu, so it leads back to
+  // the page the user lands on.
+  const home = LANDING_ROUTE_BY_ROLE[session.user.role];
+  const homeLabel =
+    NAV_BY_ROLE[session.user.role].find((item) => item.href === home)?.label ??
+    "your work";
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
-        <p className="text-sm text-muted-foreground">
-          Updates about your events, bookings, registrations and changes,
-          newest first.
-        </p>
-      </div>
+      <PageHeader
+        title="Notifications"
+        description="Updates about your events, bookings, registrations and changes, newest first."
+        back={{ href: home, to: homeLabel }}
+      />
       <NotificationsList notifications={notifications} />
     </div>
   );

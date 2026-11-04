@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -12,11 +12,17 @@ import {
   getChangeDecision,
   type ChangeDecisionView,
 } from "@/app/(app)/events/change-decision-actions";
-import { changeFieldLabel, changeValueLabel } from "@/lib/schemas/change-request";
+import {
+  changeFieldLabel,
+  changeValueLabel,
+} from "@/lib/schemas/change-request";
+import {
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 
 const DECIDE_FAILED_MESSAGE =
   "The decision couldn't be sent. If the request above isn't decided, try again.";
-
 
 /**
  * SCRUM-128 — under a Submitted change request, for its event's assigned
@@ -37,10 +43,17 @@ export function ChangeRequestDecision({
   // is the answer for anyone who may not decide, so it still renders nothing.
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  // SCRUM-264: a reason refused for length is said at the box.
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [saving, startSave] = useTransition();
+  // A refusal left the list possibly out of date: read it again once the
+  // dialog that shows why is closed (SCRUM-207 AC4, AC5).
+  const [stale, setStale] = useState(false);
+  const readAgainOnClose = (open: boolean) => {
+    if (open || !stale) return;
+    setStale(false);
+    onDecided();
+  };
   const router = useRouter();
 
   useEffect(() => {
@@ -76,49 +89,56 @@ export function ChangeRequestDecision({
   }
   if (!view) return null;
 
-  function decide(decision: "APPROVED" | "REJECTED") {
-    startSave(async () => {
-      let result: Awaited<ReturnType<typeof decideChangeRequest>>;
-      try {
-        result = await decideChangeRequest({
-          changeRequestId: view!.changeRequestId,
-          decision,
-          // Text left behind by Back isn't part of an approval.
-          reason: decision === "REJECTED" ? reason : undefined,
-        });
-      } catch {
-        // A lost connection or an unexpected server error: the decision may
-        // or may not have been saved, so the list is read again, as the raise
-        // form does.
-        toast.error(DECIDE_FAILED_MESSAGE);
-        onDecided();
-        return;
-      }
-      if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.error);
-        // A refused reason changed nothing on the server. Anything else (decided
-        // in another tab, the event reassigned or closed) may mean the list is
-        // out of date, so it is read again.
-        if (!result.fieldErrors) onDecided();
-        return;
-      }
-      toast.success(
-        decision === "REJECTED"
-          ? "Change request rejected. The organiser has been told why."
-          : view!.requestsCancellation
-            ? "Change request approved. The event is cancelled."
-            : result.data.returnedToPlanning
-              ? "Change request approved. The event is back in Planning and its arrangements are flagged."
-              : "Change request approved and applied.",
-      );
-      onDecided();
-      router.refresh();
-    });
+  // SCRUM-207 AC5: both decisions ask first, in the shared dialog, which
+  // shows a refusal inside itself.
+  async function decide(
+    decision: "APPROVED" | "REJECTED",
+  ): Promise<ConfirmOutcome> {
+    let result: Awaited<ReturnType<typeof decideChangeRequest>>;
+    try {
+      result = await decideChangeRequest({
+        changeRequestId: view!.changeRequestId,
+        decision,
+        // SCRUM-264 TC-264-05: text left behind by backing out of the reject
+        // dialog isn't part of an approval, so it can't refuse one.
+        reason: decision === "REJECTED" ? reason : undefined,
+      });
+    } catch {
+      // A lost connection or an unexpected server error: the decision may
+      // or may not have been saved, so the list is read again, as the raise
+      // form does, once the dialog showing why is closed.
+      setStale(true);
+      return { ok: false, error: DECIDE_FAILED_MESSAGE };
+    }
+    if (!result.ok) {
+      // A blank reason changed nothing on the server. Anything else (decided
+      // in another tab, the event reassigned or closed) may mean the list is
+      // out of date, so it is read again once the dialog is closed.
+      setErrors(result.fieldErrors ?? {});
+      // SCRUM-264: the message belongs at the box, so the dialog does not
+      // repeat it; returning no error keeps the dialog open on it.
+      if (result.fieldErrors) return { ok: false, error: "" };
+      setStale(true);
+      return result;
+    }
+    toast.success(
+      decision === "REJECTED"
+        ? "Change request rejected. The organiser has been told why."
+        : view!.requestsCancellation
+          ? "Change request approved. The event is cancelled."
+          : result.data.returnedToPlanning
+            ? "Change request approved. The event is back in Planning and its arrangements are flagged."
+            : "Change request approved and applied.",
+    );
+    onDecided();
+    router.refresh();
   }
 
   return (
-    <div className="space-y-3 border-t pt-3" data-testid="change-request-decision">
+    <div
+      className="space-y-3 border-t pt-3"
+      data-testid="change-request-decision"
+    >
       {!view.requestsCancellation && (
         <table className="w-full text-left">
           <thead className="text-muted-foreground">
@@ -131,8 +151,12 @@ export function ChangeRequestDecision({
           <tbody>
             {view.fields.map((field) => (
               <tr key={field.fieldName}>
-                <td className="pr-2 font-medium">{changeFieldLabel(field.fieldName)}</td>
-                <td className="pr-2">{changeValueLabel(field.fieldName, field.current)}</td>
+                <td className="pr-2 font-medium">
+                  {changeFieldLabel(field.fieldName)}
+                </td>
+                <td className="pr-2">
+                  {changeValueLabel(field.fieldName, field.current)}
+                </td>
                 <td>{changeValueLabel(field.fieldName, field.requested)}</td>
               </tr>
             ))}
@@ -155,8 +179,57 @@ export function ChangeRequestDecision({
         </div>
       )}
 
-      {rejecting ? (
-        <div className="space-y-2">
+      <div className="flex gap-2">
+        {/* Shared page conventions: the decisions in green and red. */}
+        <ConfirmDialog
+          trigger={
+            <Button
+              size="sm"
+              variant="ghost"
+              className="border border-success/40 bg-success/10 text-success hover:bg-success/20 hover:text-success"
+            >
+              Approve
+            </Button>
+          }
+          title={
+            view.requestsCancellation
+              ? "Approve the cancellation?"
+              : "Approve this change request?"
+          }
+          message={
+            view.requestsCancellation
+              ? "The event is cancelled, and everything listed above is released. A cancelled event can't be reopened."
+              : "The change is applied to the event now, and anything listed above is flagged for you to reconsider."
+          }
+          confirmLabel="Approve"
+          pendingLabel="Saving…"
+          onOpenChange={readAgainOnClose}
+          destructive={view.requestsCancellation}
+          onConfirm={() => decide("APPROVED")}
+        />
+        <ConfirmDialog
+          trigger={
+            <Button
+              size="sm"
+              variant="ghost"
+              className="border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
+              onClick={() => {
+                setReason("");
+                setErrors({});
+              }}
+            >
+              Reject
+            </Button>
+          }
+          title="Reject this change request?"
+          message="The organiser is told why, and the event stays as it is."
+          confirmLabel="Reject change request"
+          pendingLabel="Rejecting…"
+          onOpenChange={readAgainOnClose}
+          destructive
+          ready={reason.trim() !== ""}
+          onConfirm={() => decide("REJECTED")}
+        >
           <Textarea
             value={reason}
             onChange={(e) => {
@@ -166,50 +239,16 @@ export function ChangeRequestDecision({
             placeholder="Why can't this change be made?"
             aria-label="Reason for rejecting the change request"
             aria-invalid={Boolean(errors.reason)}
-            aria-describedby={errors.reason ? "change-rejection-reason-error" : undefined}
+            aria-describedby={
+              errors.reason ? "change-rejection-reason-error" : undefined
+            }
           />
-          <FieldError id="change-rejection-reason-error" messages={errors.reason} />
-          <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setRejecting(false)}>
-              Back
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={saving || !reason.trim()}
-              onClick={() => decide("REJECTED")}
-            >
-              Reject change request
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          {/* Shared page conventions: the decisions in green and red. */}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="border border-success/40 bg-success/10 text-success hover:bg-success/20 hover:text-success"
-            disabled={saving}
-            onClick={() => decide("APPROVED")}
-          >
-            {saving ? "Saving…" : "Approve"}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
-            disabled={saving}
-            onClick={() => {
-              setReason("");
-              setErrors({});
-              setRejecting(true);
-            }}
-          >
-            Reject
-          </Button>
-        </div>
-      )}
+          <FieldError
+            id="change-rejection-reason-error"
+            messages={errors.reason}
+          />
+        </ConfirmDialog>
+      </div>
     </div>
   );
 }

@@ -88,7 +88,7 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Test Data | `Password123!` |
 | Expected Result | 1, 2. Planning is offered; Approved is not. 3. The filter is ignored, as for any malformed value. A history entry still shows "Approved", since the label stays. |
 
-**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-233 [AC3] TC-233-03: offers every status an event can rest in, and not Approved, which approval never leaves an event in"; `e2e/seed-lifecycle.spec.ts` › "SCRUM-233 [AC3] TC-233-03: My Events and All Events don't offer Approved, and still offer Planning"; `e2e/status-names.spec.ts` › "SCRUM-131 [AC1] TC-131-01: the Organiser's tab of every request that isn't a draft reads Sent, and the status filter offers the agreed names an event can rest in"
+**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-233 [AC3] TC-233-03: offers every status an event can rest in, and not Approved, which approval never leaves an event in"; `e2e/seed-lifecycle.spec.ts` › "SCRUM-233 [AC3] TC-233-03: My Events and All Events don't offer Approved, and still offer Planning"; `e2e/status-names.spec.ts` › "SCRUM-131 [AC1] TC-131-01: the Organiser's list filters by the agreed names an event can rest in, and groups none of them under another name"
 
 ### TC-233-04
 

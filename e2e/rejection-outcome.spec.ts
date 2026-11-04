@@ -132,15 +132,17 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
     await expect(editor).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(editor).toHaveCount(0);
-    const draftRow = page.getByRole("row", { name: new RegExp(eventName) });
+    // Both rows share the name now; the new one is the one to resume.
+    const draftRow = page
+      .getByRole("row", { name: new RegExp(eventName) })
+      .filter({ has: page.getByTestId("resume-draft-button") });
     await expect(draftRow.getByTestId("status-badge")).toHaveAttribute(
       "data-status",
       "DRAFT",
     );
 
     // Starting again shows the Draft already started instead of a copy (AC4).
-    await page.getByRole("button", { name: /^All \(/ }).click();
-    // Two rows share the name now; the rejected one is the one with the button.
+    // The whole list is in view, so the rejected one is the one with the button.
     await page
       .getByRole("row", { name: new RegExp(eventName) })
       .filter({ has: page.getByTestId("start-new-request-button") })

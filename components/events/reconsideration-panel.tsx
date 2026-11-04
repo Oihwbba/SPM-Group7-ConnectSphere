@@ -9,14 +9,6 @@ import { Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   getEventFlags,
   getFlaggedArrangements,
   resolveReconsiderationFlag,
@@ -26,6 +18,11 @@ import {
 type Flag = Omit<FlaggedArrangement, "reason"> & { reason: string | null };
 import { formatDateTime } from "@/lib/datetime";
 import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
+import { ActionError } from "@/components/app/action-error";
+import {
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 
 /**
  * SCRUM-26 AC9 — what happens after an arrangement is cancelled, so the
@@ -64,6 +61,7 @@ export function ReconsiderationPanel({
   const [loadFailed, setLoadFailed] = useState(false);
   const [reload, setReload] = useState(0);
   const [cancelling, setCancelling] = useState<Flag | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -83,49 +81,55 @@ export function ReconsiderationPanel({
     };
   }, [eventId, reload, readOnly]);
 
-  function resolve(arrangement: Flag, decision: "STILL_STANDS" | "CANCEL") {
-    startTransition(async () => {
-      let result: Awaited<ReturnType<typeof resolveReconsiderationFlag>>;
-      try {
-        result = await resolveReconsiderationFlag({
-          kind: arrangement.kind,
-          id: arrangement.id,
-          decision,
-        });
-      } catch {
-        // An unexpected error or a lost connection: the decision may or may
-        // not have been saved, so the flags are read again.
-        toast.error(
-          "Couldn't save your decision. Check the list and try again.",
-        );
-        setCancelling(null);
-        setReload((n) => n + 1);
-        return;
-      }
-      if (!result.ok) {
-        toast.error(result.error);
-        // A refusal can mean the flag was resolved elsewhere meanwhile, so
-        // the list is read again rather than left stale.
-        setCancelling(null);
-        setReload((n) => n + 1);
-        return;
-      }
-      toast.success(
-        decision === "STILL_STANDS"
-          ? `${arrangement.label} still stands.`
-          : [
-              `${arrangement.label} was cancelled.`,
-              afterCancelling(arrangement.kind),
-              result.data.returnedToPlanning &&
-                "The event is back in Planning.",
-            ]
-              .filter(Boolean)
-              .join(" "),
-      );
-      setCancelling(null);
+  // Cancelling is awaited by the shared dialog (SCRUM-207 AC5), which shows
+  // a refusal inside itself; Still stands shows one in the panel (AC4).
+  async function resolveNow(
+    arrangement: Flag,
+    decision: "STILL_STANDS" | "CANCEL",
+  ): Promise<ConfirmOutcome> {
+    let result: Awaited<ReturnType<typeof resolveReconsiderationFlag>>;
+    try {
+      result = await resolveReconsiderationFlag({
+        kind: arrangement.kind,
+        id: arrangement.id,
+        decision,
+      });
+    } catch {
+      // An unexpected error or a lost connection: the decision may or may
+      // not have been saved, so the flags are read again.
       setReload((n) => n + 1);
-      onResolved();
-      router.refresh();
+      return {
+        ok: false,
+        error: "Couldn't save your decision. Check the list and try again.",
+      };
+    }
+    if (!result.ok) {
+      // A refusal can mean the flag was resolved elsewhere meanwhile, so
+      // the list is read again rather than left stale.
+      setReload((n) => n + 1);
+      return result;
+    }
+    toast.success(
+      decision === "STILL_STANDS"
+        ? `${arrangement.label} still stands.`
+        : [
+            `${arrangement.label} was cancelled.`,
+            afterCancelling(arrangement.kind),
+            result.data.returnedToPlanning && "The event is back in Planning.",
+          ]
+            .filter(Boolean)
+            .join(" "),
+    );
+    setError(null);
+    setReload((n) => n + 1);
+    onResolved();
+    router.refresh();
+  }
+
+  function stillStands(arrangement: Flag) {
+    startTransition(async () => {
+      const result = await resolveNow(arrangement, "STILL_STANDS");
+      setError(result && !result.ok ? result.error : null);
     });
   }
 
@@ -197,7 +201,7 @@ export function ReconsiderationPanel({
                     size="sm"
                     variant="outline"
                     disabled={pending}
-                    onClick={() => resolve(arrangement, "STILL_STANDS")}
+                    onClick={() => stillStands(arrangement)}
                   >
                     Still stands
                   </Button>
@@ -214,37 +218,29 @@ export function ReconsiderationPanel({
             </li>
           ))}
         </ul>
+        <ActionError message={error} />
       </CardContent>
 
-      <Dialog
+      <ConfirmDialog
         open={cancelling !== null}
         onOpenChange={(open) => !open && setCancelling(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel {cancelling?.label}?</DialogTitle>
-            <DialogDescription>
-              Its{" "}
-              {cancelling?.kind === "booking" ? "venue period" : "equipment"} is
-              released for others.{" "}
-              {cancelling && afterCancelling(cancelling.kind)} A Confirmed event
-              goes back to Planning.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setCancelling(null)}>
-              Keep it for now
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={() => cancelling && resolve(cancelling, "CANCEL")}
-            >
-              {pending ? "Cancelling…" : "Cancel arrangement"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={`Cancel ${cancelling?.label ?? "this arrangement"}?`}
+        message={
+          <>
+            Its {cancelling?.kind === "booking" ? "venue period" : "equipment"}{" "}
+            is released for others.{" "}
+            {cancelling && afterCancelling(cancelling.kind)} A Confirmed event
+            goes back to Planning.
+          </>
+        }
+        confirmLabel="Cancel arrangement"
+        pendingLabel="Cancelling…"
+        cancelLabel="Keep it for now"
+        destructive
+        onConfirm={async () =>
+          cancelling ? resolveNow(cancelling, "CANCEL") : undefined
+        }
+      />
     </Card>
   );
 }

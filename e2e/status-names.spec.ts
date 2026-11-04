@@ -7,14 +7,17 @@ import { signedIn, optionsOf } from "./helpers";
  * the seeded organiser's events and writes nothing.
  */
 test.describe("SCRUM-131 agreed status names", () => {
-  test("SCRUM-131 [AC1] TC-131-01: the Organiser's tab of every request that isn't a draft reads Sent, and the status filter offers the agreed names an event can rest in", async ({
+  test("SCRUM-131 [AC1] TC-131-01: the Organiser's list filters by the agreed names an event can rest in, and groups none of them under another name", async ({
     browser,
   }) => {
     const page = await signedIn(browser, "organiser@test.local");
     await page.goto("/events");
 
-    await expect(page.getByRole("button", { name: /^Sent \(\d+\)$/ })).toBeVisible();
+    // AC1, as the PO settled it on 2 Nov 2026: the tabs that grouped several
+    // statuses under one name are gone, so "Submitted" can only be the status.
+    await expect(page.getByRole("button", { name: /^Sent \(/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Submitted \(/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^All \(/ })).toHaveCount(0);
 
     const offered = await optionsOf(
       page.getByRole("combobox", { name: "Filter by status" }),

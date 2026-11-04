@@ -111,3 +111,118 @@
     @apply border border-white/55 bg-card/30 shadow-glass-sm backdrop-blur-glass backdrop-saturate-150;
   }
 }
+
+/*
+ * SCRUM-207 — a table that stacks into one card per row on a phone (below
+ * `md`), so nothing scrolls sideways. The markup stays one table: every cell,
+ * link and button is still there, in the same order. A cell's `data-label`
+ * names it above its value, since the column headings are only a bar of sort
+ * links on a phone; headings without a control are kept for screen readers.
+ * `data-stack="full"` makes a cell span the card. From `md` up it is the
+ * ordinary table.
+ */
+@media (max-width: 767.98px) {
+  .table-stack,
+  .table-stack > thead,
+  .table-stack > tbody {
+    display: block;
+  }
+
+  .table-stack > thead > tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 1.25rem;
+    padding: 0 1rem;
+  }
+
+  .table-stack > thead > tr > th {
+    display: block;
+    width: auto;
+    height: auto;
+    padding: 0;
+  }
+
+  .table-stack > thead > tr > th:not(:has(a, button)) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .table-stack > thead > tr > th :is(a, button) {
+    min-height: 2.75rem;
+  }
+
+  .table-stack > tbody > tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem 1rem;
+    padding: 1rem;
+  }
+
+  .table-stack > tbody > tr > td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .table-stack > tbody > tr > td:first-child,
+  .table-stack > tbody > tr > td[data-stack="full"] {
+    grid-column: 1 / -1;
+  }
+
+  .table-stack > tbody > tr > td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.125rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* The card's title link gets room around it to tap. */
+  .table-stack > tbody > tr > td:first-child a {
+    display: inline-block;
+    padding-block: 0.375rem;
+  }
+
+  /* A value cut short to keep a desktop column aligned wraps instead. */
+  .table-stack > tbody > tr > td .truncate {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+}
+
+/*
+ * SCRUM-207 — on a phone or any touch screen, text fields use 16px type, so
+ * iPhone Safari doesn't zoom the page when one is tapped, and checkboxes and
+ * radio buttons are large enough to hit.
+ */
+@media (max-width: 767.98px), (pointer: coarse) {
+  /*
+   * `:not([hidden])` is not a filter but a weight: a bare `textarea` loses to
+   * the `text-sm` utility the fields carry, an attribute selector matches it.
+   */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  textarea:not([hidden]),
+  select:not([hidden]) {
+    font-size: 1rem;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}

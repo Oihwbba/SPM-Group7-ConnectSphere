@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,7 +17,9 @@ import {
   ChevronDown,
   ClipboardList,
   LayoutGrid,
+  Menu,
   Search,
+  X,
   ShieldCheck,
   Inbox,
   LayoutList,
@@ -56,16 +59,6 @@ const ICON_BY_GROUP: Record<GroupId, LucideIcon> = {
   planning: LayoutList,
 };
 
-// SCRUM-210: the rail from `md` up, the phone's bar below it. The server
-// renders the rail; a phone switches once mounted.
-const DESKTOP = "(min-width: 768px)";
-function onWidthChange(notify: () => void) {
-  const query = window.matchMedia(DESKTOP);
-  query.addEventListener("change", notify);
-  return () => query.removeEventListener("change", notify);
-}
-const isDesktop = () => window.matchMedia(DESKTOP).matches;
-
 /**
  * The left navigation rail. Collapsed by default: a slim column with a toggle
  * at the top and the role's items as circular icon buttons stacked inside one
@@ -80,7 +73,7 @@ const isDesktop = () => window.matchMedia(DESKTOP).matches;
  *
  * SCRUM-210: the links are grouped by task. A group of more than one link is
  * one item, named for the task; selecting it opens its links beneath it,
- * indented (on a phone, in a panel above the bar). The group of the page
+ * indented. The group of the page
  * being viewed starts open. A group of one link is just that link.
  */
 export function Sidebar({ roles }: { roles: Role[] }) {
@@ -120,9 +113,6 @@ export function Sidebar({ roles }: { roles: Role[] }) {
   // A group opened or closed by hand; otherwise it is open while it holds
   // the page being viewed.
   const [opened, setOpened] = useState<Partial<Record<GroupId, boolean>>>({});
-  // On a phone, the group whose links show in the panel above the bar.
-  const [phoneGroup, setPhoneGroup] = useState<GroupId | null>(null);
-  const desktop = useSyncExternalStore(onWidthChange, isDesktop, () => true);
   const holdsActive = (links: NavItem[]) =>
     links.some((item) => item.href === activeHref);
 
@@ -130,12 +120,10 @@ export function Sidebar({ roles }: { roles: Role[] }) {
     <aside
       aria-label="Primary"
       className={cn(
-        // Mobile: a floating, rounded, translucent bar that spans the width
-        // (with a small side margin) and hovers just above the bottom edge; the
-        // shell adds bottom padding to clear it. From `md` up it becomes the
-        // in-flow, collapsible vertical rail.
-        "fixed inset-x-4 bottom-4 z-40 rounded-full border border-border/50 bg-card/45 shadow-glass backdrop-blur-glass backdrop-saturate-150",
-        "md:sticky md:inset-x-auto md:bottom-auto md:top-16 md:z-auto md:flex md:h-[calc(100vh-4rem)] md:shrink-0 md:flex-col md:gap-3 md:rounded-none md:border-0 md:bg-transparent md:p-3 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 md:transition-[width] md:duration-200",
+        // The rail is the desktop layout only. On a phone the same links are
+        // reached from the hamburger beside the logo (MobileNav, below).
+        "hidden",
+        "md:sticky md:top-16 md:z-auto md:flex md:h-[calc(100vh-4rem)] md:shrink-0 md:flex-col md:gap-3 md:p-3 md:transition-[width] md:duration-200",
         collapsed ? "md:w-[84px]" : "md:w-64",
       )}
     >
@@ -159,31 +147,6 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         )}
       </button>
 
-      {/* SCRUM-210: on a phone, an opened group's links in a panel above the
-          bar. */}
-      {groups.map(
-        (group) =>
-          group.heading &&
-          phoneGroup === group.id && (
-            <div
-              key={group.id}
-              role="group"
-              aria-label={group.heading}
-              className="absolute inset-x-0 bottom-full mb-2 flex flex-col gap-1 rounded-3xl border border-border/50 bg-background p-2 shadow-glass md:hidden"
-            >
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.href}
-                  item={item}
-                  active={item.href === activeHref}
-                  inPanel
-                  onSelect={() => setPhoneGroup(null)}
-                />
-              ))}
-            </div>
-          ),
-      )}
-
       {/* Nav items: a spaced-out row across the bottom bar on mobile; the tall
           rounded pill container on desktop. */}
       <nav
@@ -196,24 +159,22 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         )}
       >
         {groups.map((group) => {
+          // No heading: its links stand on their own (a menu that is one
+          // group, SCRUM-210, or a group of one link).
           if (!group.heading) {
-            const item = group.items[0];
-            return (
+            return group.items.map((item) => (
               <NavLink
                 key={item.href}
                 item={item}
                 active={item.href === activeHref}
                 collapsed={collapsed}
               />
-            );
+            ));
           }
           const open = opened[group.id] ?? holdsActive(group.items);
           const Icon = ICON_BY_GROUP[group.id];
-          // Whether its links are in view: in place on the rail, in the
-          // panel on a phone.
-          const shown = desktop ? open : phoneGroup === group.id;
           // Closed over the page being viewed, the group shows as active.
-          const lit = holdsActive(group.items) && !shown;
+          const lit = holdsActive(group.items) && !open;
           return (
             <div
               key={group.id}
@@ -226,17 +187,10 @@ export function Sidebar({ roles }: { roles: Role[] }) {
                 type="button"
                 title={group.heading}
                 aria-label={group.heading}
-                aria-expanded={shown}
-                onClick={() => {
-                  // The rail opens the group in place; a phone, in its panel.
-                  if (desktop) {
-                    setOpened((current) => ({ ...current, [group.id]: !open }));
-                  } else {
-                    setPhoneGroup((current) =>
-                      current === group.id ? null : group.id,
-                    );
-                  }
-                }}
+                aria-expanded={open}
+                onClick={() =>
+                  setOpened((current) => ({ ...current, [group.id]: !open }))
+                }
                 className={cn(
                   "group flex items-center justify-center gap-3 rounded-full transition-colors",
                   "flex-1 md:flex-none",
@@ -248,9 +202,7 @@ export function Sidebar({ roles }: { roles: Role[] }) {
                     "flex h-11 w-full shrink-0 items-center justify-center rounded-full transition-colors md:w-11",
                     lit
                       ? "bg-foreground text-background shadow-glass-sm"
-                      : phoneGroup === group.id
-                        ? "bg-secondary text-foreground md:bg-transparent md:text-muted-foreground"
-                        : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
+                      : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -297,6 +249,113 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         })}
       </nav>
     </aside>
+  );
+}
+
+/**
+ * The phone's menu: a hamburger beside the logo that opens the role's links in
+ * a panel from the left. The links, their grouping and their order are the
+ * rail's (SCRUM-210); only the way in differs.
+ */
+export function MobileNav({ roles }: { roles: Role[] }) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  const groups = navGroupsForRoles(roles);
+  const items = groups.flatMap((group) => group.items);
+  const activeHref = items
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  // As a dialog does: focus goes into the panel when it opens, and back to
+  // the button that opened it when it closes, but not on first render.
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open) closeButton.current?.focus();
+    else if (wasOpen.current) menuButton.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+
+  // Escape closes the panel, as it closes a dialog.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div className="md:hidden">
+      <button
+        ref={menuButton}
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+        aria-expanded={open}
+        // Narrow but still 44px tall, so it stays easy to hit while leaving
+        // the brand its place at the left of the bar.
+        className="flex h-11 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Menu className="h-6 w-6" />
+      </button>
+
+      {/* Rendered on the body: the top bar's backdrop blur would otherwise be
+          the containing block, and the panel would be trapped inside it. */}
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex">
+            {/* The page behind: tapping it closes the panel. Escape and the
+              Close button do the same, so it carries no name of its own. */}
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={() => setOpen(false)}
+              className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
+            />
+            <nav
+              aria-label="Primary"
+              className="relative flex h-full w-72 max-w-[85%] flex-col gap-1 overflow-y-auto border-r border-border/50 bg-background p-3 shadow-glass"
+            >
+              <div className="flex items-center justify-end pb-1">
+                <button
+                  ref={closeButton}
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close menu"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              {groups.map((group) => (
+                <div key={group.id} className="flex flex-col gap-1">
+                  {group.heading && (
+                    <span className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.heading}
+                    </span>
+                  )}
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      item={item}
+                      active={item.href === activeHref}
+                      inPanel
+                      onSelect={() => setOpen(false)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </div>,
+          document.body,
+        )}
+    </div>
   );
 }
 

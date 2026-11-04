@@ -136,7 +136,7 @@ test.describe("SCRUM-209 — Arrange venues, equipment and the safety check from
     await venues.getByRole("link", { name: "Find a venue" }).click();
     await page.waitForURL(new RegExp(`/venues/search\\?event=${id}&return=event`));
     await expect(page.getByTestId("search-event")).toContainText(`For ${name}`);
-    await page.getByRole("link", { name: "Back to event" }).click();
+    await page.getByRole("link", { name: "Back to the event" }).click();
     await page.waitForURL(new RegExp(`/events/${id}\\?tab=arrangements$`));
     await venues.getByRole("link", { name: "Find a venue" }).click();
     await page.waitForURL(/\/venues\/search\?/);
@@ -282,7 +282,7 @@ test.describe("SCRUM-209 — Arrange venues, equipment and the safety check from
     await other.goto(`/bookings/new?event=${id}&venue=ven_auditorium&return=event`);
     await other.locator('[data-hydrated="true"]').waitFor();
     await expect(other.getByText(name)).toHaveCount(0);
-    await expect(other.getByRole("link", { name: "Back to event" })).toHaveCount(0);
+    await expect(other.getByRole("link", { name: "Back to the event" })).toHaveCount(0);
 
     expect(await writtenFor(id)).toEqual(before);
   });
@@ -339,7 +339,7 @@ test.describe("SCRUM-209 — Arrange venues, equipment and the safety check from
 
     await page.getByRole("link", { name: "Reset" }).click();
     await page.waitForURL(new RegExp(`/venues/search\\?event=${id}&return=event$`));
-    await expect(page.getByRole("link", { name: "Back to event" })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "Back to the event" })).toHaveAttribute(
       "href",
       `/events/${id}?tab=arrangements`,
     );

@@ -59,7 +59,10 @@ export function EventProgress({
               className="flex min-w-0 flex-1 items-center gap-1 last:flex-none"
               aria-current={here ? "step" : undefined}
             >
-              <span className="flex shrink-0 items-center gap-2">
+              {/* SCRUM-207: on a phone the label sits under its circle and
+                  the type is smaller, so every step is in view at once
+                  without the row scrolling. */}
+              <span className="flex min-w-0 flex-col items-center gap-1 sm:flex-row sm:gap-2">
                 <span
                   aria-hidden
                   className={cn(
@@ -81,7 +84,7 @@ export function EventProgress({
                 </span>
                 <span
                   className={cn(
-                    "whitespace-nowrap text-sm",
+                    "whitespace-nowrap text-center text-[11px] leading-tight sm:text-sm",
                     here ? "font-semibold text-primary" : "text-muted-foreground",
                     stopped && "text-destructive",
                   )}
@@ -93,7 +96,9 @@ export function EventProgress({
                 <span
                   aria-hidden
                   className={cn(
-                    "mx-2 h-0.5 min-w-4 flex-1 rounded-full",
+                    // On a phone it lines up with the circles, which sit above
+                    // their labels.
+                    "mx-1 mt-[9px] h-0.5 min-w-1.5 flex-1 self-start rounded-full sm:mx-2 sm:mt-0 sm:min-w-4 sm:self-auto",
                     i < current || finished ? "bg-primary" : "bg-muted-foreground/20",
                   )}
                 />

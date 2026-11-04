@@ -79,7 +79,7 @@ export default async function SafetyChecksPage({
   return (
     <WorkQueue
       title="Safety checks"
-      description="Events waiting for an operational safety check, oldest request first. Open one to review its venues and equipment and record the outcome. Times are Singapore time."
+      description="Events waiting for an operational safety check, oldest request first."
       base="/safety-checks"
       state={state}
       defaults={DEFAULTS}

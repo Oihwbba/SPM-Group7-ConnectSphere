@@ -28,7 +28,7 @@ export function TimeClashFlags({ flags }: { flags: TimeClashFlag[] }) {
           decides whether each still stands.
         </p>
       </div>
-        <Table>
+        <Table className="table-stack">
           <TableHeader>
             <TableRow>
               <TableHead>Venue</TableHead>
@@ -41,13 +41,15 @@ export function TimeClashFlags({ flags }: { flags: TimeClashFlag[] }) {
           <TableBody>
             {flags.map((flag) => (
               <TableRow key={flag.bookingId}>
-                <TableCell>{flag.venueName}</TableCell>
-                <TableCell>{flag.eventName}</TableCell>
-                <TableCell>{flag.coordinatorName ?? "Not assigned"}</TableCell>
-                <TableCell>
+                <TableCell data-label="Venue">{flag.venueName}</TableCell>
+                <TableCell data-label="Event">{flag.eventName}</TableCell>
+                <TableCell data-label="Coordinator">
+                  {flag.coordinatorName ?? "Not assigned"}
+                </TableCell>
+                <TableCell data-label="Booked">
                   {formatDateTime(flag.startAt)} to {formatDateTime(flag.endAt)}
                 </TableCell>
-                <TableCell>
+                <TableCell data-label="Clashes with">
                   <ul className="space-y-1">
                     {flag.clashesWith.map((clash) => (
                       <li key={clash}>{clash}</li>

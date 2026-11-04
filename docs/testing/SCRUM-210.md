@@ -22,8 +22,9 @@ The menu keeps its original look. A group of several links is one item, with
 its own icon and name (for example **Venues**); selecting it opens its links
 beneath it, with their icons and labels, indented. In the collapsed rail they
 show as smaller, indented icons. The group holding the page being viewed
-starts open. On a phone the bar shows the single links and the groups; a
-group opens its links in a panel just above the bar.
+starts open. On a phone the rail gives way to a hamburger beside the logo
+(SCRUM-207), which opens the same links in a panel from the left, each group
+of more than one under its heading.
 
 **Each role's menu** (a group in bold, with the links it opens to; a link
 without one stands alone):
@@ -36,7 +37,7 @@ without one stands alone):
 | Venue Staff | Bookings · **Venues**: Availability, Venue Catalogue · All Events |
 | Technical Support | **My work**: Equipment, Equipment Requests · Venue Catalogue · All Events |
 | Safety Officer | Safety Checks · Venue Catalogue |
-| Attendee | **My work**: Browse Events, My Registrations |
+| Attendee | Browse Events · My Registrations (SCRUM-248: a menu that is one group has no heading) |
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -70,13 +71,13 @@ without one stands alone):
 | Item | Content |
 |---|---|
 | Test Case ID | TC-210-02 |
-| Test Scenario | [Boundary] AC 1: a group with one link has no heading |
+| Test Scenario | [Boundary] AC 1: a group with one link has no heading, nor does a menu that is one group |
 | Pre-conditions | As the shared pre-conditions. |
 | Test Steps | 1. Build each role's menu. |
 | Test Data | — |
-| Expected Result | For every role, a group has a heading exactly when it has more than one link. |
+| Expected Result | For every role, a group has a heading exactly when it has more than one link and the menu has more than one group. An Attendee's two links stand on their own, without "My work" (defect SCRUM-248, found in the SCRUM-216 epic check). |
 
-**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC1] TC-210-02: a group with a single link shows no heading; one with more has its heading"
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC1] TC-210-02: a group with a single link, or a menu that is one group, shows no heading; any other group has its heading" and "SCRUM-210 [AC1] TC-210-02: an Attendee's menu has no group heading; staff menus keep theirs"
 
 ### TC-210-03
 
@@ -163,8 +164,8 @@ without one stands alone):
 | Test Case ID | TC-210-09 |
 | Test Scenario | [Positive] AC 1: a group opens to show its links, on a desktop and on a phone (SCRUM-132) |
 | Pre-conditions | As the shared pre-conditions. |
-| Test Steps | 1. As the Coordinator on Events, look at the rail; select **Expand navigation**, then **Venues**, then **Venues** again. <br> 2. Open Availability. <br> 3. At 360 px wide, select **Venues** in the bottom bar, then Venue Search. <br> 4. At 360 px wide, sign in as Technical Support, then select **My work** twice. |
+| Test Steps | 1. As the Coordinator on Events, look at the rail; select **Expand navigation**, then **Venues**, then **Venues** again. <br> 2. Open Availability. <br> 3. At 360 px wide, open the menu from the hamburger beside the logo, then choose Venue Search. <br> 4. At 360 px wide, sign in as Technical Support, open the menu, then close it. |
 | Test Data | `coordinator@test.local`, `techsupport@test.local` |
-| Expected Result | 1: Venues starts closed; selected, it opens Venue Search, Request Venue, Availability and Venue Catalogue beneath it, indented; selected again, it closes. 2: on one of its pages, Venues starts open, with that page marked current. 3: the bar shows Events, Venues, Equipment Requests and All Events; Venues opens its four links in a panel above the bar, and its button reads as expanded while the panel is open; the panel closes once a link is chosen. The page doesn't scroll sideways. 4: on Equipment, My work reads as collapsed and shows as the current page's group; selected, its panel opens with Equipment marked current and it reads as expanded; selected again, it reads as collapsed. |
+| Expected Result | 1: Venues starts closed; selected, it opens Venue Search, Request Venue, Availability and Venue Catalogue beneath it, indented; selected again, it closes. 2: on one of its pages, Venues starts open, with that page marked current. 3: none of the menu is on the page until the hamburger is chosen; opened, it lists every link the role holds, in the rail's order, with **Venues** as a heading over its four, and choosing a link goes there and closes the menu. The page doesn't scroll sideways. 4: Equipment reads as the page being viewed, under **My work**; Close menu shuts the panel and the hamburger reads as collapsed. |
 
-**Automated by:** `e2e/menu-groups.spec.ts` › "SCRUM-210 [AC1] TC-210-09: a group opens to show its links beneath it, indented, and the group of the page being viewed starts open", "SCRUM-210 [AC1] TC-210-09: on a phone (SCRUM-132) a group opens its links in a panel above the bar" and "SCRUM-210 [AC1] TC-210-09: on a phone, the group holding the current page reads closed until it is opened"
+**Automated by:** `e2e/menu-groups.spec.ts` › "SCRUM-210 [AC1] TC-210-09: a group opens to show its links beneath it, indented, and the group of the page being viewed starts open", "SCRUM-210 [AC1] TC-210-09: on a phone (SCRUM-132) the hamburger opens every link, under its group's heading" and "SCRUM-210 [AC1] TC-210-09: on a phone, the menu marks the page being viewed, and closes again"

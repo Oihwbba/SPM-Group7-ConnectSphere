@@ -331,9 +331,14 @@ export function EditDetailsDialog({
 
   return (
     <>
+      {/* The pencil alone, so the event's name keeps the width of the header;
+          its name for screen readers and its tooltip are unchanged. */}
       <Button
         variant="outline"
         size="sm"
+        aria-label="Edit details"
+        title="Edit details"
+        className="h-9 w-9 p-0"
         onClick={() => {
           setForm(formFrom(event));
           setFieldErrors({});
@@ -342,7 +347,7 @@ export function EditDetailsDialog({
           setOpen(true);
         }}
       >
-        <Pencil className="h-4 w-4" /> Edit details
+        <Pencil className="h-4 w-4" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
