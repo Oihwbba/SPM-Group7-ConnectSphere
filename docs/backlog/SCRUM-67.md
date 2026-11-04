@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-67 - Be prevented from performing an action my role does not permit
@@ -16,6 +16,8 @@
 
 ---
 
+**Superseded in part:** the five-role wording is superseded by SCRUM-164 AC3: every action also checks the Event Coordinator Lead and Safety Officer roles on the server, and a call outside their role is refused with nothing changed. The criteria below are kept as accepted in Sprint 1.
+
 **Cross-cutting security rule — Authorization Enforcement**
 
 **Acceptance Criteria:**
@@ -27,3 +29,7 @@
 * Permission rules are defined centrally and consumed by feature operations; individual stories must not invent their own conflicting role rules.
 
 **Authoritative model:** see the Confluence page **ConnectSphere Cross-Cutting Requirements Model**.
+
+**Change log**
+
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added the Superseded in part note for SCRUM-164, whose Supersedes line already names this story. Criteria unchanged.

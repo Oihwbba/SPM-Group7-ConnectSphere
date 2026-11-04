@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-88 - Add GLM-5.3 automated code review to pull requests (GitHub Actions)
+# SCRUM-88 - Chore: Add GLM-5.3 automated code review to pull requests (GitHub Actions)
 
 | | |
 |---|---|

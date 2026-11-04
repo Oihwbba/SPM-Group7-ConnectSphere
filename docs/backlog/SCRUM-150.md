@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-150 - [DUPLICATE OF SCRUM-108] Implement field-level clarification response
@@ -16,7 +16,7 @@
 
 ---
 
-Implement the field-selection behaviour now specified by SCRUM-18 and SCRUM-108 (audit F09).
+**Implement the field-selection behaviour now specified by SCRUM-18 and SCRUM-108 (audit F09).**
 
 Acceptance criteria:
 

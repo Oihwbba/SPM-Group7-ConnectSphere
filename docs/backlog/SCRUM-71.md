@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-71 - Record who changed what and when
+# SCRUM-71 - [OUT OF SCOPE] Record who changed what and when
 
 | | |
 |---|---|

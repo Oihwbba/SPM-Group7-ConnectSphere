@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-108 - Answer a clarification, or amend and resubmit a rejected request
@@ -40,6 +40,8 @@
 13. Only the event's Organiser can answer or amend (SCRUM-67).
 14. Responses, amendments and resubmissions are recorded with who and when.
 
+**Supersedes:** SCRUM-19 AC4 (every Rejected request can be amended and resubmitted): Amend and Resubmit is offered only when the Coordinator chose Amend and resubmit (AC7 and AC8).
+
 **Customer basis:** "Rejected events may be resubmitted after appropriate changes are made; rejection is not necessarily final." "Only edits via Coordinator and the co-ordinator also decide whether it calls for a new submission." "Organiser cannot directly edit after submission; must request via Coordinator."
 
 **Change log**
@@ -49,5 +51,6 @@
 * 2026-10-04: AC11 makes the rejecting Coordinator the coordinator of an unassigned request, so the rejected request leaves other Coordinators' lists and comes back to them on resubmission (PO decision, raised by Hann Qian).
 * 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Superseded in part note for SCRUM-135 and SCRUM-165. Removed the Related note, which described the Sprint 1 code before this story was built. Criteria unchanged.
 * 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added a Supersedes line for SCRUM-19 AC4, which SCRUM-19's Superseded in part note already names. Criteria unchanged.
 
 Functionality Area: Event Review and Approval

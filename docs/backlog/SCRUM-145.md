@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-11. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-145 - Resync test documentation with the current acceptance criteria
+# SCRUM-145 - Chore: Resync test documentation with the current acceptance criteria
 
 | | |
 |---|---|

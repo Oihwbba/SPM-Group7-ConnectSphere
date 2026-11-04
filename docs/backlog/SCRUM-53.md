@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-53 - Approve or reject a booking request
@@ -15,6 +15,11 @@
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-53 |
 
 ---
+
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC1 and AC7, superseded by SCRUM-163 AC1 and AC7:** Venue Staff can also hold a Pending request until an expiry, and can approve or reject a Held booking before it expires. Deciding a hold a second time changes nothing.
+* **AC4–AC6 and AC8, superseded by SCRUM-159 AC3–AC5 and AC7:** conflicts compare occupied periods, which add the venue's setup time before a booking and its turnaround time after it. Two requests conflict when their occupied periods overlap and don't when those periods only touch, and the calendar shows the setup and turnaround time around an approved booking.
 
 **User story:** As Venue Staff, I want to approve or reject a booking request, so that the outcome is recorded and the Coordinator can carry on planning.
 
@@ -40,5 +45,6 @@
 * 2026-10-01 (mid-sprint correction, no new scope): renumbered; clarified where the "free text" quote came from. SCRUM-51 (track and be notified) was merged into this story and SCRUM-124 and is closed.
 * 2026-10-01 (audit): AC3 says the suggestion goes in the free-text reason, as built (there is no separate field). AC10 names the readiness checklist (SCRUM-110), which is where the Coordinator sees the decision. Summary in sentence case.
 * 2026-10-29 (SCRUM-244, logged 2026-11-01): removed "Venue Staff may provide a reason or suggest an alternative venue/arrangement." and "Optional, this is not considered as core requirement. Resubmission counts as new booking for audit." from the Customer basis. Criteria unchanged.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added the Superseded in part note for SCRUM-159 and SCRUM-163, whose Supersedes lines already name this story. Criteria unchanged.
 
 Functionality Area: Venue Booking Approval, Booking Conflict Detection

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-75 - Control and enforce the registration period
@@ -32,6 +32,8 @@
 10. Registration times are shown in Singapore time (SCRUM-129).
 11. Moved (2026-10-17) to SCRUM-128 AC11: a Confirmed event whose Registration needed changes from No to Yes through a change request opens registration as in AC4. A Confirmed event can't be edited directly (SCRUM-25 AC5), so a change request is the only way this happens.
 
+**Supersedes:** SCRUM-73 AC6's second sentence (an opening time later than confirmation, and when registration closes, are set in this story): the Organiser doesn't set an opening or closing time, so registration opens at confirmation and closes at the event's start (AC4), and the Organiser can close and reopen it (AC6).
+
 **Customer basis:** Step 11: "Where registration is required, Attendees can register for the confirmed event during the permitted registration period and subject to the applicable capacity." G4 (Attendee Registration): "Registration is based on first come first serve and also based on Organiser discretion." AC6 (the Organiser closes and reopens registration) is a team decision based on "Organiser discretion".
 
 **Change log**
@@ -43,5 +45,6 @@
 * 2026-10-08 (backlog refinement, PO approved): re-estimated from 3 to 2 points. Step 11 asks for a "permitted registration period" and our G4 answer for "Organiser discretion", but neither asks for the Organiser to set the opening and closing times, so setting and extending the window are removed (AC1, AC3, AC5; numbers kept because code and tests cite AC2, AC4, AC7 and AC8). AC4's default now applies to every new event. AC6 and AC9 reopen registration until the event's start. AC6 applies only to events that need registration (SCRUM-171). Customer basis replaced with our G4 answers; the earlier quotes were not from our section.
 * 2026-10-14: AC11 added, moved from SCRUM-171 AC5, so registration-window behaviour stays in this story.
 * 2026-10-17 (PO approved): AC11 moved to SCRUM-128 AC11, because it only happens through a change request, which SCRUM-128 applies. Number kept because tests and docs cite AC numbers. No re-estimate.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added a Supersedes line for SCRUM-73 AC6's second sentence, which SCRUM-73's Superseded in part note already names. Criteria unchanged.
 
 Functionality Area: Attendee Registration

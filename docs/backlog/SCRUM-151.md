@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-151 - Run CI once per pull request commit, not twice
+# SCRUM-151 - Chore: Run CI once per pull request commit, not twice
 
 | | |
 |---|---|

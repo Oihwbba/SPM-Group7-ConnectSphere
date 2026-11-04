@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-144 - [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff
+# SCRUM-144 - [MERGED INTO SCRUM-75 and SCRUM-171] Enable registration and enforce event cutoff
 
 | | |
 |---|---|
