@@ -16,8 +16,6 @@
 
 ---
 
-**User story:** As an Event Coordinator, I want to submit a request to book a venue with the event's timing and requirements, so that Venue Staff have what they need to assess it.
-
 **Superseded in part** (the criteria below are kept as accepted in Sprint 2):
 
 * **AC1's rounding of the period ("start rounded down and end rounded up to the half hour"), superseded by SCRUM-188:** choosing the event fills in the period exactly as the event's start and end, so venue search and the request check the same period.
@@ -25,6 +23,8 @@
 * **AC2–AC4, superseded by SCRUM-159 AC2–AC4:** availability compares occupied periods, which add the venue's setup time before a booking and its turnaround time after it, and a Held booking blocks the venue like an Approved one.
 * **AC8, superseded by SCRUM-162 AC1 and AC2:** an event can book several venues; only a second Pending, Held or Approved request for the same venue is refused.
 * **AC10, superseded by SCRUM-163 AC2:** a Held booking also blocks the venue. A Pending request still doesn't.
+
+**User story:** As an Event Coordinator, I want to submit a request to book a venue with the event's timing and requirements, so that Venue Staff have what they need to assess it.
 
 **Acceptance criteria**
 
@@ -50,5 +50,6 @@
 * 2026-10-23 (SCRUM-222): marked AC1's half-hour rounding as superseded by SCRUM-188 (PO approved 2026-10-21), so the story no longer reads as current where the code follows SCRUM-188.
 * 2026-10-29 (SCRUM-244, logged 2026-11-01): removed the Customer basis, which quoted "Co-ordinator can submit booking request based on per event that he is assigned. Each event can only has one venue." and "Confirmed bookings block availability. Pending conflicts are only resolved outside of system currently; the team can also propose and implement other mechanism." Criteria unchanged.
 * 2026-11-04 (SCRUM-260, PO approved 2026-11-04): the Superseded in part note lists one change per bullet and adds SCRUM-159, SCRUM-162 and SCRUM-163, whose Supersedes lines already name this story. The SCRUM-188 item is unchanged. Criteria unchanged.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): moved the Superseded in part note above the user story, where every other story has it; its wording is unchanged. Criteria unchanged.
 
 Functionality Area: Venue Booking Request, Booking Conflict Detection

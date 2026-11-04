@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-81 - Move an approved event through planning to confirmed
@@ -35,6 +35,8 @@
 7. Only the event's assigned Coordinator can confirm it; anyone else is refused with no status change.
 8. Given the event is already Confirmed, when Confirm is submitted again, then nothing changes and no second confirmation is recorded.
 
+**Supersedes:** SCRUM-19 AC1 (an approved request's status changes to Approved): approving moves the event to Planning in the same action, and Approved is kept in its history (AC1).
+
 **Related:** the full list of allowed transitions is SCRUM-135; the Organiser is notified (SCRUM-45).
 
 **Change log**
@@ -44,5 +46,6 @@
 * 2026-10-07: AC5 points the Registration needed choice to SCRUM-171, which took it over when SCRUM-127 was split.
 * 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Superseded in part note for SCRUM-135, SCRUM-162, SCRUM-165 and SCRUM-166. The Related note no longer says SCRUM-81 and SCRUM-110 must merge together; both were merged in Sprint 2. Criteria unchanged.
 * 2026-10-29 (SCRUM-243, PO approved 2026-11-01): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added a Supersedes line for SCRUM-19 AC1, which SCRUM-19's Superseded in part note already names. Criteria unchanged.
 
 Functionality Area: Event Status Management
