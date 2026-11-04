@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | Medium |
 | **Story points** | - |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-215 |
 
