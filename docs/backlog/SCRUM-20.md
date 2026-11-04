@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-20 - Auto-assign a coordinator to a submitted event
@@ -16,7 +16,7 @@
 
 ---
 
-**Superseded by:** SCRUM-165 (Week 7 change 5). Requests are no longer assigned automatically: they wait in the Lead's Unassigned queue until the Event Coordinator Lead assigns a Coordinator. The criteria below describe Sprint 1 behaviour and are kept for history.
+**Superseded by:** SCRUM-165 (Week 7 change 5). Requests are no longer assigned automatically: they wait in the Lead's Unassigned queue until the Event Coordinator Lead assigns a Coordinator. The criterion that a Coordinator who cannot take an event uses reassignment is superseded by SCRUM-21 AC1 and AC10: only the Lead reassigns, and the change takes effect at once. The criteria below describe Sprint 1 behaviour and are kept for history.
 
 **As ConnectSphere**, I want every submitted event to be assigned a single Event Coordinator automatically, so that every event has one clear internal point of contact without anyone having to claim it.
 
@@ -43,5 +43,6 @@
 **Change log**
 
 * 2026-10-21 (PO approved, after the 20 Oct audit): marked superseded by SCRUM-165. The customer's Week 7 change 5 replaced automatic assignment with the Lead's Unassigned queue; the least-loaded count lives on as the suggestion shown when the Lead assigns (SCRUM-165 AC4). Story stays Done.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): the Superseded by note adds SCRUM-21, whose Supersedes line already names this story's reassignment criterion. Criteria unchanged.
 
 Functionality Area: Coordinator Assignment

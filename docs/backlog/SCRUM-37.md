@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-37 - Record venue unavailability and reflect it everywhere
@@ -15,6 +15,13 @@
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-37 |
 
 ---
+
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC1's reason list, superseded by SCRUM-161 AC1:** the reasons are Maintenance, Equipment failure, Renovation, Safety concern or Other.
+* **AC3, superseded by SCRUM-161 AC1–AC3:** unavailability can be saved over Pending, Held or Approved bookings. Venue Staff are first shown each affected booking, and each one is flagged Needs Reconsideration (SCRUM-26) without its status or event changing. Unavailability that overlaps unavailability already recorded is still refused.
+* **AC4's booking half, superseded by SCRUM-161 AC5:** given an approval and an overlapping unavailability are saved at the same moment, the unavailability is saved and the booking ends up either refused or Approved and flagged, never Approved without a flag.
+* **The Related note, superseded by SCRUM-161:** Week 7 change 2 made venue unavailability management required in Release 1, in the form SCRUM-161 describes, and a Pending request it overlaps is flagged too.
 
 **User story:** As Venue Staff, I want to record when a venue is unavailable for reasons other than a booking, so that nobody books it during maintenance or closure.
 
@@ -35,5 +42,6 @@
 
 * 2026-10-01: summary and user story aligned; overlap with Pending requests and flagging added (both revised below).
 * 2026-10-01 (audit): restored to the behaviour the merged code and the 30 Sep criteria have: an overlap with an approved booking is refused and shown, not saved and flagged. Ending or removing a period (the earlier AC6) isn't built and is beyond Release 1. AC4 states the simultaneous-save case the database already guarantees. Status moved to In Review because the code was merged on 29 Sep (PR #99).
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added the Superseded in part note for SCRUM-161, whose Supersedes line already names this story. Criteria unchanged.
 
 Functionality Area: Venue Availability Calendar, Booking Conflict Detection

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-36 - View venue availability
@@ -16,6 +16,11 @@
 
 ---
 
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC2, superseded by SCRUM-159 AC7:** each booking is shown with the venue's setup and turnaround time around it, marked differently from the event itself.
+* **AC4, superseded by SCRUM-163 AC2:** a Held booking also shows as unavailable, as "Held until \[expiry\]". Pending requests still don't.
+
 **User story:** As an Event Coordinator or Venue Staff member, I want to see a venue's availability across dates and times, so that I know when it can realistically be requested.
 
 **Acceptance criteria**
@@ -28,12 +33,13 @@
 6. Given the venue has no bookings or unavailability in the selected range, then the whole range shows as available rather than as an empty view.
 7. Coordinators and Venue Staff can open this view; other roles cannot (SCRUM-67).
 
-**Customer basis:** "Venue Availability Calendar should reflect bookings and other recorded unavailability (e.g. maintenance)." "Calendar may be single view or per-venue." 
+**Customer basis:** "Venue Availability Calendar should reflect bookings and other recorded unavailability (e.g. maintenance)." "Calendar may be single view or per-venue."
 
 **Change log**
 
 * 2026-10-01: team chose the per-venue view (the customer allowed either). Venue Staff added as viewers. Removed the 2026-09-13 decision record saying unavailability management was outside Release 1, which contradicted SCRUM-37 and the customer's answer above. Stated that Pending requests don't appear as unavailable.
 * 2026-10-01 (audit): checked against the merged code, which matches. Summary in sentence case. Status moved to In Review because the code was merged on 29 Sep (PR #99).
 * 2026-10-29 (epic check, SCRUM-214): removed "Confirmed bookings block availability." from the Customer basis. It is the G3 answer to Li Shiyin's question, not a G4 one. No criterion changes.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added the Superseded in part note for SCRUM-159 and SCRUM-163, whose Supersedes lines already name this story. Criteria unchanged.
 
 Functionality Area: Venue Availability Calendar

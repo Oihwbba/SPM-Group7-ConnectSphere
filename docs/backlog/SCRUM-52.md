@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-52 - Review pending booking requests
@@ -16,6 +16,11 @@
 
 ---
 
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC1, superseded by SCRUM-163 AC7:** Held bookings also stay in the queue, with their expiry, until they are confirmed, released, rejected or expire.
+* **AC3, superseded by SCRUM-159 AC3:** the overlaps shown compare occupied periods, which add the venue's setup and turnaround time, and a Held booking counts like an Approved one.
+
 **User story:** As Venue Staff, I want to review pending booking requests with their event details, so that I can decide whether to approve or reject them.
 
 **Acceptance criteria**
@@ -31,5 +36,6 @@
 
 * 2026-10-01 (mid-sprint): no change to acceptance criteria; added the related-stories note.
 * 2026-10-01 (audit): AC1 says soonest event first, as built (the queue is sorted by event start; submission order belongs to SCRUM-134). Summary in sentence case.
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added the Superseded in part note for SCRUM-159 and SCRUM-163, whose Supersedes lines already name this story. Criteria unchanged.
 
 Functionality Area: Venue Booking Approval

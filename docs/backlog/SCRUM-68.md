@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-68 - View only the events I own
@@ -16,6 +16,8 @@
 
 ---
 
+**Superseded in part:** the Boundary note's SCRUM-20 is superseded by SCRUM-165: a submitted request waits in the Lead's Unassigned queue until the Event Coordinator Lead assigns a Coordinator (SCRUM-165 AC1 and AC5), and reassignment is SCRUM-21. Coordinator visibility stays with SCRUM-69 and SCRUM-141. The criteria below are kept as accepted in Sprint 1.
+
 **As an Event Organiser**, I want to see only the events I submitted, so that my event details are not visible to other clients of ConnectSphere.
 
 **Acceptance Criteria:**
@@ -27,5 +29,9 @@
 * Release 1 uses the individual Organiser account as the ownership boundary; shared visibility across multiple people in the same external organisation is not supported by this story.
 
 **Boundary:** Coordinator visibility and assignment relationships are owned centrally by SCRUM-69 and SCRUM-20; this story does not restate them.
+
+**Change log**
+
+* 2026-11-04 (SCRUM-260, PO approved 2026-11-04): added the Superseded in part note for SCRUM-165, whose Supersedes line already names this story's boundary note. Criteria unchanged.
 
 Functionality Area: User Authorisation and Authentication
