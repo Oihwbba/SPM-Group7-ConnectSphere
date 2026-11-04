@@ -164,3 +164,11 @@ by #250 the same day) SCRUM-85's last low is still open: the
 confirmed-details backfill covers Confirmed events only, so events in
 Planning at deploy show Attendees nothing last-confirmed. Known when a
 pull request touches the re-planned view.
+
+- (2026-11-04, #307) SCRUM-211 merged with its three review lows open: the
+bookings Decided note reads a booking cancelled after its approval as
+cancelled by its approver (`decidedBy`/`decidedAt` still record the
+approval), the Bookings Reject dialog keeps its old reason error after
+reopening with the reason cleared, and `components/queues/queue-loading.tsx`
+is added but never used. Known when a pull request touches the bookings
+decided list, its reject dialog or `components/queues/`.
