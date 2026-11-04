@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-143 - [SUPERSEDED BY SCRUM-162] Enforce one venue request per event
+# SCRUM-143 - [REPLACED BY SCRUM-162] Enforce one venue request per event
 
 | | |
 |---|---|
@@ -13,6 +13,10 @@
 | **Status in Jira** | Done |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-143 |
+
+---
+
+**Not changed in this review:** this task was closed without being built, after Week 7 change 3 (several venues for one event) superseded it. Its one-booking-per-event rule no longer applies. SCRUM-162 AC2 carries the replacement rule: an event can’t have two Pending, Held or Approved bookings for the same venue. Kept as-is for history.
 
 ---
 

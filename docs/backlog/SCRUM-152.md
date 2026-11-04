@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-152 - Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap
+# SCRUM-152 - Chore: Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap
 
 | | |
 |---|---|

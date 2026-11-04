@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-200 - Chore: Decide whether to format the repo with Prettier and check it in CI
+# SCRUM-200 - [NOT NEEDED] Decide whether to format the repo with Prettier and check it in CI
 
 | | |
 |---|---|
@@ -13,6 +13,10 @@
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-200 |
+
+---
+
+**Won't Do.** Prettier was installed with the project scaffold, but it was never part of our agreed stack (README, "Stack"; ADR 0016), our Definition of Done or our CI checks. This ticket's description overstated that. Our enforced quality checks (ESLint, type checks, tests at 100% coverage, e2e and the AI review) ran on every pull request. Prettier only changes layout, not behaviour or structure. Applying it now would rewrite 663 files in one commit and bury the story-by-story history, so we chose not to adopt it.
 
 ---
 

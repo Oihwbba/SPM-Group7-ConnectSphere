@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-169 - Backlog Sync: update docs/backlog from Jira after the 7 Oct changes
+# SCRUM-169 - Chore: Backlog Sync: update docs/backlog from Jira after the 7 Oct changes
 
 | | |
 |---|---|

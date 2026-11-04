@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-122 - Remind Coordinators about incomplete and overdue arrangements
+# SCRUM-122 - [OUT OF SCOPE] Remind Coordinators about incomplete and overdue arrangements
 
 | | |
 |---|---|

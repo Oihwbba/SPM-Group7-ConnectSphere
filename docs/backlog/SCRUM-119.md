@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-119 - Maintain the equipment catalogue and record unavailability
+# SCRUM-119 - [OUT OF SCOPE] Maintain the equipment catalogue and record unavailability
 
 | | |
 |---|---|

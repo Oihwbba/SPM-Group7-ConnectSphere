@@ -65,7 +65,7 @@ _33 stories, 88 points_
 | [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-26](SCRUM-26.md) | Flag and resolve arrangements affected by a change | 5 | Highest | SCRUM Sprint 3 | Done |
-| [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 5 | Low | Backlog | To Do |
+| [SCRUM-71](SCRUM-71.md) | [OUT OF SCOPE] Record who changed what and when | 5 | Low | Backlog | To Do |
 | [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 3 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-84](SCRUM-84.md) | Organiser views their own event requests | 2 | Highest | SCRUM Sprint 1 | Done |
@@ -73,7 +73,7 @@ _33 stories, 88 points_
 | [SCRUM-109](SCRUM-109.md) | [MERGED INTO SCRUM-108] Respond to an event clarification request | 0 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-110](SCRUM-110.md) | See an event's readiness checklist | 3 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-117](SCRUM-117.md) | Reject an event that can't be fulfilled | 2 | Medium | SCRUM Sprint 2 | Done |
-| [SCRUM-123](SCRUM-123.md) | Record event preparation progress | 3 | Low | Backlog | To Do |
+| [SCRUM-123](SCRUM-123.md) | [OUT OF SCOPE] Record event preparation progress | 3 | Low | Backlog | To Do |
 | [SCRUM-126](SCRUM-126.md) | Coordinator decides whether a rejected request is amended or submitted as new | 2 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | SCRUM Sprint 2 | Done |
@@ -119,7 +119,7 @@ _7 stories, 29 points_
 | [SCRUM-45](SCRUM-45.md) | Organiser and Coordinator workflow notifications | 5 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-48](SCRUM-48.md) | User views their notification list | 3 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-85](SCRUM-85.md) | Attendees are kept informed when an event they registered for changes or is cancelled | 5 | High | SCRUM Sprint 3 | Done |
-| [SCRUM-122](SCRUM-122.md) | Remind Coordinators about incomplete and overdue arrangements | 3 | Low | Backlog | To Do |
+| [SCRUM-122](SCRUM-122.md) | [OUT OF SCOPE] Remind Coordinators about incomplete and overdue arrangements | 3 | Low | Backlog | To Do |
 | [SCRUM-124](SCRUM-124.md) | Staff and arrangement notifications | 5 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-128](SCRUM-128.md) | Decide a change request and apply it in one step | 5 | Highest | SCRUM Sprint 3 | Done |
 
@@ -135,7 +135,7 @@ _12 stories, 38 points_
 | [SCRUM-68](SCRUM-68.md) | View only the events I own | 3 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-69](SCRUM-69.md) | View only the events assigned to me | 2 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-70](SCRUM-70.md) | Organisers and coordinators see an event's registrations; attendees' records stay private | 3 | Highest | SCRUM Sprint 3 | Done |
-| [SCRUM-120](SCRUM-120.md) | Event calendar: all events in one view | 8 | Low | Backlog | To Do |
+| [SCRUM-120](SCRUM-120.md) | [OUT OF SCOPE] Event calendar: all events in one view | 8 | Low | Backlog | To Do |
 | [SCRUM-121](SCRUM-121.md) | Accounts can hold multiple roles | 3 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-141](SCRUM-141.md) | See every event read-only for planning | 5 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-153](SCRUM-153.md) | [NOT NEEDED] Lack of User Story for self-registration | - | Medium | Backlog | Done |
@@ -156,7 +156,7 @@ _13 stories, 31 points_
 | [SCRUM-32](SCRUM-32.md) | Report reserved equipment that can no longer be provided | 2 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-33](SCRUM-33.md) | [MERGED INTO SCRUM-27] View Event Reservations | 0 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-55](SCRUM-55.md) | [MERGED INTO SCRUM-30] View Equipment Availability Calendar | 0 | Low | Backlog | Done |
-| [SCRUM-119](SCRUM-119.md) | Maintain the equipment catalogue and record unavailability | 5 | Low | Backlog | To Do |
+| [SCRUM-119](SCRUM-119.md) | [OUT OF SCOPE] Maintain the equipment catalogue and record unavailability | 5 | Low | Backlog | To Do |
 | [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | High | SCRUM Sprint 3 | Done |
 | [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | 3 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-156](SCRUM-156.md) | Make the one-type equipment form availability-only (follow-up to SCRUM-31 and SCRUM-155) | 2 | Medium | SCRUM Sprint 2 | Done |
@@ -174,9 +174,9 @@ _11 stories, 22 points_
 | [SCRUM-75](SCRUM-75.md) | Control and enforce the registration period | 2 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-76](SCRUM-76.md) | View my registration status | 1 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-77](SCRUM-77.md) | Withdraw my registration | 2 | Highest | SCRUM Sprint 3 | Done |
-| [SCRUM-79](SCRUM-79.md) | Join a waiting list when an event is full | 3 | Low | Backlog | To Do |
-| [SCRUM-80](SCRUM-80.md) | Record attendance per registration on the day | 3 | Low | Backlog | To Do |
-| [SCRUM-115](SCRUM-115.md) | Find an event to attend | 3 | Low | Backlog | To Do |
+| [SCRUM-79](SCRUM-79.md) | [OUT OF SCOPE] Join a waiting list when an event is full | 3 | Low | Backlog | To Do |
+| [SCRUM-80](SCRUM-80.md) | [OUT OF SCOPE] Record attendance per registration on the day | 3 | Low | Backlog | To Do |
+| [SCRUM-115](SCRUM-115.md) | [OUT OF SCOPE] Find an event to attend | 3 | Low | Backlog | To Do |
 | [SCRUM-133](SCRUM-133.md) | [MERGED INTO SCRUM-85] Attendees see a clear status while a registered event is being re-planned | 0 | Medium | Backlog | Done |
 | [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | Done |
 
@@ -196,27 +196,27 @@ _5 stories, 9 points_
 
 | Task | Summary | Sprint | Status |
 |---|---|---|---|
-| [SCRUM-88](SCRUM-88.md) | Add GLM-5.3 automated code review to pull requests (GitHub Actions) | SCRUM Sprint 1 | Done |
-| [SCRUM-89](SCRUM-89.md) | CI and developer infrastructure: Node 24, CI hardening, test folders, security upgrades, migration sync | SCRUM Sprint 1 | Done |
-| [SCRUM-111](SCRUM-111.md) | GLM reviewer context: never drop a file the PR changed, and measure the budget | Backlog | Done |
-| [SCRUM-112](SCRUM-112.md) | The GLM reviewer maintains its own memory instead of being taught by hand | Backlog | Done |
-| [SCRUM-113](SCRUM-113.md) | Re-sync docs/backlog snapshot from Jira before the Sprint 1 review | Backlog | Done |
+| [SCRUM-88](SCRUM-88.md) | Chore: Add GLM-5.3 automated code review to pull requests (GitHub Actions) | SCRUM Sprint 1 | Done |
+| [SCRUM-89](SCRUM-89.md) | Chore: CI and developer infrastructure: Node 24, CI hardening, test folders, security upgrades, migration sync | SCRUM Sprint 1 | Done |
+| [SCRUM-111](SCRUM-111.md) | Chore: GLM reviewer context: never drop a file the PR changed, and measure the budget | Backlog | Done |
+| [SCRUM-112](SCRUM-112.md) | Chore: The GLM reviewer maintains its own memory instead of being taught by hand | Backlog | Done |
+| [SCRUM-113](SCRUM-113.md) | Chore: Re-sync docs/backlog snapshot from Jira before the Sprint 1 review | Backlog | Done |
 | [SCRUM-114](SCRUM-114.md) | Chore: Sprint 1 post-DoD test hardening and code hygiene cleanup | SCRUM Sprint 2 | Done |
-| [SCRUM-116](SCRUM-116.md) | Sync Jira User Stories into Github Repo on User Story Changes | SCRUM Sprint 2 | Done |
-| [SCRUM-125](SCRUM-125.md) | Measure coverage on every server-side file and fail CI when it drops | SCRUM Sprint 2 | Done |
-| [SCRUM-143](SCRUM-143.md) | [SUPERSEDED BY SCRUM-162] Enforce one venue request per event | Backlog | Done |
-| [SCRUM-144](SCRUM-144.md) | [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff | Backlog | Done |
-| [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | Done |
-| [SCRUM-146](SCRUM-146.md) | Remove stale story references | SCRUM Sprint 3 | Done |
-| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | Done |
-| [SCRUM-149](SCRUM-149.md) | [SUPERSEDED BY SCRUM-162] Use event attendance in venue booking | Backlog | Done |
+| [SCRUM-116](SCRUM-116.md) | Chore: Sync Jira User Stories into Github Repo on User Story Changes | SCRUM Sprint 2 | Done |
+| [SCRUM-125](SCRUM-125.md) | Chore: Measure coverage on every server-side file and fail CI when it drops | SCRUM Sprint 2 | Done |
+| [SCRUM-143](SCRUM-143.md) | [REPLACED BY SCRUM-162] Enforce one venue request per event | Backlog | Done |
+| [SCRUM-144](SCRUM-144.md) | [MERGED INTO SCRUM-75 and SCRUM-171] Enable registration and enforce event cutoff | Backlog | Done |
+| [SCRUM-145](SCRUM-145.md) | Chore: Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | Done |
+| [SCRUM-146](SCRUM-146.md) | Chore: Remove stale story references | SCRUM Sprint 3 | Done |
+| [SCRUM-147](SCRUM-147.md) | Chore: Update data-model documentation | SCRUM Sprint 3 | Done |
+| [SCRUM-149](SCRUM-149.md) | [REPLACED BY SCRUM-162] Use event attendance in venue booking | Backlog | Done |
 | [SCRUM-150](SCRUM-150.md) | [DUPLICATE OF SCRUM-108] Implement field-level clarification response | Backlog | Done |
-| [SCRUM-151](SCRUM-151.md) | Run CI once per pull request commit, not twice | Backlog | Done |
-| [SCRUM-152](SCRUM-152.md) | Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap | Backlog | Done |
+| [SCRUM-151](SCRUM-151.md) | Chore: Run CI once per pull request commit, not twice | Backlog | Done |
+| [SCRUM-152](SCRUM-152.md) | Chore: Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap | Backlog | Done |
 | [SCRUM-157](SCRUM-157.md) | Chore: Refresh the project docs so people and AI tools read one consistent, current guide | SCRUM Sprint 2 | Done |
-| [SCRUM-158](SCRUM-158.md) | Week 7 customer changes (received 2 Oct) – apply to Product Backlog | Backlog | Done |
+| [SCRUM-158](SCRUM-158.md) | Chore: Week 7 customer changes (received 2 Oct) – apply to Product Backlog | Backlog | Done |
 | [SCRUM-168](SCRUM-168.md) | Remove the placeholder search bar from the top bar | SCRUM Sprint 3 | Done |
-| [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | Done |
+| [SCRUM-169](SCRUM-169.md) | Chore: Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | Done |
 | [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | Done |
 | [SCRUM-173](SCRUM-173.md) | Chore: Bring the docs up to date with the code and the Week 7 changes | SCRUM Sprint 3 | Done |
 | [SCRUM-174](SCRUM-174.md) | Chore: Record the tech stack decision as ADR 0016 | SCRUM Sprint 3 | Done |
@@ -229,19 +229,19 @@ _5 stories, 9 points_
 | [SCRUM-181](SCRUM-181.md) | Chore: Fix the GLM reviewer gaps found by auditing a week of reviews | SCRUM Sprint 3 | Done |
 | [SCRUM-182](SCRUM-182.md) | Chore: Close the e2e sign-in pages that slow CI past its time limit | SCRUM Sprint 3 | Done |
 | [SCRUM-183](SCRUM-183.md) | Chore: SCRUM-18 clarification.spec.ts | SCRUM Sprint 4 | Done |
-| [SCRUM-184](SCRUM-184.md) | Chore: SCRUM-50 facility picker inconsistency | Backlog | To Do |
+| [SCRUM-184](SCRUM-184.md) | [NOT NEEDED] SCRUM-50 facility picker inconsistency | Backlog | To Do |
 | [SCRUM-185](SCRUM-185.md) | Chore:  Fix SCRUM-25 "Needs Reconsideration" only appears after reopening the modal | SCRUM Sprint 3 | Done |
 | [SCRUM-187](SCRUM-187.md) | Bug: The clarification answer form stays on "Sending…" when sending fails | SCRUM Sprint 4 | Done |
 | [SCRUM-189](SCRUM-189.md) | Chore: Stop long e2e journeys failing at the 30-second test limit on CI | SCRUM Sprint 4 | Done |
 | [SCRUM-191](SCRUM-191.md) | Bug: Integration suites race each other through shared data, and the docs still describe the Safety Officer as unbuilt | SCRUM Sprint 3 | Done |
 | [SCRUM-193](SCRUM-193.md) | Bug: SCRUM-142's TC-142-18 and SCRUM-172's migration suites time out alongside other files, and a timed-out TC-142-18 leaves a test venue behind | SCRUM Sprint 3 | Done |
 | [SCRUM-194](SCRUM-194.md) | Chore: Record each sprint, how we estimate, and the Definition of Done in docs/scrum | SCRUM Sprint 4 | Done |
-| [SCRUM-195](SCRUM-195.md) | Chore: Remove the placeholder tests for features that are built | Backlog | To Do |
+| [SCRUM-195](SCRUM-195.md) | [NOT NEEDED] Remove the placeholder tests for features that are built | Backlog | To Do |
 | [SCRUM-196](SCRUM-196.md) | Chore: Check in CI that every test case cites tests and files that exist | SCRUM Sprint 4 | Done |
 | [SCRUM-197](SCRUM-197.md) | Chore: Document how the team uses AI and who owns each part of the system | SCRUM Sprint 4 | Done |
 | [SCRUM-198](SCRUM-198.md) | Chore: Add a demo script for the core workflows, including conflicts, changes and failures | SCRUM Sprint 4 | Done |
-| [SCRUM-199](SCRUM-199.md) | Chore: Bring the component diagram up to date with main | Backlog | To Do |
-| [SCRUM-200](SCRUM-200.md) | Chore: Decide whether to format the repo with Prettier and check it in CI | Backlog | To Do |
+| [SCRUM-199](SCRUM-199.md) | [NOT NEEDED] Bring the component diagram up to date with main | Backlog | To Do |
+| [SCRUM-200](SCRUM-200.md) | [NOT NEEDED] Decide whether to format the repo with Prettier and check it in CI | Backlog | To Do |
 | [SCRUM-201](SCRUM-201.md) | Bug: SCRUM-124's TC-124-02 borrows another suite's equipment and fails at random | SCRUM Sprint 3 | Done |
 | [SCRUM-202](SCRUM-202.md) | Bug: A venue edit can deadlock with a simultaneous booking decision or event edit | SCRUM Sprint 4 | Done |
 | [SCRUM-203](SCRUM-203.md) | Chore: Bring test-case citations, stale notes and the backlog snapshot up to date with main | SCRUM Sprint 3 | Done |

@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-149 - [SUPERSEDED BY SCRUM-162] Use event attendance in venue booking
+# SCRUM-149 - [REPLACED BY SCRUM-162] Use event attendance in venue booking
 
 | | |
 |---|---|
@@ -13,6 +13,10 @@
 | **Status in Jira** | Done |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-149 |
+
+---
+
+**Not changed in this review:** this task was closed without being built, after Week 7 change 3 superseded it. Now that an event can book several venues, each booking holds part of the audience. Attendance is therefore set per booking (SCRUM-162 AC4), and the safety check judges whether the venues together suit the whole audience (SCRUM-166). Registration capacity still follows SCRUM-74. Because the rule lives in those stories, updating this task would duplicate it.
 
 ---
 
