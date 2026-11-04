@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-11-01. Jira is the source of truth.
+     Synced from Jira on 2026-11-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-211 - One layout for every work queue
@@ -23,7 +23,7 @@
 1. Every queue shows the same four columns: event, event date, what's asked, and requested (the date and how long ago, e.g. "23 Oct (3 days ago)"). Other details appear when an item is opened. Each queue keeps its current default order (oldest request first; Bookings soonest event first, SCRUM-52 AC1), and users can sort by event date or requested.
 2. Every queue has the same status filter and search box.
 3. Opening an item shows the decision on the same side of the page, with the same buttons in the same order.
-4. After a decision, the next item in the queue opens.
+4. After a decision, the next item in the queue opens. In Bookings and Equipment Requests, it opens from the Next request button on the confirmation pop-up.
 
 **Supersedes:** SCRUM-165 AC2's columns (name, dates, expected attendance, Organiser and submission time) for the Unassigned queue (AC1). Its oldest-first order stays.
 
@@ -38,5 +38,6 @@
 * 2026-10-21: created at Sprint 3 review for Sprint 4 (UI revamp U5). Owner Caylern.
 * 2026-10-27 (PO approved, Hann Qian): AC1 reworded. "Oldest item first" conflicted with SCRUM-52 AC1 (Bookings: soonest event first), so each queue keeps its current default order and users can sort. "Waiting since" becomes "requested" (date and how long ago), which still shows the submission time first-come-first-served needs (SCRUM-134). The table is limited to four columns so it stays easy to scan; other details move to the opened item. No re-estimate.
 * 2026-10-29 (SCRUM-243, PO approved 2026-11-01): added the Supersedes line for SCRUM-165 AC2 (decision by Felicia, 29 Oct); SCRUM-165 now carries a matching note. Criteria unchanged.
+* 2026-11-03 (PO approved, Hann Qian; decision made 1 Nov): AC4 adds that in Bookings and Equipment Requests the next item opens from the Next request button on the confirmation pop-up, so staff see the outcome of each decision before moving on. The Unassigned Queue and Safety Checks open the next item directly. The code in #307 already matches; no code change, no re-estimate.
 
 Functionality Area: Venue Booking Approval, Equipment Request Management, Coordinator Assignment

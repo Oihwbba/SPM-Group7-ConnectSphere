@@ -49,360 +49,236 @@ with the same rules, permissions, locks, notifications and messages.
 | [TC-211-17](#tc-211-17) | Positive | AC 3 | Unit, e2e |
 | [TC-211-18](#tc-211-18) | Positive | AC 3, AC 4 | e2e |
 
-## TC-211-01
+### TC-211-01
 
-**Every queue lists its items in the same four columns, in its own default order.**
-
-1. Open each queue.
-
-**Expected:** the columns are Event, Event date, What's asked and Requested,
-and nothing else. What's asked is one short line: "Needs a Coordinator",
-"Seminar Room 2.1 for 40", "Projector ×1, Wireless Microphone ×4", "Safety
-check, 40 people"; a long one is cut short, not wrapped. Requested is the
-submission date and how long ago. The Unassigned Queue, Equipment Requests and
-Safety Checks list the oldest request first; Bookings the soonest event first
-(SCRUM-52 AC1). The Unassigned Queue still marks Overdue (SCRUM-165).
-
-*Automated:* `tests/unit/queues.test.ts` › every "SCRUM-211 [AC1] TC-211-01" and
-"SCRUM-211 [AC1, AC2] TC-211-01" test; `tests/unit/booking-queue.test.tsx` ›
-"SCRUM-207 TC-207-20, SCRUM-211 [AC1] TC-211-01: …"; `e2e/work-queues.spec.ts` ›
-the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02, TC-211-03, TC-211-04: …"
-tests; `e2e/lead-queue.spec.ts` (Overdue).
-
-## TC-211-02
-
-**Sorting by Event date or Requested.**
-
-1. Click the **Event date** heading, then again.
-2. Click the **Requested** heading. Refresh the page.
-
-**Expected:** the list sorts by that column, ascending first, then the other
-way (a column already sorted flips first); the heading shows which column is
-sorted and which way. An item without an event date sorts last either way.
-The sort is kept in the link, so a refresh keeps it.
-
-*Automated:* `tests/unit/queues.test.ts` › every "SCRUM-211 [AC1] TC-211-02" test;
-`e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02,
-TC-211-03, TC-211-04: …" tests.
-
-## TC-211-03
-
-**The same status filter in every queue: Waiting, Decided, All.**
-
-1. Open each queue; choose **Decided**, then **All**.
-
-**Expected:** Waiting is the default. Decided lists the queue's decided items:
-requests a Lead assigned, bookings approved or rejected (and holds that
-ended, TC-211-12), equipment requests
-approved or rejected, checks with an outcome (only for events the officer may
-review, SCRUM-166 AC6). All lists both. An opened decided item says what was
-decided, with no decision buttons. The filter is kept in the link.
-
-*Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-03: …" tests;
-`tests/integration/work-queues.test.ts` › every "SCRUM-211 [AC2] TC-211-03" test;
-`e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02,
-TC-211-03, TC-211-04: …" tests.
-
-## TC-211-04
-
-**The same search box: it matches the event's name, and in Bookings the words
-SCRUM-52 searched too.**
-
-1. Type words from an event's name; then a word no event has.
-
-**Expected:** only items for matching events are listed; every word must
-match, and case doesn't matter. In the Unassigned Queue, Equipment Requests and
-Safety Checks the rows show no person or venue, so only the event's name is
-searched. Bookings also matches the venue and its location, the Coordinator
-and their email, the layout, notes, facilities and dates, as SCRUM-52 did
-(TC-52-05, TC-211-15); its box says so. The search is kept in the link.
-
-*Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-04: …";
-`e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02,
-TC-211-03, TC-211-04: …" tests; `e2e/bookings.spec.ts` (search step).
-
-## TC-211-05
-
-**The two empty states.**
-
-1. Open a queue with nothing waiting.
-2. Search for a word no event has.
-
-**Expected:** 1: "Nothing waiting. You're all caught up." 2: "No requests match
-'…'" ("No checks match" on Safety Checks), with **Clear search**, which returns
-the full list.
-
-*Automated:* `tests/unit/booking-queue.test.tsx` › "SCRUM-52 [AC4] TC-52-06,
-SCRUM-211 [AC2] TC-211-05: …"; `tests/unit/shared-conventions-lists.test.tsx` ›
-"SCRUM-207 [AC3] TC-207-04, SCRUM-211 [AC2] TC-211-05: …";
-`e2e/work-queues.spec.ts` (search step of each list test; the caught-up state,
-TC-211-08).
-
-## TC-211-06
-
-**An opened item: details on the left, the decision on the right, the buttons in the same order.**
-
-1. Open an item in each queue (for Equipment Requests, start the review).
-
-**Expected:** the item opens on the same page, with **All requests** back to
-the list and its position ("2 of 5"). The decision is on the right, with no
-card behind it, its buttons side by side in one row (TC-211-17): positive
-first, then the middle option, then Reject:
-
-| Queue | Buttons |
+| Item | Content |
 |---|---|
-| Unassigned Queue | Assign (with the Coordinator picker) |
-| Bookings | Approve · Hold · Reject (Hold only for a Pending request; an approved hold offers Reject only, SCRUM-163 AC7) |
-| Equipment Requests | Start review first, as before; then Approve · Suggest alternative · Reject |
-| Safety Checks | Approve · Request changes · Reject |
-
-Reject asks first, in a confirmation dialog, with its reason or note still
-required; Request changes asks for its note and picked arrangements; Hold
-asks for its expiry and note.
-
-*Automated:* `tests/unit/booking-queue.test.tsx` › "SCRUM-53, SCRUM-211 [AC3]
-TC-211-06: …"; `e2e/work-queues.spec.ts` › the two "SCRUM-211 [AC3, AC4]
-TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned Queue, Safety Checks),
-"SCRUM-211 [AC3] TC-211-06, TC-211-17, TC-211-18: …" (Bookings) and
-"SCRUM-211 [AC3] TC-211-06, TC-211-16, TC-211-18: …" (Equipment Requests).
-
-## TC-211-07
-
-**After a decision, the next waiting item opens.**
-
-1. With three items waiting, decide the first.
-
-**Expected:** a short success message, and the next waiting item in the
-current filter, search and sort opens; after the last in the list, the first
-still waiting. Starting an equipment review, or suggesting an alternative, is
-not a decision: the request stays open.
-
-In the Unassigned Queue and Safety Checks the next item opens by itself. In
-Bookings and Equipment Requests an approval or a rejection ends in a pop-up
-(TC-211-18), so the same step is offered there as a **Next request** button
-inside it, shown only while something is still waiting; a hold still opens the
-next request. The Product Owner settled this on 2 Nov 2026: the pop-up stays,
-and the button carries AC4 in those two queues.
-
-*Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC4] TC-211-07: …" and
-"SCRUM-211 [AC2, AC4] TC-211-07, TC-211-08: …"; `e2e/work-queues.spec.ts` › the
-two "SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned
-Queue, Safety Checks), and the Next request button in the two
-"SCRUM-211 [AC3] TC-211-06, TC-211-17/16, TC-211-18: …" tests (Bookings,
-Equipment Requests).
-
-## TC-211-08
-
-**Boundary — after the last waiting item: all caught up.**
-
-**Expected:** "Nothing waiting. You're all caught up.", even with a search
-still in the link.
-
-*Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC4] TC-211-08: …" and
-"SCRUM-211 [AC2, AC4] TC-211-07, TC-211-08: …"; `e2e/work-queues.spec.ts` › the
-two "SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned
-Queue, Safety Checks).
-
-## TC-211-09
-
-**Negative — a refused decision stays on the item, says why as before, and writes nothing.**
-
-1. Unassigned Queue: another Lead assigns the request while it is open; choose **Assign**.
-2. Bookings: a competing request was submitted earlier; choose **Approve**.
-3. Equipment Requests: in review, choose **Reject** with no note.
-4. Safety Checks: another officer records the check while it is open; choose **Approve**.
-
-**Expected:** the same message as before, shown in the decision panel (and as
-an error message): 1 "This request is already assigned to Cara Coordinator.";
-2 "An earlier request for … is still waiting …" (SCRUM-134 AC2); 3 "Give the
-coordinator a reason for rejecting the request.", beside the note; 4 "This
-check is already Approved by Sasha Safety on …; nothing was changed." The
-item stays open, and nothing it holds changes. Where someone else decided it
-meanwhile (1, 4), the panel then shows what they decided, e.g. "Assigned to
-Cara Coordinator.", while the error message stays on screen.
-
-*Automated:* `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-09: …",
-"SCRUM-211 [AC3] TC-211-09, SCRUM-134 [AC2]: …", "SCRUM-211 [AC3] TC-211-09,
-SCRUM-28 [AC3]: …" and "SCRUM-211 [AC3] TC-211-09, SCRUM-166 [AC3]: …";
-`e2e/first-come.spec.ts` (SCRUM-134).
-
-## TC-211-10
-
-**Negative — Venue Staff see what the booking needs, not the whole event (SCRUM-17).**
-
-1. As Venue Staff, open a request whose event has a purpose, an open
-   clarification question and registration.
-
-**Expected:** the details show the venue, the period with setup and
-turnaround, attendance next to capacity, layout and facilities, the requesting
-Coordinator, overlapping bookings and unavailability, competing requests with
-their submission times, the suitability judgement, the Organiser's venue
-answers and the operational notes; not the event's purpose, its clarification
-or its registrations.
-
-*Automated:* `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-10, SCRUM-17: …".
-
-## TC-211-11
-
-**On a phone, the details come first, then the decision.**
-
-1. At 390 px wide, open a request in the Unassigned Queue.
-
-**Expected:** the decision sits below the details, and the page doesn't scroll
-sideways.
-
-*Automated:* `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-11: …".
-
-## TC-211-12
-
-**A hold that ended without a decision is under Decided in Bookings, not lost.**
-
-*Pre-conditions:* holds Venue Staff placed (SCRUM-163): one the Coordinator
-released, one marked Expired, one whose expiry has passed but which nothing
-has marked yet, and one still live.
-
-1. In **Bookings**, choose **Waiting**, then **Decided**.
-
-**Expected:** the released hold (Cancelled) and both expired ones (Expired) are
-under Decided and not under Waiting; the live hold is under Waiting and not
-under Decided. A hold that ended has no decision, so it counts from when it
-was held: the most recently held first, and a request decided today comes
-before a hold placed days ago. Opened, it says how it ended and when it was
-held.
-
-*Automated:* `tests/integration/work-queues.test.ts` › both "SCRUM-211 [AC2]
-TC-211-12: …" tests.
-
-## TC-211-13
-
-**A request cancelled before any decision is under Decided in Bookings, not lost.**
-
-*Pre-conditions:* a pending venue request its Coordinator withdrew (SCRUM-142)
-2 days ago, one released when its event was cancelled 6 days ago, and a hold
-the Coordinator released, held 3 days ago (TC-211-12).
-
-1. In **Bookings**, choose **Waiting**, then **Decided**.
-2. Open the withdrawn request.
-
-**Expected:** both cancelled requests (Cancelled) are under Decided and not
-under Waiting. With no decision or hold, each counts from when it was
-cancelled, newest first among everything decided: the withdrawn request, then
-the released hold, then the one cancelled with its event. Opened, it says
-"Cancelled before a decision, on" the date it ended.
-
-*Automated:* `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2]
-TC-211-13: a request withdrawn, or cancelled with its event, before any
-decision is under Decided, by when it ended, and no longer waiting".
-
-## TC-211-14
-
-**Safety Checks' Decided lists only checks with a recorded outcome.**
-
-*Pre-conditions:* for an event in Planning, a check approved by a Safety
-Officer, a check that went Outdated before anyone reviewed it, and one that
-was approved and then went Outdated (SCRUM-166 AC13); and an Outdated check
-for an event the officer coordinates.
-
-1. In **Safety Checks**, choose **Decided**, then **All**.
-
-**Expected:** Decided lists the approved check and the one approved and then
-outdated (it keeps its decision, shown as Outdated), and not the check that
-went Outdated before review. That one is listed under All only, marked
-Outdated. The officer's own event's check is in neither (SCRUM-166 AC6).
-
-*Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-14: an item
-neither waiting nor decided, like a check outdated before review, is only
-under All"; `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2]
-TC-211-14: a check outdated before anyone reviewed it isn't under Decided; it
-is read for All, while one approved and then outdated stays decided".
-
-## TC-211-15
-
-**Bookings' search box finds a request by its venue and by its Coordinator.**
-
-*Pre-conditions:* three pending requests Cody Coordinator made, for the
-Exhibition Hall, the Seminar Room and the Auditorium.
-
-1. In **Bookings**, type "seminar" into **Search by event, venue or
-   coordinator**; then "auditorium".
-2. Type "Cody"; then "Cara".
-
-**Expected:** "seminar" lists only the Seminar Room request, and "auditorium"
-only the Auditorium one. "Cody" lists all three; "Cara", who asked for none,
-lists nothing: "No requests match …". It is the one box every queue shares
-(AC2); Bookings searches more than the event's name because SCRUM-52 did.
-
-*Automated:* `tests/unit/booking-search.test.ts` › "SCRUM-211 [AC2] TC-211-15:
-the Bookings search finds a request by its venue and by its Coordinator, and
-not another's"; `e2e/work-queues.spec.ts` › "SCRUM-211 [AC2] TC-211-15,
-SCRUM-52 [AC1] TC-52-05: the one search box finds a request by its venue and
-by its Coordinator".
-
-## TC-211-16
-
-**A decided booking or equipment request shows how it was decided, with its buttons disabled.**
-
-*Pre-conditions:* a pending booking request, and one Venue Staff approved; an
-equipment request Technical Support approved.
-
-1. In **Bookings**, open the pending request; then open the approved one.
-2. In **Equipment Requests**, open the approved one.
-
-**Expected:** the pending request's Approve, Hold and Reject can be chosen. The
-approved one's panel reads **Decided**, with its status ("Approved by Vera
-Venue on …"), above the same three buttons, all disabled. The approved
-equipment request reads **Decided**, "Approved on …", above Approve, Suggest
-alternative and Reject, all disabled, without the note field.
-
-*Automated:* `tests/unit/booking-queue.test.tsx` › "SCRUM-211 [AC3] TC-211-16:
-a decided request shows how it was decided, above the same buttons, all
-disabled; a pending one's are enabled"; `e2e/work-queues.spec.ts` › "SCRUM-211
-[AC3] TC-211-06, TC-211-17, TC-211-18: …" and "SCRUM-211 [AC3] TC-211-06,
-TC-211-16, TC-211-18: …".
-
-## TC-211-17
-
-**The decision buttons sit side by side, with no card behind them.**
-
-1. Open an item in each queue (for Equipment Requests, start the review).
-
-**Expected:** the decision has no card around it, and its buttons share one
-row, side by side, in the order of TC-211-06; on a phone a long label wraps
-inside its button, and the page doesn't scroll sideways.
-
-*Automated:* `tests/unit/booking-queue.test.tsx` › "SCRUM-211 [AC3] TC-211-17:
-the decision buttons sit side by side in one row, with no card behind them";
-`e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-06, TC-211-17, TC-211-18:
-…" (one row, measured); `e2e/phone-and-speed.spec.ts` (no sideways scroll at
-360 px).
-
-## TC-211-18
-
-**In Bookings and Equipment Requests, approving or rejecting ends in a pop-up that leads back to the list, or stays on the request.**
-
-*Pre-conditions:* three pending requests.
-
-1. Open the first and choose **Approve**.
-2. Choose **View this booking**.
-3. Open the second, choose **Reject**, give a reason, and confirm.
-4. Choose **Back to booking requests**.
-
-**Expected:** 1: the animated pop-up (SCRUM-207), "Request approved", saying
-"Approved: … is now booked for …", with **Back to booking requests**, the
-larger button, and **View this booking**. 2: the pop-up closes on the same
-request, now Approved, its buttons disabled (TC-211-16). 3: "Request
-rejected", "Rejected the request for …". 4: the list, as filtered and
-searched, without the decided requests. A refused decision shows no pop-up
-(TC-211-09). Equipment Requests does the same, with **Back to equipment
-requests** and **View this request**, after "Request approved. The
-coordinator has been notified." or "Request rejected. …". The pop-up also
-offers **Next request**, which opens the next waiting one, so AC4 is kept in
-these two queues without opening it unasked (TC-211-07); it is left out once
-nothing is waiting. The Product Owner settled this on 2 Nov 2026.
-
-*Automated:* `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-06, TC-211-17,
-TC-211-18: Approve, Hold, Reject side by side; approving or rejecting ends in
-a pop-up that leads back to the list or stays on the request, now decided" and
-"SCRUM-211 [AC3] TC-211-06, TC-211-16, TC-211-18: in review, Approve, Suggest
-alternative, Reject side by side; approving or rejecting ends in the pop-up,
-which leads back to the list or stays on the request, now decided".
+| Test Case ID | TC-211-01 |
+| Test Scenario | [Positive] AC 1: Every queue lists its items in the same four columns, in its own default order. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Open each queue. |
+| Test Data | — |
+| Expected Result | the columns are Event, Event date, What's asked and Requested, and nothing else. What's asked is one short line: "Needs a Coordinator", "Seminar Room 2.1 for 40", "Projector ×1, Wireless Microphone ×4", "Safety check, 40 people"; a long one is cut short, not wrapped. Requested is the submission date and how long ago. The Unassigned Queue, Equipment Requests and Safety Checks list the oldest request first; Bookings the soonest event first (SCRUM-52 AC1). The Unassigned Queue still marks Overdue (SCRUM-165). |
+
+**Automated by:** `tests/unit/queues.test.ts` › every "SCRUM-211 [AC1] TC-211-01" and "SCRUM-211 [AC1, AC2] TC-211-01" test; `tests/unit/booking-queue.test.tsx` › "SCRUM-207 TC-207-20, SCRUM-211 [AC1] TC-211-01: …"; `e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02, TC-211-03, TC-211-04: …" tests; `e2e/lead-queue.spec.ts` (Overdue).
+
+### TC-211-02
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-02 |
+| Test Scenario | [Positive, Boundary] AC 1: Sorting by Event date or Requested. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Click the **Event date** heading, then again. <br> 2. Click the **Requested** heading. Refresh the page. |
+| Test Data | — |
+| Expected Result | the list sorts by that column, ascending first, then the other way (a column already sorted flips first); the heading shows which column is sorted and which way. An item without an event date sorts last either way. The sort is kept in the link, so a refresh keeps it. |
+
+**Automated by:** `tests/unit/queues.test.ts` › every "SCRUM-211 [AC1] TC-211-02" test; `e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02, TC-211-03, TC-211-04: …" tests.
+
+### TC-211-03
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-03 |
+| Test Scenario | [Positive] AC 2: The same status filter in every queue: Waiting, Decided, All. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Open each queue; choose **Decided**, then **All**. |
+| Test Data | — |
+| Expected Result | Waiting is the default. Decided lists the queue's decided items: requests a Lead assigned, bookings approved or rejected (and holds that ended, TC-211-12), equipment requests approved or rejected, checks with an outcome (only for events the officer may review, SCRUM-166 AC6). All lists both. An opened decided item says what was decided, with no decision buttons. The filter is kept in the link. |
+
+**Automated by:** `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-03: …" tests; `tests/integration/work-queues.test.ts` › every "SCRUM-211 [AC2] TC-211-03" test; `e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02, TC-211-03, TC-211-04: …" tests.
+
+### TC-211-04
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-04 |
+| Test Scenario | [Positive] AC 2: The same search box: it matches the event's name, and in Bookings the words SCRUM-52 searched too. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Type words from an event's name; then a word no event has. |
+| Test Data | — |
+| Expected Result | only items for matching events are listed; every word must match, and case doesn't matter. In the Unassigned Queue, Equipment Requests and Safety Checks the rows show no person or venue, so only the event's name is searched. Bookings also matches the venue and its location, the Coordinator and their email, the layout, notes, facilities and dates, as SCRUM-52 did (TC-52-05, TC-211-15); its box says so. The search is kept in the link. |
+
+**Automated by:** `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-04: …"; `e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02, TC-211-03, TC-211-04: …" tests; `e2e/bookings.spec.ts` (search step).
+
+### TC-211-05
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-05 |
+| Test Scenario | [Positive] AC 2: The two empty states. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Open a queue with nothing waiting. <br> 2. Search for a word no event has. |
+| Test Data | — |
+| Expected Result | 1: "Nothing waiting. You're all caught up." 2: "No requests match '…'" ("No checks match" on Safety Checks), with **Clear search**, which returns the full list. |
+
+**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-52 [AC4] TC-52-06, SCRUM-211 [AC2] TC-211-05: …"; `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC3] TC-207-04, SCRUM-211 [AC2] TC-211-05: …"; `e2e/work-queues.spec.ts` (search step of each list test; the caught-up state, TC-211-08).
+
+### TC-211-06
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-06 |
+| Test Scenario | [Positive] AC 3: An opened item: details on the left, the decision on the right, the buttons in the same order. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Open an item in each queue (for Equipment Requests, start the review). |
+| Test Data | — |
+| Expected Result | the item opens on the same page, with **All requests** back to the list and its position ("2 of 5"). The decision is on the right, with no card behind it, its buttons side by side in one row (TC-211-17): positive first, then the middle option, then Reject: Unassigned Queue: Assign (with the Coordinator picker). Bookings: Approve · Hold · Reject (Hold only for a Pending request; an approved hold offers Reject only, SCRUM-163 AC7). Equipment Requests: Start review first, as before; then Approve · Suggest alternative · Reject. Safety Checks: Approve · Request changes · Reject. Reject asks first, in a confirmation dialog, with its reason or note still required; Request changes asks for its note and picked arrangements; Hold asks for its expiry and note. |
+
+**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-53, SCRUM-211 [AC3] TC-211-06: …"; `e2e/work-queues.spec.ts` › the two "SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned Queue, Safety Checks), "SCRUM-211 [AC3] TC-211-06, TC-211-17, TC-211-18: …" (Bookings) and "SCRUM-211 [AC3] TC-211-06, TC-211-16, TC-211-18: …" (Equipment Requests).
+
+### TC-211-07
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-07 |
+| Test Scenario | [Positive] AC 4: After a decision, the next waiting item opens. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. With three items waiting, decide the first. |
+| Test Data | — |
+| Expected Result | a short success message, and the next waiting item in the current filter, search and sort opens; after the last in the list, the first still waiting. Starting an equipment review, or suggesting an alternative, is not a decision: the request stays open. In the Unassigned Queue and Safety Checks the next item opens by itself. In Bookings and Equipment Requests an approval or a rejection ends in a pop-up (TC-211-18), so the same step is offered there as a **Next request** button inside it, shown only while something is still waiting; a hold still opens the next request. The Product Owner settled this on 2 Nov 2026: the pop-up stays, and the button carries AC4 in those two queues. |
+
+**Automated by:** `tests/unit/queues.test.ts` › "SCRUM-211 [AC4] TC-211-07: …" and "SCRUM-211 [AC2, AC4] TC-211-07, TC-211-08: …"; `e2e/work-queues.spec.ts` › the two "SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned Queue, Safety Checks), and the Next request button in "SCRUM-211 [AC3] TC-211-06, TC-211-17, TC-211-18: …" (Bookings) and "SCRUM-211 [AC3] TC-211-06, TC-211-16, TC-211-18: …" (Equipment Requests).
+
+### TC-211-08
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-08 |
+| Test Scenario | [Boundary] AC 4: After the last waiting item: all caught up. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Decide the last waiting item. |
+| Test Data | — |
+| Expected Result | "Nothing waiting. You're all caught up.", even with a search still in the link. |
+
+**Automated by:** `tests/unit/queues.test.ts` › "SCRUM-211 [AC4] TC-211-08: …" and "SCRUM-211 [AC2, AC4] TC-211-07, TC-211-08: …"; `e2e/work-queues.spec.ts` › the two "SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: …" tests (Unassigned Queue, Safety Checks).
+
+### TC-211-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-09 |
+| Test Scenario | [Negative] AC 3, AC 4: A refused decision stays on the item, says why as before, and writes nothing. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Unassigned Queue: another Lead assigns the request while it is open; choose **Assign**. <br> 2. Bookings: a competing request was submitted earlier; choose **Approve**. <br> 3. Equipment Requests: in review, choose **Reject** with no note. <br> 4. Safety Checks: another officer records the check while it is open; choose **Approve**. |
+| Test Data | — |
+| Expected Result | the same message as before, shown in the decision panel (and as an error message): 1 "This request is already assigned to Cara Coordinator."; 2 "An earlier request for … is still waiting …" (SCRUM-134 AC2); 3 "Give the coordinator a reason for rejecting the request.", beside the note; 4 "This check is already Approved by Sasha Safety on …; nothing was changed." The item stays open, and nothing it holds changes. Where someone else decided it meanwhile (1, 4), the panel then shows what they decided, e.g. "Assigned to Cara Coordinator.", while the error message stays on screen. |
+
+**Automated by:** `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-09: …", "SCRUM-211 [AC3] TC-211-09, SCRUM-134 [AC2]: …", "SCRUM-211 [AC3] TC-211-09, SCRUM-28 [AC3]: …" and "SCRUM-211 [AC3] TC-211-09, SCRUM-166 [AC3]: …"; `e2e/first-come.spec.ts` (SCRUM-134).
+
+### TC-211-10
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-10 |
+| Test Scenario | [Negative] AC 3: Venue Staff see what the booking needs, not the whole event (SCRUM-17). |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. As Venue Staff, open a request whose event has a purpose, an open clarification question and registration. |
+| Test Data | — |
+| Expected Result | the details show the venue, the period with setup and turnaround, attendance next to capacity, layout and facilities, the requesting Coordinator, overlapping bookings and unavailability, competing requests with their submission times, the suitability judgement, the Organiser's venue answers and the operational notes; not the event's purpose, its clarification or its registrations. |
+
+**Automated by:** `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-10, SCRUM-17: …".
+
+### TC-211-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-11 |
+| Test Scenario | [Positive] AC 3: On a phone, the details come first, then the decision. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. At 390 px wide, open a request in the Unassigned Queue. |
+| Test Data | — |
+| Expected Result | the decision sits below the details, and the page doesn't scroll sideways. |
+
+**Automated by:** `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-11: …".
+
+### TC-211-12
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-12 |
+| Test Scenario | [Positive, Boundary] AC 2: A hold that ended without a decision is under Decided in Bookings, not lost. |
+| Pre-conditions | holds Venue Staff placed (SCRUM-163): one the Coordinator released, one marked Expired, one whose expiry has passed but which nothing has marked yet, and one still live. |
+| Test Steps | 1. In **Bookings**, choose **Waiting**, then **Decided**. |
+| Test Data | — |
+| Expected Result | the released hold (Cancelled) and both expired ones (Expired) are under Decided and not under Waiting; the live hold is under Waiting and not under Decided. A hold that ended has no decision, so it counts from when it was held: the most recently held first, and a request decided today comes before a hold placed days ago. Opened, it says how it ended and when it was held. |
+
+**Automated by:** `tests/integration/work-queues.test.ts` › both "SCRUM-211 [AC2] TC-211-12: …" tests.
+
+### TC-211-13
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-13 |
+| Test Scenario | [Positive, Boundary] AC 2: A request cancelled before any decision is under Decided in Bookings, not lost. |
+| Pre-conditions | a pending venue request its Coordinator withdrew (SCRUM-142) 2 days ago, one released when its event was cancelled 6 days ago, and a hold the Coordinator released, held 3 days ago (TC-211-12). |
+| Test Steps | 1. In **Bookings**, choose **Waiting**, then **Decided**. <br> 2. Open the withdrawn request. |
+| Test Data | — |
+| Expected Result | both cancelled requests (Cancelled) are under Decided and not under Waiting. With no decision or hold, each counts from when it was cancelled, newest first among everything decided: the withdrawn request, then the released hold, then the one cancelled with its event. Opened, it says "Cancelled before a decision, on" the date it ended. |
+
+**Automated by:** `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2] TC-211-13: a request withdrawn, or cancelled with its event, before any decision is under Decided, by when it ended, and no longer waiting".
+
+### TC-211-14
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-14 |
+| Test Scenario | [Positive, Negative] AC 2: Safety Checks' Decided lists only checks with a recorded outcome. |
+| Pre-conditions | for an event in Planning, a check approved by a Safety Officer, a check that went Outdated before anyone reviewed it, and one that was approved and then went Outdated (SCRUM-166 AC13); and an Outdated check for an event the officer coordinates. |
+| Test Steps | 1. In **Safety Checks**, choose **Decided**, then **All**. |
+| Test Data | — |
+| Expected Result | Decided lists the approved check and the one approved and then outdated (it keeps its decision, shown as Outdated), and not the check that went Outdated before review. That one is listed under All only, marked Outdated. The officer's own event's check is in neither (SCRUM-166 AC6). |
+
+**Automated by:** `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-14: an item neither waiting nor decided, like a check outdated before review, is only under All"; `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2] TC-211-14: a check outdated before anyone reviewed it isn't under Decided; it is read for All, while one approved and then outdated stays decided".
+
+### TC-211-15
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-15 |
+| Test Scenario | [Positive, Negative] AC 2: Bookings' search box finds a request by its venue and by its Coordinator. |
+| Pre-conditions | three pending requests Cody Coordinator made, for the Exhibition Hall, the Seminar Room and the Auditorium. |
+| Test Steps | 1. In **Bookings**, type "seminar" into **Search by event, venue or coordinator**; then "auditorium". <br> 2. Type "Cody"; then "Cara". |
+| Test Data | — |
+| Expected Result | "seminar" lists only the Seminar Room request, and "auditorium" only the Auditorium one. "Cody" lists all three; "Cara", who asked for none, lists nothing: "No requests match …". It is the one box every queue shares (AC2); Bookings searches more than the event's name because SCRUM-52 did. |
+
+**Automated by:** `tests/unit/booking-search.test.ts` › "SCRUM-211 [AC2] TC-211-15: the Bookings search finds a request by its venue and by its Coordinator, and not another's"; `e2e/work-queues.spec.ts` › "SCRUM-211 [AC2] TC-211-15, SCRUM-52 [AC1] TC-52-05: the one search box finds a request by its venue and by its Coordinator".
+
+### TC-211-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-16 |
+| Test Scenario | [Positive] AC 3: A decided booking or equipment request shows how it was decided, with its buttons disabled. |
+| Pre-conditions | a pending booking request, and one Venue Staff approved; an equipment request Technical Support approved. |
+| Test Steps | 1. In **Bookings**, open the pending request; then open the approved one. <br> 2. In **Equipment Requests**, open the approved one. |
+| Test Data | — |
+| Expected Result | the pending request's Approve, Hold and Reject can be chosen. The approved one's panel reads **Decided**, with its status ("Approved by Vera Venue on …"), above the same three buttons, all disabled. The approved equipment request reads **Decided**, "Approved on …", above Approve, Suggest alternative and Reject, all disabled, without the note field. |
+
+**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-211 [AC3] TC-211-16: a decided request shows how it was decided, above the same buttons, all disabled; a pending one's are enabled"; `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-06, TC-211-17, TC-211-18: …" and "SCRUM-211 [AC3] TC-211-06, TC-211-16, TC-211-18: …".
+
+### TC-211-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-17 |
+| Test Scenario | [Positive] AC 3: The decision buttons sit side by side, with no card behind them. |
+| Pre-conditions | The shared pre-conditions above. |
+| Test Steps | 1. Open an item in each queue (for Equipment Requests, start the review). |
+| Test Data | — |
+| Expected Result | the decision has no card around it, and its buttons share one row, side by side, in the order of TC-211-06; on a phone a long label wraps inside its button, and the page doesn't scroll sideways. |
+
+**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-211 [AC3] TC-211-17: the decision buttons sit side by side in one row, with no card behind them"; `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-06, TC-211-17, TC-211-18: …" (one row, measured); `e2e/phone-and-speed.spec.ts` (no sideways scroll at 360 px).
+
+### TC-211-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-211-18 |
+| Test Scenario | [Positive] AC 3, AC 4: In Bookings and Equipment Requests, approving or rejecting ends in a pop-up that leads back to the list, or stays on the request. |
+| Pre-conditions | three pending requests. |
+| Test Steps | 1. Open the first and choose **Approve**. <br> 2. Choose **View this booking**. <br> 3. Open the second, choose **Reject**, give a reason, and confirm. <br> 4. Choose **Back to booking requests**. |
+| Test Data | — |
+| Expected Result | 1: the animated pop-up (SCRUM-207), "Request approved", saying "Approved: … is now booked for …", with **Back to booking requests**, the larger button, and **View this booking**. 2: the pop-up closes on the same request, now Approved, its buttons disabled (TC-211-16). 3: "Request rejected", "Rejected the request for …". 4: the list, as filtered and searched, without the decided requests. A refused decision shows no pop-up (TC-211-09). Equipment Requests does the same, with **Back to equipment requests** and **View this request**, after "Request approved. The coordinator has been notified." or "Request rejected. …". The pop-up also offers **Next request**, which opens the next waiting one, so AC4 is kept in these two queues without opening it unasked (TC-211-07); it is left out once nothing is waiting. The Product Owner settled this on 2 Nov 2026. |
+
+**Automated by:** `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-06, TC-211-17, TC-211-18: Approve, Hold, Reject side by side; approving or rejecting ends in a pop-up that leads back to the list or stays on the request, now decided" and "SCRUM-211 [AC3] TC-211-06, TC-211-16, TC-211-18: in review, Approve, Suggest alternative, Reject side by side; approving or rejecting ends in the pop-up, which leads back to the list or stays on the request, now decided".

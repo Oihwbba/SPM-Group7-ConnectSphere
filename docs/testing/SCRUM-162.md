@@ -41,7 +41,7 @@ time.
 | Test Data | Exhibition Hall, 9:10 am–12:45 pm, 120 |
 | Expected Result | "Request submitted". The event now has two bookings: the Grand Auditorium and the Exhibition Hall. The other venue's approval doesn't make this one unavailable: availability is checked for the requested venue only. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC1] TC-162-01: an event with a pending booking at another venue gets a new request for this one, linked to the same event" (and the approved one)
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC1] TC-162-01: an event with a pending booking at another venue gets a new request for this one, linked to the same event" (and the approved one); `e2e/several-venues.spec.ts` › "SCRUM-162 [AC1, AC7, AC8] TC-162-01, TC-162-11, TC-162-12, TC-162-13: a Coordinator requests a hall and a breakout room for one event, …"
 
 ### TC-162-02
 
@@ -171,7 +171,7 @@ time.
 | Test Data | — |
 | Expected Result | Step 1: **Venue bookings** lists all three, oldest first, each with its venue, attendance, period and status; an expired hold reads Expired. Step 2: Confirmed arrangements lists both approved venues. Step 3: both approved venues' names and locations show. Step 4: "Event not found." and nothing is read. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC7] TC-162-11: lists every booking of the event, …" and "SCRUM-81 [AC6] TC-81-06, SCRUM-162 [AC7] TC-162-11: when two approved bookings cover the event, the Organiser sees both venues, oldest first"; `tests/unit/readiness-actions.test.ts` › "SCRUM-162 [AC7] TC-162-11: $who sees every venue booking of the event" (2 tests) and "… is told the event was not found, and no booking is read" (4 tests); `tests/unit/attendee-events.test.ts` › "SCRUM-162 [AC7] TC-162-11: the detail read brings every approved venue's name and location, in the order requested" and "SCRUM-162 [AC7] TC-162-11, SCRUM-72 [AC1, AC2] TC-72-01: [Positive] fetches every approved booking's venue, …"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC7] TC-162-11: lists every booking of the event, …" and "SCRUM-81 [AC6] TC-81-06, SCRUM-162 [AC7] TC-162-11: when two approved bookings cover the event, the Organiser sees both venues, oldest first"; `tests/unit/readiness-actions.test.ts` › "SCRUM-162 [AC7] TC-162-11: $who sees every venue booking of the event" (2 tests) and "… is told the event was not found, and no booking is read" (4 tests); `tests/unit/attendee-events.test.ts` › "SCRUM-162 [AC7] TC-162-11: the detail read brings every approved venue's name and location, in the order requested" and "SCRUM-162 [AC7] TC-162-11, SCRUM-72 [AC1, AC2] TC-72-01: [Positive] fetches every approved booking's venue, …"; `e2e/several-venues.spec.ts` › "SCRUM-162 [AC1, AC7, AC8] TC-162-01, TC-162-11, TC-162-12, TC-162-13: a Coordinator requests a hall and a breakout room for one event, …" and "SCRUM-162 [AC7] TC-162-11: once Confirmed, the Organiser and Attendees see every approved venue"
 
 ### TC-162-12
 
@@ -184,7 +184,7 @@ time.
 | Test Data | — |
 | Expected Result | Venue booking reads "Approved" and is complete; it lists the two approved venues, oldest first, each with its attendance. Ended bookings aren't listed. The Organiser sees the same states but not a flag's reason. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC8] TC-162-12: every booking approved for the whole event completes the item, …", "SCRUM-162 [AC8] TC-162-12: a rejected, cancelled or expired booking isn't listed …" and "SCRUM-110 [AC6] TC-110-12, SCRUM-162 [AC8] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC8] TC-162-12: every booking approved for the whole event completes the item, …", "SCRUM-162 [AC8] TC-162-12: a rejected, cancelled or expired booking isn't listed …" and "SCRUM-110 [AC6] TC-110-12, SCRUM-162 [AC8] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason"; `e2e/several-venues.spec.ts` › "SCRUM-162 [AC1, AC7, AC8] TC-162-01, TC-162-11, TC-162-12, TC-162-13: a Coordinator requests a hall and a breakout room for one event, …"
 
 ### TC-162-13
 
@@ -197,7 +197,7 @@ time.
 | Test Data | — |
 | Expected Result | Incomplete each time, so the event isn't ready to confirm. The item reads what stands in the way first: a flagged booking's status with the Needs Reconsideration badge and its reason (SCRUM-131 AC3), then "Held until … – confirm to secure", then "Pending", then "Approved for a different time". The hold keeps its Confirm and Release buttons and a pending request its Withdraw button, on its own line. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC8] TC-162-13: …" (4 tests); `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC6] TC-163-11, SCRUM-162 [AC8] TC-162-13: a pending request after an expired hold reads Pending; a live hold beside an approval keeps the venue incomplete"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC8] TC-162-13: …" (4 tests); `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC6] TC-163-11, SCRUM-162 [AC8] TC-162-13: a pending request after an expired hold reads Pending; a live hold beside an approval keeps the venue incomplete"; `e2e/several-venues.spec.ts` › "SCRUM-162 [AC1, AC7, AC8] TC-162-01, TC-162-11, TC-162-12, TC-162-13: a Coordinator requests a hall and a breakout room for one event, …"
 
 ### TC-162-14
 

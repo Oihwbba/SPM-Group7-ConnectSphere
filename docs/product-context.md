@@ -87,7 +87,7 @@ row lock (ADR 0006 for the Coordinator's decision).
 | **Review** | The Coordinator can ask the Organiser a question and name the fields the answer may change. While a question is open the event stays Under Review; "awaiting clarification" is shown, not stored as a status. | SCRUM-17, 18, 108, ADR 0014 |
 | **Approve** | Approval moves the event straight to **Planning**: "Approved means there is enough information to start planning." Approved is recorded in the history but never stored on its own. | SCRUM-19, 81, ADR 0012 |
 | **Reject** | A rejection always has a reason and an outcome chosen by the Coordinator: **amend and resubmit** (back to the same Coordinator) or **submit as a new request** (a copy starts as a new Draft). | SCRUM-19, 126, 108, ADR 0013 |
-| **Planning** | The Coordinator books one venue and raises one equipment request. Venue Staff and Technical Support decide them. A Planning event that can't be fulfilled is rejected, and its bookings and reservations are released in the same step. Since Week 7 an event can book several venues, each requested and decided on its own (SCRUM-162), and Venue Staff can hold a venue until a deadline instead of approving it (SCRUM-163). Until the event is Confirmed, the Organiser can ask for changes through a change request (SCRUM-41), which the Coordinator decides and applies (SCRUM-128). | SCRUM-50, 53, 27, 28, 117, ADR 0015; SCRUM-162, 163, 41, 128 |
+| **Planning** | The Coordinator books one or more venues, each requested and decided on its own (SCRUM-162), and raises an equipment request. Venue Staff and Technical Support decide them; Venue Staff can hold a venue until a deadline instead of approving it (SCRUM-163). A Planning event that can't be fulfilled is rejected, and its bookings and reservations are released in the same step. Until the event is Confirmed, the Organiser can ask for changes through a change request (SCRUM-41), which the Coordinator decides and applies (SCRUM-128). | SCRUM-50, 53, 27, 28, 117, ADR 0015; SCRUM-162, 163, 41, 128 |
 | **Confirm** | A readiness checklist shows what is still missing (the venue, and the equipment if any was requested). When it is complete, only the assigned Coordinator can confirm: "Confirmed means the essential arrangements are complete." Week 7 change 6 adds a step: the Safety Officer must approve the event's safety check before it can be confirmed; the checklist's Safety check item is complete only once a check is Approved (SCRUM-166). | SCRUM-110, 81, ADR 0011, 0012; SCRUM-166 |
 | **Registration** | Attendees register for an event open for registration, up to its expected attendance, within its registration period. | SCRUM-72 to 77 |
 
@@ -100,13 +100,13 @@ row lock (ADR 0006 for the Coordinator's decision).
   approved booking blocks the venue for that period, and the database refuses
   a clash, even when two approvals happen at the same instant (SCRUM-50, 53,
   ADR 0010).
-- **Week 7 rules, in the database already, in the screens not yet.** The
-  Week 7 migration (SCRUM-172, ADR 0010's addendum) already has the database
-  enforce these; each story adds the screens:
-  - a booking also blocks the venue for its setup and turnaround time
-    (SCRUM-159, 160);
-  - unavailability can be recorded over existing bookings, which are then
-    flagged for a replacement venue (SCRUM-161).
+- **Setup, turnaround and unavailability.** The database enforces these
+  (SCRUM-172, ADR 0010's addendum), and the screens show them:
+  - a booking also blocks the venue for its setup and turnaround time, and a
+    longer setup or turnaround flags the bookings it makes clash, moving none
+    (SCRUM-159, 160, ADR 0021);
+  - Venue Staff can record unavailability over existing bookings, which are
+    then flagged Needs Reconsideration for a replacement venue (SCRUM-161).
 - **Equipment** is requested as lines (type, quantity, technical
   requirements). Technical Support reviews the request, and **approving it
   doesn't hold any stock**. Stock is held only when Technical Support reserves

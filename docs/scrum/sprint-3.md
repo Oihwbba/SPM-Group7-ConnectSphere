@@ -169,10 +169,44 @@ a separate recording.
 
 - **Product Owner:** Caylern, who reviewed pull requests and took no stories.
   Hann Qian was Scrum Master.
-- **What was demonstrated, and what was accepted or sent back:** _To be
-  completed by the team_ from recording 1.
-  The minutes in the team's SPM Documentation (Google Docs) are still a draft
-  written before the meeting.
+- **What was demonstrated, and what was accepted or sent back.** Each
+  developer demonstrated their own stories live in the production app with the
+  seed accounts; steps the seed data can't show were demonstrated by running
+  their end-to-end tests.
+  - **Hann Qian:** SCRUM-164 and 165 (the Lead and Safety Officer roles; the
+    Unassigned Queue), SCRUM-21 and 141 (reassigning; every event read-only),
+    SCRUM-162 (several venues per event), and SCRUM-70, 77 and 85
+    (registrations, withdrawal, the attendee notice).
+  - **Felicia:** SCRUM-34 (venue catalogue), SCRUM-38 and 40 (search and
+    suitability), SCRUM-161 (unavailability over existing bookings), SCRUM-25
+    and 170 (event details, the Organiser's requirements), SCRUM-75 and 171
+    (registration window, Registration needed), and SCRUM-131 and 132 (status
+    names, phone view and speed).
+  - **Jin Hong:** SCRUM-163 (holds), SCRUM-134 (first come, first served, by
+    its end-to-end test), SCRUM-142 (changing or withdrawing requests),
+    SCRUM-32 and 41 (equipment reports, change requests), and SCRUM-45, 48, 124
+    and 121 (notifications; one account with several roles).
+  - **Jun Bin:** SCRUM-159 and 160 (setup and turnaround; the clash case by its
+    end-to-end test), SCRUM-128 and 26 (deciding change requests, resolving
+    flags), SCRUM-166 (safety check; the full flow by its end-to-end test), and
+    SCRUM-135 and 82 (status transitions; cancellation and completion).
+
+  The Product Owner, Caylern, **accepted all 34 stories (126 points); none was
+  sent back.** Before accepting, he asked how an attendance change after an
+  approved safety check is handled (the check becomes Outdated, so the event
+  can't be confirmed until it is checked again) and what happens to an
+  unconfirmed hold (it lapses at its expiry, after a 24-hour reminder).
+
+  Two issues were raised and recorded as new backlog items, with the stories
+  staying Done: the venue suitability reason is very long on the phone view
+  (SCRUM-40), and the Unassigned Queue shows Overdue but not how long a request
+  has waited (SCRUM-165).
+
+  Recorded on 4 Nov by the Sprint 3 Product Owner from the meeting minutes
+  (Sprint 3 Review, Retrospective and Sprint 4 Planning, in the team's Drive)
+  and Jira, where each story was moved to Done on 21 Oct. Recording 1 wasn't
+  uploaded to the team folder, so it was not re-watched; recordings are kept
+  only for the final sprint.
 
 What Jira and git already show:
 

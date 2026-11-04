@@ -163,3 +163,22 @@ and SCRUM-108 AC11 had allowed).
 - Refusals read the same everywhere.
 - A Submitted request no Coordinator was assigned to waits in the Lead's
   Unassigned queue (SCRUM-165).
+
+---
+
+## Addendum (2026-11-03) — The event page replaced the details modal (SCRUM-208, SCRUM-275)
+
+Points 2 and 3 of the 2026-09-19 addendum describe an `EventDetailsModal` that
+no longer exists. Since SCRUM-208 (#275), each event has its own page, and the
+decision is unchanged: it stays current by refreshing itself, without a socket
+or a client-side copy of the status.
+
+- `app/(app)/events/[id]/event-page.tsx` asks `isEventStillVisible` every
+  4 seconds while the tab is visible. If the user can still see the event, it
+  calls `router.refresh()`; if not (reassigned or removed), it keeps the last
+  view and shows the "no longer available in your view" notice, instead of
+  "not found".
+- The events list still refreshes itself the same way.
+- `e2e/events.spec.ts` ("SCRUM-24 [AC7] TC-24-05") opens the event page as the
+  Organiser and checks that the status follows the Coordinator's approval to
+  Planning without a reload.
