@@ -92,6 +92,8 @@ const CHANGES_NO_DATA = new Set([
 const NO_CONFIRMATION: Record<string, string> = {
   markNotificationRead:
     "it happens as the notification opens, and the list or page it opens is the confirmation (TC-132-09)",
+  decideBookingRequest:
+    "approving or rejecting ends in the SCRUM-207 pop-up, which says what was decided (TC-211-18), not a toast",
 };
 
 const FIELD_ERRORS_NOT_READ: Record<string, string> = {

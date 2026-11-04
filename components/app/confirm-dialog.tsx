@@ -13,8 +13,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-/** What a confirmed action reports back; an `ActionResult` fits as it is. */
-export type ConfirmOutcome = { ok: true } | { ok: false; error: string };
+/**
+ * What a confirmed action reports back; an `ActionResult` fits as it is.
+ * Nothing (`void`) means the action showed its own outcome, e.g. a refusal
+ * next to a field on the page, so the dialog just closes.
+ */
+export type ConfirmOutcome = { ok: true } | { ok: false; error: string } | void;
 
 /**
  * SCRUM-207 AC5 — runs the confirmed action. Success closes the dialog; a
@@ -26,7 +30,7 @@ export async function runConfirmed(
   on: { close: () => void; fail: (error: string) => void },
 ): Promise<void> {
   const result = await action();
-  if (result.ok) on.close();
+  if (!result || result.ok) on.close();
   else on.fail(result.error);
 }
 
@@ -39,6 +43,10 @@ type Wording = {
   cancelLabel?: string;
   /** The action can't be undone and takes something away: a red button. */
   destructive?: boolean;
+  /** False while a field the action needs, inside the dialog, is still empty. */
+  ready?: boolean;
+  /** Fields the action needs, such as a reason, shown under the message. */
+  children?: React.ReactNode;
 };
 
 /** The dialog's contents, separate so they render without a browser. */
@@ -49,6 +57,8 @@ export function ConfirmDialogBody({
   pendingLabel,
   cancelLabel = "Cancel",
   destructive = false,
+  ready = true,
+  children,
   pending,
   error,
   onConfirm,
@@ -65,6 +75,7 @@ export function ConfirmDialogBody({
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{message}</DialogDescription>
       </DialogHeader>
+      {children}
       {error && (
         <p
           role="alert"
@@ -86,7 +97,7 @@ export function ConfirmDialogBody({
         </Button>
         <Button
           variant={destructive ? "destructive" : "default"}
-          disabled={pending}
+          disabled={pending || !ready}
           onClick={onConfirm}
           className="h-11 sm:h-10"
           data-testid="confirm-dialog-confirm"
@@ -100,20 +111,29 @@ export function ConfirmDialogBody({
 
 /**
  * SCRUM-207 AC5 — the one dialog every action that can't be undone asks in.
- * `trigger` opens it; nothing happens until the user confirms, and the way
- * back changes nothing.
+ * `trigger` opens it, or the page does, through `open` and `onOpenChange`;
+ * nothing happens until the user confirms, and the way back changes nothing.
  */
 export function ConfirmDialog({
   trigger,
+  open: shownByPage,
+  onOpenChange,
   onConfirm,
   testId,
   ...wording
 }: Wording & {
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onConfirm: () => Promise<ConfirmOutcome>;
   testId?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [shownByTrigger, setShownByTrigger] = useState(false);
+  const open = shownByPage ?? shownByTrigger;
+  const setOpen = (next: boolean) => {
+    setShownByTrigger(next);
+    onOpenChange?.(next);
+  };
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -133,7 +153,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent hideClose className="max-w-md" data-testid={testId}>
         <ConfirmDialogBody
           {...wording}

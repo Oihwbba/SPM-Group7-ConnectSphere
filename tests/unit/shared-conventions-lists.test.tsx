@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { ReviewQueue } from "@/app/(app)/equipment-requests/review-queue";
+import { ReviewDetails } from "@/app/(app)/equipment-requests/review-queue";
+import { WorkQueue } from "@/components/queues/work-queue";
+import { queueState } from "@/lib/queues";
 import { CoordinatorRequests } from "@/app/(app)/equipment-requests/coordinator-requests";
 import type {
   CoordinatorEquipmentRequest,
@@ -10,7 +12,7 @@ import type {
 
 // Rendering only: no action, router call or note is reached.
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }));
 vi.mock("@/app/(app)/equipment-requests/actions", () => ({
   updateEquipmentRequestStatus: vi.fn(),
@@ -44,23 +46,29 @@ const request = {
 };
 
 describe("SCRUM-207 — shared page conventions in the equipment request lists", () => {
-  it("SCRUM-207 [AC2] TC-207-03: a request's row shows its status with the shared badge and the story's name for it", () => {
+  it("SCRUM-207 [AC2] TC-207-03: an opened request shows its status with the shared badge and the story's name for it", () => {
     const html = renderToStaticMarkup(
-      <ReviewQueue requests={[request as unknown as QueuedEquipmentRequest]} />,
+      <ReviewDetails request={request as unknown as QueuedEquipmentRequest} />,
     );
-    expect(html).toContain('data-testid="review-row"');
+    expect(html).toContain('data-testid="review-request"');
     expect(html).toMatch(
       /data-testid="request-status"[^>]*><svg[\s\S]*?<\/svg><span>Pending Review<\/span>/,
     );
   });
 
-  it("SCRUM-207 [AC3] TC-207-04: an empty review queue says why it is empty and what comes next", () => {
-    const html = renderToStaticMarkup(<ReviewQueue requests={[]} />);
-    expect(html).toContain("No requests waiting for review");
-    expect(html).toContain(
-      "New equipment requests from coordinators appear here.",
+  it("SCRUM-207 [AC3] TC-207-04, SCRUM-211 [AC2] TC-211-05: an empty review queue says nothing is waiting", () => {
+    const defaults = { sort: "requested", dir: "asc" } as const;
+    const html = renderToStaticMarkup(
+      <WorkQueue
+        title="Equipment requests"
+        description=""
+        base="/equipment-requests"
+        state={queueState("/equipment-requests", [], {}, defaults)}
+        defaults={defaults}
+      />,
     );
-    expect(html).not.toContain('data-testid="review-row"');
+    expect(html).toContain("Nothing waiting. You&#x27;re all caught up.");
+    expect(html).not.toContain('data-testid="queue-row"');
   });
 
   it("SCRUM-207 [AC3] TC-207-05: a Coordinator with no requests is told what to do next, and offered the button for it", () => {

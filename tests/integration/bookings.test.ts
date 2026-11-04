@@ -550,8 +550,10 @@ describe.skipIf(!usesLocalDatabase)(
         expect(offered.map((e) => e.id)).toEqual(
           expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
         );
-        // Judged as the form read them: other files running alongside may
-        // confirm one of these events afterwards.
+        // Judged as offered, from the same read: other suites run alongside
+        // and may confirm one of these events a moment later, and Prisma
+        // stamps updatedAt when it builds that write, not when it commits, so
+        // reading the rows again can't tell a change apart from an old row.
         for (const { organiserId, coordinatorId, status } of offered) {
           expect(
             can(COORDINATOR.user, "booking:request", {

@@ -263,7 +263,9 @@ test.describe("SCRUM-159 — setup and turnaround time", () => {
     card = await openBooking(staff, { id: booking.id });
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(
-      staff.getByText(`Approved: ${PREFIX} Studio is now booked for ${PREFIX} Breakfast Briefing.`),
+      staff
+        .getByTestId("decision-done")
+        .getByText(`Approved: ${PREFIX} Studio is now booked for ${PREFIX} Breakfast Briefing.`),
     ).toBeVisible();
   });
 });

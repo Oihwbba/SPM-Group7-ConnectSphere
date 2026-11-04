@@ -122,4 +122,45 @@ describe("SCRUM-207 — the shared confirmation dialog", () => {
     expect(html).not.toContain("Withdraw from this event?");
     expect(action).not.toHaveBeenCalled();
   });
+
+  it("SCRUM-207 [AC5] TC-207-10: a field the action needs is asked for inside the dialog, and confirming waits until it is filled", () => {
+    const reason = <textarea aria-label="Rejection reason" />;
+    const waiting = body({ children: reason, ready: false });
+    expect(waiting).toContain('aria-label="Rejection reason"');
+    expect(button(waiting, "confirm-dialog-confirm")?.[0]).toContain(
+      'disabled=""',
+    );
+    // The way back stays open while the field is empty.
+    expect(button(waiting, "confirm-dialog-cancel")?.[0]).not.toContain(
+      'disabled=""',
+    );
+    expect(
+      button(
+        body({ children: reason, ready: true }),
+        "confirm-dialog-confirm",
+      )?.[0],
+    ).not.toContain('disabled=""');
+  });
+
+  it("SCRUM-207 [AC5] TC-207-10: an action that shows its own outcome on the page closes the dialog", async () => {
+    const close = vi.fn();
+    const fail = vi.fn();
+    await runConfirmed(async () => {}, { close, fail });
+    expect(close).toHaveBeenCalledOnce();
+    expect(fail).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-207 [AC5] TC-207-10: a dialog the page opens shows nothing, and runs nothing, while the page keeps it closed", () => {
+    const action = vi.fn(async () => ({ ok: true as const }));
+    const html = renderToStaticMarkup(
+      <ConfirmDialog
+        {...wording}
+        open={false}
+        onOpenChange={() => {}}
+        onConfirm={action}
+      />,
+    );
+    expect(html).toBe("");
+    expect(action).not.toHaveBeenCalled();
+  });
 });

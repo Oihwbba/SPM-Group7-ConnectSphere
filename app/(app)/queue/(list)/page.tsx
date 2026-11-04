@@ -1,95 +1,156 @@
-import Link from "next/link";
-import { CalendarDays, Inbox, User, Users } from "lucide-react";
-
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DecidedNote,
+  DecisionCard,
+  QueueFact,
+  WorkQueue,
+} from "@/components/queues/work-queue";
 import { formatDateTime, formatEventTime } from "@/lib/datetime";
-import { getUnassignedQueue } from "../queries";
+import { queueState, type QueueDefaults, type QueueItem } from "@/lib/queues";
+import {
+  getAssignedFromQueue,
+  getQueueRequest,
+  getUnassignedQueue,
+} from "../queries";
+import { AssignForm } from "../assign-form";
 
-/** SCRUM-165 — the Lead's Unassigned queue. Access is decided by `can()`
- * (SCRUM-66 / SCRUM-67), not a role list here. */
-export default async function QueuePage() {
+// SCRUM-165: oldest submission first.
+const DEFAULTS: QueueDefaults = { sort: "requested", dir: "asc" };
+const ASKED = "Needs a Coordinator";
+
+/**
+ * SCRUM-165 — the Lead's Unassigned queue, in the layout every queue shares
+ * (SCRUM-211). Access is decided by `can()` (SCRUM-66 / SCRUM-67), not a role
+ * list here; an opened request is read through `getQueueRequest`, the gate
+ * the request's own page used.
+ */
+export default async function QueuePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireSession();
   if (!can(session.user, "event:assign")) {
     return <Forbidden />;
   }
 
-  const requests = await getUnassignedQueue();
+  const [waiting, assigned, params] = await Promise.all([
+    getUnassignedQueue(),
+    getAssignedFromQueue(),
+    searchParams,
+  ]);
+  const items: QueueItem[] = [
+    ...waiting.map((request) => ({
+      id: request.id,
+      event: request.name,
+      eventStart: request.startAt,
+      asked: ASKED,
+      requestedAt: request.submittedAt ?? new Date(0),
+      waiting: true,
+      badges: request.overdue
+        ? [{ label: "Overdue", tone: "danger" as const }]
+        : [],
+    })),
+    ...assigned.map((request) => ({
+      id: request.id,
+      event: request.name,
+      eventStart: request.startAt,
+      asked: ASKED,
+      requestedAt: request.submittedAt ?? new Date(0),
+      waiting: false,
+      badges: [],
+    })),
+  ];
+  const state = queueState("/queue", items, params, DEFAULTS);
+
+  let detail: React.ReactNode = null;
+  let decision: React.ReactNode = null;
+  if (state.open?.waiting) {
+    const found = await getQueueRequest(state.open.id);
+    if (found) {
+      detail = <RequestDetails request={found.request} />;
+      decision = (
+        <DecisionCard title="Assign a Coordinator">
+          <AssignForm
+            eventId={found.request.id}
+            coordinators={found.coordinators}
+            suggestedId={found.suggestedId}
+            nextHref={state.nextHref}
+          />
+        </DecisionCard>
+      );
+    }
+  } else if (state.open) {
+    const request = assigned.find((entry) => entry.id === state.open!.id)!;
+    detail = <RequestDetails request={request} />;
+    decision = (
+      <DecidedNote>
+        Assigned to {request.coordinator?.name ?? "a Coordinator"}.
+      </DecidedNote>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Unassigned Queue
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          New requests wait here, oldest first, until you assign a
-          Coordinator.
-        </p>
-      </div>
+    <WorkQueue
+      title="Unassigned Queue"
+      description="New requests wait here, oldest first, until you assign a Coordinator."
+      base="/queue"
+      state={state}
+      defaults={DEFAULTS}
+      testId="queue-item"
+      detail={detail}
+      decision={decision}
+    />
+  );
+}
 
-      {requests.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <Inbox className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">
-              No requests waiting
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Newly submitted requests will appear here.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {requests.map((request) => (
-            <Link
-              key={request.id}
-              href={`/queue/${request.id}`}
-              data-testid="queue-request"
-              className="block rounded-lg transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Card>
-                <CardHeader className="space-y-1.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base font-semibold leading-tight">
-                      {request.name}
-                    </CardTitle>
-                    {request.overdue && (
-                      <Badge variant="destructive" data-testid="overdue">
-                        Overdue
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                  <span className="flex items-center gap-1.5">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                    {formatEventTime(request.startAt, request.endAt)}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 shrink-0" />
-                    {request.expectedAttendance ?? "—"} expected
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5 shrink-0" />
-                    {request.organiser.name}
-                  </span>
-                  <span data-testid="submitted-at">
-                    Submitted{" "}
-                    {request.submittedAt
-                      ? formatDateTime(request.submittedAt)
-                      : "—"}
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+/** SCRUM-165 AC3 — the request's basic information, read-only. */
+function RequestDetails({
+  request,
+}: {
+  request: {
+    purpose: string | null;
+    description: string | null;
+    startAt: Date | null;
+    endAt: Date | null;
+    expectedAttendance: number | null;
+    venueRequirements: string | null;
+    accessibilityNeeds: string | null;
+    preferredLayout: string | null;
+    equipmentRequirements: string | null;
+    submittedAt: Date | null;
+    organiser: { name: string };
+  };
+}) {
+  const details: [string, string | null][] = [
+    ["Purpose", request.purpose],
+    ["Description", request.description],
+    ["Date & time", formatEventTime(request.startAt, request.endAt)],
+    [
+      "Expected attendance",
+      request.expectedAttendance === null
+        ? null
+        : String(request.expectedAttendance),
+    ],
+    ["Venue requirements", request.venueRequirements],
+    ["Accessibility needs", request.accessibilityNeeds],
+    ["Preferred layout", request.preferredLayout],
+    ["Equipment requirements", request.equipmentRequirements],
+    ["Organiser", request.organiser.name],
+    [
+      "Submitted",
+      request.submittedAt ? formatDateTime(request.submittedAt) : null,
+    ],
+  ];
+  return (
+    <dl className="grid gap-4 sm:grid-cols-2" data-testid="request-details">
+      {details.map(([label, value]) => (
+        <QueueFact key={label} label={label}>
+          <span className="whitespace-pre-wrap">{value || "—"}</span>
+        </QueueFact>
+      ))}
+    </dl>
   );
 }

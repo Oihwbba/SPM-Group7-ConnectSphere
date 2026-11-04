@@ -135,9 +135,10 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
 
     // AC7: Venue Staff approve the hold once; it stays Held.
     await card.getByRole("button", { name: "Approve" }).click();
-    const approved = staff.getByTestId("venue-approved");
-    await expect(approved).toContainText("Approved the hold");
-    await approved.getByRole("button", { name: "Close" }).click();
+    const done = staff.getByTestId("decision-done");
+    await expect(done.getByText(/^Approved the hold/)).toBeVisible();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
+    await staff.waitForURL((url) => !url.searchParams.has("open"));
     card = await openBooking(staff, { id: request.bookingId });
     await expect(card).toContainText(
       "Approved by Venue Staff – awaiting confirmation",
@@ -198,7 +199,8 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
         ),
     ).toBeVisible();
     await staff.keyboard.press("Escape");
-    const card = await openBooking(staff, { id: request.bookingId });
+    // SCRUM-211 AC4: refused, so the request stays open, still Pending.
+    const card = staff.locator(`[data-testid="booking-${request.bookingId}"]`);
     await expect(card).toContainText("Pending");
     expect(
       (

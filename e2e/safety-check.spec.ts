@@ -114,10 +114,15 @@ test.describe("SCRUM-166 — Operational safety check", () => {
     await expect(venue).toContainText("theatre");
     await expect(page.getByText("Two wheelchair users")).toBeVisible();
 
-    // AC3: Approve needs no note.
-    await page.getByLabel(/^Approve/).check();
-    await page.getByRole("button", { name: "Record outcome" }).click();
-    await expect(page.getByTestId("safety-check-status")).toContainText("Approved");
+    // AC3: Approve needs no note (SCRUM-211: the first of the three
+    // decisions; the next waiting check then opens).
+    await page.getByRole("button", { name: "Approve" }).click();
+    await expect(
+      page.getByText("Outcome recorded. The Coordinator has been notified."),
+    ).toBeVisible();
+    await expect.poll(async () =>
+      (await prisma.safetyCheck.findFirstOrThrow({ where: { eventId } })).status,
+    ).toBe("APPROVED");
 
     // AC14: approval didn't confirm it; the Coordinator does.
     await signIn(page, "coordinator@test.local", "/events");
@@ -137,16 +142,23 @@ test.describe("SCRUM-166 — Operational safety check", () => {
 
     await signIn(page, "safety@test.local", "/safety-checks");
     await page.getByRole("link", { name: new RegExp(name) }).click();
-    await page.getByLabel(/^Request changes/).check();
-    const record = page.getByRole("button", { name: "Record outcome" });
+    // SCRUM-211 AC3: Request changes asks first, for the note and the pick.
+    await page.getByRole("button", { name: "Request changes" }).click();
+    const dialog = page.getByRole("dialog");
+    const record = dialog.getByRole("button", { name: "Request changes" });
 
     // Failure path (AC3): no note and no pick, so it can't be recorded.
     await expect(record).toBeDisabled();
-    await page.getByLabel(/^Note/).fill(NOTE);
+    await dialog.getByLabel(/^Note/).fill(NOTE);
     await expect(record).toBeDisabled();
-    await page.getByRole("checkbox", { name: "Exhibition Hall" }).check();
+    await dialog.getByRole("checkbox", { name: "Exhibition Hall" }).check();
     await record.click();
-    await expect(page.getByTestId("safety-check-status")).toContainText("Changes requested");
+    await expect(
+      page.getByText("Outcome recorded. The Coordinator has been notified."),
+    ).toBeVisible();
+    await expect.poll(async () =>
+      (await prisma.safetyCheck.findFirstOrThrow({ where: { eventId } })).status,
+    ).toBe("CHANGES_REQUESTED");
 
     // AC10: the booking is flagged with the note; the Coordinator sees why.
     await signIn(page, "coordinator@test.local", "/events");

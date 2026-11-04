@@ -140,16 +140,19 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .getByLabel("Note for the coordinator")
       .fill("Lecterns swapped for laptops.");
     await request.getByRole("button", { name: "Approve" }).click();
+    const done = page.getByTestId("decision-done");
     await expect(
-      page.getByText("Request approved. The coordinator has been notified."),
+      done.getByText("Request approved. The coordinator has been notified."),
     ).toBeVisible();
 
-    await expect(request.getByTestId("request-status")).toHaveText("Approved");
-    await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: /^Decided/ }).click();
+    // SCRUM-211: the pop-up leads back to the list; the request is under
+    // Decided, with its history.
+    await done.getByRole("button", { name: "Back to equipment requests" }).click();
+    await expect(request).toHaveCount(0);
+    await page.getByRole("link", { name: "Decided", exact: true }).click();
+    await page.waitForURL(/status=decided/);
     const decided = await openReview(page, rig.name);
     await expect(decided.getByTestId("request-status")).toHaveText("Approved");
-    await decided.getByRole("tab", { name: /^History/ }).click();
     await expect(decided.getByTestId("history-entry")).toHaveText([
       /Submitted as Pending Review\s*Request submitted\./,
       /Pending Review → In Review.*by Theo Tech/,
@@ -176,7 +179,9 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     await request.getByRole("button", { name: "Start review" }).click();
     await expect(request.getByTestId("request-status")).toHaveText("In Review");
 
+    // SCRUM-211 AC3: Reject asks first; without a note it is refused.
     await request.getByRole("button", { name: "Reject" }).click();
+    await page.getByRole("button", { name: "Reject request" }).click();
     await expect(
       request.getByText(
         "Give the coordinator a reason for rejecting the request.",
@@ -191,6 +196,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .getByLabel("Note for the coordinator")
       .fill("Not enough lecterns that day.");
     await request.getByRole("button", { name: "Reject" }).click();
+    await page.getByRole("button", { name: "Reject request" }).click();
     await expect(
       page.getByText("Request rejected. The coordinator has been notified."),
     ).toBeVisible();
@@ -219,6 +225,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .getByLabel("Note for the coordinator")
       .fill("Not enough lecterns that day.");
     await request.getByRole("button", { name: "Reject" }).click();
+    await page.getByRole("button", { name: "Reject request" }).click();
     await expect(
       page.getByText("Request rejected. The coordinator has been notified."),
     ).toBeVisible();
@@ -241,35 +248,35 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     await openRequests(page, "techsupport@test.local");
     const request = await openReview(page, rig.name);
 
-    // Only offered once the request is in review.
+    // Only offered once the request is in review (SCRUM-211: in the
+    // decision, between Approve and Reject).
     await expect(
-      request.getByText("Start the review to suggest an alternative."),
-    ).toBeVisible();
+      request.getByRole("button", { name: "Suggest alternative" }),
+    ).toHaveCount(0);
     await request.getByRole("button", { name: "Start review" }).click();
     await expect(request.getByTestId("request-status")).toHaveText("In Review");
 
-    const lectern = request
-      .getByTestId("request-line")
-      .filter({ hasText: "Lectern" });
-    const choices = lectern.getByLabel("Suggest instead of Lectern");
+    await request.getByRole("button", { name: "Suggest alternative" }).click();
+    const dialog = page.getByRole("dialog");
+    const choices = dialog.getByLabel("Suggest instead of Lectern");
     expect(
       (await optionsOf(choices)).some((o) => o.label.includes("Lectern")),
     ).toBe(false);
     await selectFrom(choices, "eqp_laptop");
-    await lectern.getByRole("button", { name: "Suggest" }).click();
+    await dialog.getByRole("button", { name: "Suggest" }).click();
 
     await expect(
       page.getByText("Laptop suggested to the coordinator."),
     ).toBeVisible();
+    // The line that fits is never offered alternatives.
+    await expect(dialog.getByLabel(/Suggest instead of Projector/)).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    const lectern = request
+      .getByTestId("request-line")
+      .filter({ hasText: "Lectern" });
     await expect(lectern.getByTestId("suggested-alternative")).toHaveText(
       "Suggested instead: Laptop",
     );
-    // The line that fits is never offered alternatives. It is picked by
-    // position (lines keep entry order), because the Lectern line's own
-    // alternatives list mentions "Projector" too.
-    const projector = request.getByTestId("request-line").nth(1);
-    await expect(projector).toContainText("Projector");
-    await expect(projector.getByLabel(/Suggest instead of/)).toHaveCount(0);
 
     expect(
       await prisma.notification.count({
@@ -312,8 +319,9 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .click();
 
     await expect(page).toHaveURL(/\/equipment-requests$/);
+    // SCRUM-211 AC2: Waiting is the filter it opens on.
     await expect(
-      page.getByRole("button", { name: /^Waiting for review/ }),
-    ).toHaveAttribute("aria-pressed", "true");
+      page.getByRole("link", { name: "Waiting", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
   });
 });

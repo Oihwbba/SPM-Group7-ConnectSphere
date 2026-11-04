@@ -218,7 +218,6 @@ test.describe("SCRUM-25 — update routine event information during planning", (
       select: { id: true },
     });
     const card = await openBooking(staff, { id: booking.id });
-    await card.getByRole("tab", { name: "Operational notes" }).click();
     const staffNotes = card.getByTestId("operational-notes");
     await staffNotes.getByLabel("Add a note").fill("Banquet tables confirmed for 120.");
     await staffNotes.getByRole("button", { name: "Add note" }).click();

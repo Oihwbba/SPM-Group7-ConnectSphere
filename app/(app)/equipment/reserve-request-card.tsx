@@ -275,7 +275,7 @@ export function ReserveRequestCard({
                   </p>
                 </div>
                 <Link
-                  href={`/equipment-requests#request-${chosen.id}`}
+                  href={`/equipment-requests?status=all&open=${chosen.id}`}
                   className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                 >
                   View request

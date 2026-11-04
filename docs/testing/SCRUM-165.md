@@ -57,7 +57,7 @@ the queue unassigned. Every account's password is `Password123!`.
 | Pre-conditions | Signed in as the Lead; two or more requests wait, one whose start has passed. |
 | Test Steps | 1. Open the Unassigned Queue. |
 | Test Data | — |
-| Expected Result | Each entry shows its name, date and times (SGT), expected attendance, Organiser and submission time, oldest submission first; the past one is marked **Overdue**. |
+| Expected Result | Each entry shows its name, event date, "Needs a Coordinator" and its submission (date and how long ago), oldest submission first, the four columns every queue shares (SCRUM-211); the past one is marked **Overdue**. Its times, attendance and Organiser show when it is opened (TC-165-04). |
 
 **Automated by:** `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC2] TC-165-02: …" (2 tests); `e2e/lead-queue.spec.ts` › "… TC-165-02 …"
 
@@ -122,7 +122,7 @@ the queue unassigned. Every account's password is `Password123!`.
 | Pre-conditions | Signed in as the Lead, on a queued request. |
 | Test Steps | 1. Choose Cody. <br> 2. Click **Assign**. <br> 3. Sign in as Cody. |
 | Test Data | — |
-| Expected Result | "Assigned to Cody Coordinator." The request leaves the queue, is Under Review with Cody, the assignment is recorded with the Lead's name, the Organiser and Cody each get "A coordinator was assigned" / "You were assigned an event", and Cody sees it in his list. |
+| Expected Result | "Assigned to Cody Coordinator." The next waiting request opens (SCRUM-211 AC4). The request leaves the queue, is Under Review with Cody, the assignment is recorded with the Lead's name, the Organiser and Cody each get "A coordinator was assigned" / "You were assigned an event", and Cody sees it in his list. |
 
 **Automated by:** `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5] TC-165-07: …" (3 tests); `e2e/lead-queue.spec.ts` › "… TC-165-07 …"
 

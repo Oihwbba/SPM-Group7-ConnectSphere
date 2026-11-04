@@ -264,12 +264,17 @@ test.describe("SCRUM-264 — text over 2,000 characters is refused at the box", 
 
     await signIn(page, "safety@test.local", "/safety-checks");
     await page.getByRole("link", { name: new RegExp(name) }).click();
-    await page.getByLabel(/^Reject/).check();
+    // SCRUM-211: the outcome is recorded from the queue's decision panel, so
+    // Reject asks in the shared dialog and the note is written there.
+    await page.getByRole("button", { name: "Reject" }).click();
+    const dialog = page.getByRole("dialog", {
+      name: "Reject this safety check?",
+    });
 
     await expectRefusedAtTheBox(
-      page.getByLabel(/^Note/),
-      page.getByRole("button", { name: "Record outcome" }),
-      page.getByTestId("safety-check-outcome"),
+      dialog.getByLabel(/^Note/),
+      dialog.getByRole("button", { name: "Reject" }),
+      dialog,
       "Keep the note under 2000 characters.",
     );
     expect(
