@@ -4,8 +4,8 @@ Our module requires us to be open about AI assistance, and in the Q&A each of
 us explains and justifies the code, the architecture and what AI contributed.
 This page says which AI tools we use and for what, the rules they work under,
 what a person decides, and how mistakes in AI-assisted work get caught. It
-also proposes an answer to the Week 10 CFO question: what value the team added
-beyond AI. Who explains each part of the system is in
+also gives the team's answer to the Week 10 CFO question: what value the team
+added beyond AI. Who explains each part of the system is in
 [ownership.md](ownership.md). (SCRUM-197)
 
 ## The tools, and what each is for
@@ -16,8 +16,8 @@ beyond AI. Who explains each part of the system is in
 | **GLM-5.3** (Zhipu AI), run by GitHub Actions | Reviewing each pull request that changes code against its story's acceptance criteria and the team's rules, in one comment; after each merge, proposing lessons for its own memory. Drafts, and pull requests that change only Markdown, lockfiles or `docs/backlog`, aren't reviewed. | [`.github/workflows/ai-review.yml`](../.github/workflows/ai-review.yml), [`.github/scripts/ai-review.mjs`](../.github/scripts/ai-review.mjs), [ADR 0008](adr/0008-advisory-ai-code-review.md) |
 | **GitHub Copilot** | Reviewed pull requests from 10 to 14 Sep, until GLM replaced it (ADR 0008's first addendum). Its coding agent made one commit, on 23 Sep (`e7f5d6a0`, SCRUM-15). | No longer used |
 
-**_To be completed by the team:_** each of us confirms this is every AI tool
-we used, or adds the one that's missing.
+These are the AI tools the team used on the project; the slide deck's AI
+slides name the same ones.
 
 Neither tool acts on its own. Claude Code runs only the commands its user
 approves, under that user's own GitHub and Jira accounts. GLM can only post a
@@ -79,14 +79,14 @@ before ADR 0009 fixed the deploys: #52 (Caylern's #41), #53 (Jun Bin's #48),
 Each example below links its evidence.
 
 - **The reviewer's memory.** When GLM reports something the team chose on purpose, a person writes the reason in its memory, so the reviewer doesn't report it again. Real defects nobody has fixed yet go under "Known open gaps" instead. Every entry is approved by a person ([memory.md](../.github/ai-review/memory.md), "Rules for a lesson").
-- **GLM checking Claude's work.** On [#313](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/313), which is still open, GLM found:
+- **GLM checking Claude's work.** On [#313](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/313), before it merged, GLM found:
   - test titles that Claude's rename had left with a doubled prefix (it named 16);
   - six tags with a stray comma;
   - one tag with a stray slash.
 
   The fixes on that pull request corrected 22, 7 and 1.
 - **People choosing what to check.** Both checks below were run with Claude Code. What the team added was deciding to make them:
-  - **Citations.** Felicia ran every test-case citation against the test titles. She found citations naming tests that had been renamed, moved to another file, or couldn't be found at all ([#302 comment](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/302#issuecomment-6444468402)). They were fixed there, and SCRUM-196 ([#318](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/318), still open) proposes a CI check that fails on any such citation.
+  - **Citations.** Felicia ran every test-case citation against the test titles. She found citations naming tests that had been renamed, moved to another file, or couldn't be found at all ([#302 comment](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/302#issuecomment-6444468402)). They were fixed there, and SCRUM-196 ([#318](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/318), merged 2 Nov) added a CI check that fails on any such citation.
   - **Race conditions.** The SCRUM-10 epic check reviewed each story's criteria against the code. It found two race conditions every test had passed: SCRUM-226, where two Technical Support staff could reserve the same line, and SCRUM-227, where two simultaneous updates could both be saved. Each was fixed with a test that fails without the fix ([SCRUM-217](https://smu-spm-group7.atlassian.net/browse/SCRUM-217), [#293](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/293), [#292](https://github.com/Oihwbba/SPM-Group7-ConnectSphere/pull/292)).
 
 ## Value the team added beyond AI
@@ -95,10 +95,13 @@ The Week 10 CFO update asks: *"If AI can generate so much of the code, what
 value are our software development teams adding beyond simply asking AI to
 build the system?"*
 
-**_To be completed by the team:_** agree the answer below, and choose which
-of the candidate examples go in the slide deck.
+**The team's answer**, as given in the slide deck: "The most important value
+our team added beyond AI was deciding what to build and what counts as correct
+(the acceptance criteria, the trade-offs and the checks we ran), because AI
+could turn those decisions into code quickly, but only we could judge the
+result against what the customer needs."
 
-**Proposed answer**, for Release 1 of the Event Planning and Venue Booking
+In more detail, for Release 1 of the Event Planning and Venue Booking
 System: AI turns a decision into code quickly, while the decisions came from
 the team. That covers what the customer needs, where stories conflict, what
 each choice gives up, what to check, and whether the result is right.
@@ -132,7 +135,7 @@ each choice gives up, what to check, and whether the result is right.
 
 - **What AI could produce alone:** code whose own tests pass.
 - **What the team added:**
-  - deciding which checks to run: an epic check for each epic (SCRUM-213 to SCRUM-218, in progress), and Felicia's citation check;
+  - deciding which checks to run: an epic check for each epic (SCRUM-213 to SCRUM-218, all six done and their epics closed on 4 Nov), and Felicia's citation check;
   - a second model reviewing each code change, with rules and memory approved by people.
 
   The SCRUM-10 epic check found the race conditions in SCRUM-226 and SCRUM-227, which had passed every test. The checks were run with Claude Code; choosing them, and judging what they found, was the team's work.
@@ -156,6 +159,7 @@ each choice gives up, what to check, and whether the result is right.
 ### For the slide deck and the demo
 
 SCRUM-197 asks for at least one example to be shown in the deck or the demo.
-The demo script (SCRUM-198) is already Done and doesn't include any of these,
-so the deck (SCRUM-219) is where it can go. **_To be completed by the team:_**
-which example is shown, and where.
+The demo script (SCRUM-198) doesn't include any of these, so they are in the
+deck: its "CFO Update" slide shows candidates 2 (SCRUM-188), 3 (SCRUM-190) and
+4 (the SCRUM-10 epic check's race conditions), and its "AI Usage" slide gives
+the answer above and SCRUM-190 as the decision that needed human judgement.
