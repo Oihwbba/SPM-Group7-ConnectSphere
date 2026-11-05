@@ -53,8 +53,8 @@ sprint and was finished again before it closed.
 
 | Task | Summary | Points | In the sprint | Outcome |
 |---|---|---|---|---|
-| [SCRUM-88](../backlog/SCRUM-88.md) | Add GLM-5.3 automated code review to pull requests (GitHub Actions) | - | Added 16 Sep | Done 16 Sep |
-| [SCRUM-89](../backlog/SCRUM-89.md) | CI and developer infrastructure: Node 24, CI hardening, test folders, security upgrades, migration sync | - | Added 16 Sep | Done 16 Sep |
+| [SCRUM-88](../backlog/SCRUM-88.md) | Chore: Add GLM-5.3 automated code review to pull requests (GitHub Actions) | - | Added 16 Sep | Done 16 Sep |
+| [SCRUM-89](../backlog/SCRUM-89.md) | Chore: CI and developer infrastructure: Node 24, CI hardening, test folders, security upgrades, migration sync | - | Added 16 Sep | Done 16 Sep |
 
 ## Scope changes during the sprint
 

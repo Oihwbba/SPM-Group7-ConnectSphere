@@ -47,9 +47,24 @@ the customer's Week 7 changes (the Lead, several venues per event, holds,
 setup and turnaround times, and the safety check), which arrived with this
 sprint and were part of Release 1.
 
-Why the team committed this much, and what it changes for Sprint 4: _To be completed by the team._
-For reference, the [backlog index](../backlog/README.md) records 15 points
-committed to Sprint 4 at its start.
+**Why the team committed this much.** At sprint planning the team chose to
+take all of the remaining Release 1 stories (option A), so that Sprint 4 would
+be kept for fixes, re-checks and the submission. At the consultation with
+Rajesh and KK in the middle of Sprint 2, the team had learnt that many teams
+finish core functionality by Sprint 3 and keep the final sprint for testing,
+documentation, bug fixes and release preparation. The Highest-priority stories
+were the commitment and the `stretch` stories came next, so the team knew what
+to drop first. Jira started the sprint at 159 points; on the first evening
+refinement removed eight stories marked [OUT OF SCOPE] for Release 1 (33
+points, from the Week 4 list of features not required) and SCRUM-13, leaving
+124. That should have been caught at planning.
+
+**What it changed for Sprint 4.** The velocity of 126 reflects a deliberate
+concentration of feature work, not a lasting increase in capacity, so it is
+not a benchmark. The cost showed as a ten-day flat burndown while stories that
+depended on each other, across different developers, waited for one another.
+Sprint 4 committed 15 points ([Sprint 4](sprint-4.md)) and logged its
+hardening work as unpointed tasks.
 
 ## Stories
 
@@ -110,11 +125,11 @@ In Review for the Product Owner, and moved to Done again by the PO at 00:30 on
 
 | Task | Summary | Points | In the sprint | Outcome |
 |---|---|---|---|---|
-| [SCRUM-145](../backlog/SCRUM-145.md) | Resync test documentation with the current acceptance criteria | 2 | At start | Done 11 Oct |
-| [SCRUM-146](../backlog/SCRUM-146.md) | Remove stale story references | - | At start | Done 14 Oct |
-| [SCRUM-147](../backlog/SCRUM-147.md) | Update data-model documentation | 2 | At start | Done 14 Oct (reopened 11 Oct and closed again) |
+| [SCRUM-145](../backlog/SCRUM-145.md) | Chore: Resync test documentation with the current acceptance criteria | 2 | At start | Done 11 Oct |
+| [SCRUM-146](../backlog/SCRUM-146.md) | Chore: Remove stale story references | - | At start | Done 14 Oct |
+| [SCRUM-147](../backlog/SCRUM-147.md) | Chore: Update data-model documentation | 2 | At start | Done 14 Oct (reopened 11 Oct and closed again) |
 | [SCRUM-168](../backlog/SCRUM-168.md) | Remove the placeholder search bar from the top bar | 0 | At start | Done 8 Oct |
-| [SCRUM-169](../backlog/SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | 1 | Added 7 Oct | Done 9 Oct |
+| [SCRUM-169](../backlog/SCRUM-169.md) | Chore: Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | 1 | Added 7 Oct | Done 9 Oct |
 | [SCRUM-172](../backlog/SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | 3 | Added 7 Oct | Done 14 Oct (reopened 9 Oct, 9 Oct, 11 Oct and closed again) |
 | [SCRUM-173](../backlog/SCRUM-173.md) | Chore: Bring the docs up to date with the code and the Week 7 changes | - | Added 11 Oct | Done 13 Oct |
 | [SCRUM-174](../backlog/SCRUM-174.md) | Chore: Record the tech stack decision as ADR 0016 | - | Added 11 Oct | Done 13 Oct |
@@ -204,9 +219,11 @@ a separate recording.
 
   Recorded on 4 Nov by the Sprint 3 Product Owner from the meeting minutes
   (Sprint 3 Review, Retrospective and Sprint 4 Planning, in the team's Drive)
-  and Jira, where each story was moved to Done on 21 Oct. Recording 1 wasn't
-  uploaded to the team folder, so it was not re-watched; recordings are kept
-  only for the final sprint.
+  and Jira, where each story was moved to Done on 21 Oct. Recording 1 (the
+  review and retrospective) wasn't uploaded to the team folder, so it was not
+  re-watched; recordings are kept only for the final sprint. Recording 2,
+  [Sprint 4 Planning](https://youtu.be/GEJpDrJ3SSY), is linked from
+  [Sprint 4](sprint-4.md#recordings).
 
 What Jira and git already show:
 
@@ -221,19 +238,74 @@ What Jira and git already show:
 
 ## Retrospective
 
+Held after the review on Wed 21 Oct, in recording 1, and run by Hann Qian
+(Scrum Master). The team voted on what to fix first: workload 5, testing each
+other's work 4, flaky CI 3, late merges 3. Taken from the team's Scrum and
+Sprint Documentation (submission folder 4).
+
+### Sprint 2's actions, and what came of them
+
+| Sprint 2 action | What happened |
+|---|---|
+| One story per branch, merged only when complete | Partly. The Week 7 stories depended on each other, so some needed repeated pull requests to `main`. |
+| Record every review; send questions to the customer early | Done. This review was recorded, and the customer questions went to the 12 Oct clarification session. |
+| Write up the Organiser form changes in Jira (Felicia) | Done: SCRUM-170 (7 Oct), delivered in this sprint. |
+| Export the backlog, then merge SCRUM-167 into 166 and 133 into 85 (Felicia) | Done on 7 Oct. |
+| Show the full time frame on the Attendee event card (Hann Qian) | Done in PR #139, before Sprint 2 closed. |
+| Document the Sprint 2 end-to-end test cases (each story owner) | Done (SCRUM-145, 176). |
+
 ### What went well
 
-_To be completed by the team._
+- The GLM review, which caught the lock-order problem in the venue edit
+  (continue).
+- Clear acceptance criteria, which made acceptance quick (continue).
+- Every Week 7 change was delivered and accepted, with the Highest-priority
+  and `stretch` order known in advance.
 
 ### What to improve
 
-_To be completed by the team._
+- Stop merging late at night just before stand-up.
+- Stop one person taking most of the items: Jin Hong held 31 of the 58 items
+  and more than half of the team's pull requests, partly from taking the
+  chores because he knew the code.
+- End-to-end tests failing on their first attempt in CI (four fixed this
+  sprint, SCRUM-189 still open); most are long journeys hitting the 30-second
+  limit, not real failures.
+- The jump from 56 to 126 points suggests smaller sizing or more hours,
+  probably both; the commitment was 2.2 times Sprint 2's velocity.
 
 ### Actions, and what came of them
 
-_To be completed by the team._
+What came of each was checked at the [Sprint 4 retrospective](sprint-4.md#retrospective).
+
+| Owner | Action | Due | What came of it |
+|---|---|---|---|
+| Everyone | Start: someone who didn't build a story tries it before it is Done (about ten minutes per story) | Sprint 4 | Partly: the Product Owner tried each feature before accepting it |
+| Everyone | Start: telling the Product Owner early when a story will be late | Sprint 4 | Partly: the two largest UI pieces were held back three to four days |
+| Hann Qian | Make sure nobody takes more than about a quarter of the sprint's items | Sprint 4 planning, Wed 21 Oct | Not met: Felicia held 28 of 69 items and Jin Hong 18 |
+| Felicia | Make sure every story is tried by one other person before it moves to Done | Sprint 4 | Partly, as the first action |
+| Jun Bin | Fix the slow end-to-end tests (SCRUM-189) first in Sprint 4 | Sprint 4 | Done: all 415 end-to-end tests passed on `main` |
+| Caylern | Log the two new backlog items from the review in Jira | Wed 21 Oct | Not recorded in the Sprint 4 retrospective |
+| Jun Bin | Enter the planning poker estimates and the goal, and start Sprint 4 in Jira | Wed 21 Oct | Done: Sprint 4 started at 15:00 on 21 Oct |
+| Everyone | Split their stories into tasks on the Sprint 4 board | Thu 22 Oct | Not recorded in the Sprint 4 retrospective |
+| Jun Bin | Set the date of the recorded stand-up | Thu 22 Oct | Done: held live and recorded on 28 Oct |
+| Hann Qian | Upload both recordings as unlisted videos and add the links | Thu 22 Oct | Partly: Sprint 4 Planning is uploaded; recording 1 is not |
+| Jin Hong | Run the seed again to undo the demo changes, and record this retrospective in the sprint records (SCRUM-194) | Thu 22 Oct | The record is this section (SCRUM-194, Done in Sprint 4); the re-seed isn't recorded |
 
 Follow-ups the backlog already records:
 
 - The rubric audit on 19 Oct raised SCRUM-194, the Sprint 4 task this
   record belongs to.
+
+## Burndown
+
+Remaining work stayed flat for ten days: the Week 7 stories depended on the
+shared schema and booking-rules migration SCRUM-172 (Done 14 Oct). 57 merges
+reached `main` from 7 to 17 Oct, but the first story (SCRUM-70) was accepted
+only on 18 Oct. Then 13 points were accepted on 18 Oct and 60 on 19 Oct, many
+when the PO reviewed the interlocking Week 7 roles and queues as a batch; the
+20 Oct audit reopened six stories (a 27-point rise) before they were fixed and
+accepted again on 21 Oct. Lower-priority and out-of-scope stories had been
+removed after the requirement changes so the team could focus on essential
+functionality, and Sprint 4 therefore focused on stability, usability, testing
+and documentation instead of new features.

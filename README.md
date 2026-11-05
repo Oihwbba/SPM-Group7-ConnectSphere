@@ -37,8 +37,8 @@ Week 7 added two more roles:
   requested or Rejected (SCRUM-166). Their approval doesn't confirm the
   event; the Coordinator still does.
 
-Release 1 covers the twenty features in the Week 4 project instructions, and
-Sprint 3 adds the Week 7 changes. The full picture (all seven roles, the event
+Release 1 covers the twenty features in the Week 4 project instructions and
+the Week 7 changes, delivered over four sprints (9 Sep to 4 Nov 2026). The full picture (all seven roles, the event
 lifecycle, scope) is in [`docs/product-context.md`](docs/product-context.md).
 
 **Course material:** the customer briefing, the Week 4 project instructions

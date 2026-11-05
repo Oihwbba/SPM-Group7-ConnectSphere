@@ -1,6 +1,7 @@
 # How we estimate
 
-Every figure here comes from Jira and was read on 23 Oct 2026: the
+Every figure here comes from Jira and was read on 23 Oct 2026 (Sprint 4's on
+6 Nov): the
 "Story point estimate" field, each story's change history, and the
 **Change log** at the end of its description, mirrored in
 [docs/backlog](../backlog/README.md).
@@ -27,12 +28,30 @@ How many of Jira's 97 stories carry each value:
 
 One story, [SCRUM-153](../backlog/SCRUM-153.md), has no estimate.
 
-The examples are Done stories at each value, picked from Jira. Whether they
-are the stories the team actually compares new work against: _To be
-completed by the team._
+The examples are the team's reference stories: Done stories it compares new
+work against at each value.
 
-How an estimate is reached, who takes part and when stories are estimated:
-_To be completed by the team._
+| Points | What the reference story involves |
+|---|---|
+| 0 | No work of its own; its points moved to the story it was merged into |
+| 1 | One read-only view, one role, no state change |
+| 2 | One flow with validation and an error path |
+| 3 | Rules applied across several pages and roles |
+| 5 | A rule every other story depends on, with concurrency |
+| 8 | A new role, queue and gate on confirmation, with outdating rules |
+
+**How an estimate is reached.** By Planning Poker
+(planningpokeronline.com) at every sprint planning. Each voter picks a card
+before the reveal; the highest and lowest explain their reasoning, then the
+team votes again until it agrees. The developers and the Scrum Master vote
+while the Product Owner explains each story. Sprint 1 was the exception: the
+PO role rotates and every PO is a developer in other sprints, so the whole
+team, PO included, voted at the pre-planning session on 6 Sep to build a
+shared feel for the scale. Anything above 8 is split before it is committed.
+Stories are re-estimated the same day the PO adds or removes a criterion.
+
+From the team's Scrum and Sprint Documentation (submission folder 4), "How
+Estimates Are Reached".
 
 ### Tasks
 
@@ -53,6 +72,7 @@ estimates. The sprint records give the stories behind each figure.
 | [Sprint 1](sprint-1.md) | 34 | 3 | **37** | 16 |
 | [Sprint 2](sprint-2.md) | 45 | 11 | **56** | 25 |
 | [Sprint 3](sprint-3.md) | 124 (120 at today's estimates) | 6 | **126** | 34 |
+| [Sprint 4](sprint-4.md) | 15 | 0 | **15** | 9 |
 
 At the Sprint 1 review the team counted 31 of the 37 points, leaving out
 SCRUM-13, 15 and 31 because their tests were incomplete
@@ -75,9 +95,23 @@ commitment as the Highest-priority stories:
 
 All 34 stories were Done by close.
 
-Why the team committed that much, and what it changes in planning: _To be
-completed by the team._ Sprint 4 started with 15 points committed, according
-to the [backlog index](../backlog/README.md).
+Why the team committed that much: it chose to take all of the remaining
+Release 1 stories so that Sprint 4 would be kept for fixes, re-checks and the
+submission, as it had learnt many teams do. The cost was a ten-day flat
+burndown while dependent stories waited for one another ([Sprint
+3](sprint-3.md#commitment-against-velocity)).
+
+What it changed in planning: Sprint 3's velocity is not a benchmark. Sprint 4
+committed **15 points**, 0.1 times Sprint 3 by design, and logged its hardening
+work (16 bugs, 6 epic checks and 38 other chores) as unpointed tasks. All 15
+points were Done ([Sprint 4](sprint-4.md#commitment-against-velocity)).
+
+### Unplanned bugs and points
+
+Sprint 4 set its three mid-sprint bugs (SCRUM-226, 227, 229) from 1 point back
+to 0 at close, as the team decided that unplanned bugs and chores found during
+a sprint are not velocity. That differs from Sprint 3, which pointed four
+planned tasks. The lesson: decide the rule at planning, not at close.
 
 ## Every re-estimate
 

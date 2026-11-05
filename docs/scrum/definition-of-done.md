@@ -51,7 +51,21 @@ merge.
 | 19 | The story's backlog file matches Jira. | CLAUDE.md, "Check your work against the story" | A re-sync of `docs/backlog` (for example SCRUM-221) |
 | 20 | **The Product Owner accepts the story** and moves it to Done in Jira. Opening a PR moves it only to In Review. | CLAUDE.md, "Board discipline"; CONTRIBUTING.md | The Product Owner, in Jira |
 
-How the team checks the Definition of Done at the sprint review, and what
-happens to a story that misses it: _To be completed by the team._ One known
-case is in [Sprint 1's record](sprint-1.md): SCRUM-114 finished tests three
-stories lacked at that sprint's close.
+**How the team checks it at the sprint review.** The Product Owner judges
+each story against its acceptance criteria and this Definition of Done:
+merged, CI green on `main`, and test cases that point to real tests. Stories
+are moved to Done in Jira beforehand and confirmed at the review; a story that
+doesn't hold up on screen is reopened. Steps the seed data can't show are
+proved by running their end-to-end tests. At the Sprint 4 review the PO, Hann
+Qian, recapped the Definition of Done on the recording
+([Sprint 4](sprint-4.md#decisions)).
+
+**What happens to a story that misses it.** It is not counted. At the Sprint 1
+review, SCRUM-13, 15 and 31 (6 points) were left out of the points counted
+because their tests were incomplete, and SCRUM-114 then finished the tests
+three stories lacked ([Sprint 1](sprint-1.md)). Later, a gap found after Done
+reopens the story: on 20 Oct the team's own audit reopened six Sprint 3
+stories, each fixed in its own pull request and accepted again before the
+review ([Sprint 3](sprint-3.md#stories)). No Sprint 4 story was reopened.
+
+From the team's Scrum and Sprint Documentation (submission folder 4).
