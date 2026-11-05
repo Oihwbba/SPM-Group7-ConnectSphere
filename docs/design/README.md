@@ -10,7 +10,24 @@ document, outside the repo.
 - The diagrams below, exported from the design pack as SVG images.
 
 **Last checked against the code:** 2026-11-03, `main` at commit `8db5be5e`,
-and the Jira stories each diagram cites (SCRUM-275).
+and the Jira stories each diagram cites (SCRUM-275). **Last checked against
+the submitted design document:** 2026-11-06, `main` at commit `cecb1b3`.
+
+## The C4 levels
+
+The design document submitted with the project, "Architecture and Design
+Diagrams" (submission folder 2, System Design), is the source of truth for
+every diagram. The course asks for C4 levels 1 and 2.
+
+| C4 level | In the design document | In this repo |
+|---|---|---|
+| 1, System context | Figure 1: ConnectSphere and the seven roles that use it | Not kept here. It shows the people and the one outside system, which don't change when the code does, so Figure 1 is the only copy. |
+| 2, Containers | Figure 2 | `c4-2-containers.svg`, below. Matches Figure 2: on 2026-11-06 its one differing label, on the arrow to the database, was changed to Figure 2's "Reads and writes in transactions; row locks". |
+| 3, Components | Not included, as the course doesn't ask for it | `c4-3-components.svg`, below, kept for working on the code. |
+
+If a diagram here and the design document disagree, the design document is
+right and the diagram here is corrected to match it. If the code changes what
+a diagram shows, both are updated.
 
 ## Diagrams
 
