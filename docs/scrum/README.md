@@ -64,3 +64,7 @@ All four sprints are finished. Sprint 4, the last, closed on 4 Nov 2026.
 | [3](sprint-3.md) | 7–21 Oct | Caylern | Hann Qian | 34 | 126 |
 | [4](sprint-4.md) | 21 Oct – 4 Nov | Hann Qian | Jun Bin | 9 | 15 |
 | Total | | | | 84 | 234 (228 counted) |
+
+84 is the stories in Sprints 1–4. The [backlog index](../backlog/README.md) counts 97
+because it also includes 13 stories never put in a sprint: 8 out of scope (33 points),
+4 merged into other stories and 1 not needed.
