@@ -58,8 +58,8 @@ and are 0 points.
 | Task | Summary | Points | In the sprint | Outcome |
 |---|---|---|---|---|
 | [SCRUM-114](../backlog/SCRUM-114.md) | Chore: Sprint 1 post-DoD test hardening and code hygiene cleanup | 0 | Added 24 Sep | Done 29 Sep (reopened 29 Sep and closed again) |
-| [SCRUM-116](../backlog/SCRUM-116.md) | Sync Jira User Stories into Github Repo on User Story Changes | - | Added 30 Sep | Done 7 Oct |
-| [SCRUM-125](../backlog/SCRUM-125.md) | Measure coverage on every server-side file and fail CI when it drops | - | Added 30 Sep | Done 1 Oct |
+| [SCRUM-116](../backlog/SCRUM-116.md) | Chore: Sync Jira User Stories into Github Repo on User Story Changes | - | Added 30 Sep | Done 7 Oct |
+| [SCRUM-125](../backlog/SCRUM-125.md) | Chore: Measure coverage on every server-side file and fail CI when it drops | - | Added 30 Sep | Done 1 Oct |
 | [SCRUM-157](../backlog/SCRUM-157.md) | Chore: Refresh the project docs so people and AI tools read one consistent, current guide | 0 | Added 7 Oct | Done 7 Oct |
 
 ## Scope changes during the sprint
@@ -128,17 +128,63 @@ Fourteen issues were raised. The ones that changed the backlog:
 
 ## Retrospective
 
-Run asynchronously in the team's Telegram group, as agreed at the meeting.
+Held on Wed 7 Oct 2026 at the end of the review meeting, run by Jun Bin (Scrum
+Master). When the meeting ran out of time it was finished in the team's
+Telegram group, with everyone asked to post their points; Jin Hong contributed
+there. Taken from the team's Scrum and Sprint Documentation (submission
+folder 4).
+
+### Sprint 1's actions, and what came of them
+
+- **Stop merging without tests:** done. SCRUM-114 completed the missing tests
+  and SCRUM-125 made full coverage a failing CI check.
+- **Schedule stand-ups:** done, on 25 Sep, 29 Sep and 2 Oct.
+- **Document work as it is done:** partly. The Sprint 2 end-to-end test cases
+  were still undocumented.
+- **Fewer last-minute changes:** not yet. Six stories were added during the
+  sprint, and most stories reached Done on 4 and 5 Oct.
 
 ### What went well
 
-_To be completed by the team_ from the Telegram retrospective; the 7 Oct
-minutes haven't copied it in yet.
+- Using the customer clarification sessions (continue).
+- The Product Owner checking each story against its criteria before Done
+  (continue).
+- 56 points done comfortably, with nothing carried over.
 
 ### What to improve
 
-_To be completed by the team_, from the same source.
+- Stop splitting stories so finely that they depend on each other (SCRUM-73,
+  74 and 76 could have been one).
+- Stop individual UI changes that leave screens inconsistent.
+- Acceptance still came late: shorter PO acceptance cycles had not yet been
+  achieved.
+- The meeting was transcribed but not recorded, and the team was unsure
+  whether its Scrum practice was right.
 
 ### Actions, and what came of them
 
-_To be completed by the team_, from the same source.
+What came of each was checked at the [Sprint 3 retrospective](sprint-3.md#retrospective).
+
+| Owner | Action | Due | What came of it |
+|---|---|---|---|
+| Everyone | Start: one story per branch, merged only when complete | Sprint 3 | Partly: the Week 7 stories depended on each other, so some needed repeated pull requests to `main` |
+| Everyone | Start: recording every review; sending questions to the customer and instructors early | Sprint 3 | Done: the Sprint 3 review was recorded, and the customer questions went to the 12 Oct clarification session |
+| Felicia | Write up the Organiser form changes and the other UI fixes in Jira | Sprint 3 | Done: SCRUM-170, delivered in Sprint 3 |
+| Felicia | Export the backlog, then merge SCRUM-167 into 166 and 133 into 85 | Wed 7 Oct | Done on 7 Oct |
+| Hann Qian | Show the full time frame on the Attendee event card and merge before Sprint 2 closes | Wed 7 Oct | Done in PR #139 |
+| Jun Bin | Send the customer the question on whether equipment is compulsory | Sun 11 Oct, 8am | Not recorded separately; the team's customer questions went to the 12 Oct clarification session |
+| Everyone | Send the team's Scrum questions to the instructors | Sprint 3 | Not recorded in the Sprint 3 retrospective |
+| Everyone | Post their Sprint 2 retrospective points in the Telegram group | Sprint 3 | Done; Jin Hong's points are included above |
+| Each story owner | Document their Sprint 2 end-to-end test cases | Sprint 3 | Done in Sprint 3 (SCRUM-145, 176) |
+
+## Burndown
+
+The burndown was fairly flat for the first half and fell sharply near the end.
+The commitment grew from 43 points on Jira's chart (45 at today's estimates) to 56: 11 from six small stories added
+between 30 Sep and 5 Oct, gaps found while building that the goal needed, and
+2 from SCRUM-108 (3 to 5 on 1 Oct), which absorbed SCRUM-109's work when
+duplicates were merged after Rajesh and KK's feedback; the other merges
+netted to zero. The six Week 7 changes that arrived on 2 Oct were scheduled for
+Sprint 3 (SCRUM-158), so the committed scope was not affected. For Sprint 3 the
+team aimed for more predictable delivery by separating essential functionality
+from lower-priority requirements.

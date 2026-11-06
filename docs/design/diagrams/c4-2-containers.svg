@@ -216,8 +216,7 @@
 <path fill="none" stroke="#707070" stroke-width="1.1" stroke-dasharray="5,2" d="M1338.2,-402.63C1417.92,-396.66 1512.02,-389.62 1593.46,-383.52"/>
 <polygon fill="#707070" stroke="#707070" stroke-width="1.1" points="1594,-385.94 1600.8,-382.97 1593.63,-381.05 1594,-385.94"/>
 <text text-anchor="start" x="1428" y="-427.8" font-family="Inter" font-size="9.00" fill="#505050">Reads and writes in</text>
-<text text-anchor="start" x="1423.5" y="-418.8" font-family="Inter" font-size="9.00" fill="#505050">transactions, with row</text>
-<text text-anchor="start" x="1438.5" y="-409.8" font-family="Inter" font-size="9.00" fill="#505050">locks</text>
+<text text-anchor="start" x="1421" y="-418.8" font-family="Inter" font-size="9.00" fill="#505050">transactions; row locks</text>
 <text text-anchor="start" x="1378" y="-401.6" font-family="Inter" font-size="8.00" fill="#505050">[SQL over TCP 5432, Supabase session pooler]</text>
 </g>
 <!-- migrate -->
